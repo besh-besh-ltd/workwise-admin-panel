@@ -1,0 +1,219 @@
+[
+  {
+    "title": "Dashboard",
+    "link": "/",
+    "class": "",
+    "icon": "",
+    "active": true,
+    "children": []
+  },
+  {
+    "title": "User Management",
+    "link": "",
+    "class": "",
+    "icon": "",
+    "active": false,
+    "children": [
+      {
+        "title": "Buyer Management",
+        "link": "/buyer-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Vendor Management",
+        "link": "/vendor-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Other User Management",
+        "link": "/other-user-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      }
+    ]
+  },
+  {
+    "title": "Product",
+    "link": "",
+    "class": "",
+    "icon": "",
+    "active": false,
+    "children": [
+      {
+        "title": "Product Management",
+        "link": "/product-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Category Management",
+        "link": "/category-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Product Preview",
+        "link": "/product-preview",
+        "class": "",
+        "icon": "",
+        "active": false
+      }
+    ]
+  },
+  {
+    "title": "CMS",
+    "link": "",
+    "class": "",
+    "icon": "",
+    "active": false,
+    "children": [
+      {
+        "title": "Banner Management",
+        "link": "/banner-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Page Management",
+        "link": "/page-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Media Management",
+        "link": "/media-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Testimonial Management",
+        "link": "/testimonial-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Blog Management",
+        "link": "/blog-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "FAQ Management",
+        "link": "/faq-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Client Management",
+        "link": "/client-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      }
+    ]
+  },
+  {
+    "title": "Price and Subscription Management",
+    "link": "",
+    "class": "",
+    "icon": "",
+    "active": false,
+    "children": [
+      {
+        "title": "Price Management",
+        "link": "/pricing-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "List of Subscribed User",
+        "link": "/subscribed-user-list",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Payment History",
+        "link": "/payment-history",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Coupon Management",
+        "link": "/coupon-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Offer Management",
+        "link": "/offer-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      }
+    ]
+  },
+  {
+    "title": "User Access and Restriction",
+    "link": "",
+    "class": "",
+    "icon": "",
+    "active": false,
+    "children": [
+      {
+        "title": "Subadmin Management",
+        "link": "/subadmin-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
+        "title": "Roles and Permissions",
+        "link": "/role-permission",
+        "class": "",
+        "icon": "",
+        "active": false
+      }
+    ]
+  },
+  {
+    "title": "Notification",
+    "link": "",
+    "class": "",
+    "icon": "",
+    "active": false,
+    "children": [
+      {
+        "title": "System Notification",
+        "link": "/system-notification",
+        "class": "",
+        "icon": "",
+        "active": false
+      }
+    ]
+  },
+  {
+    "title": "Communication",
+    "link": "/message",
+    "class": "",
+    "icon": "",
+    "active": false,
+    "children": []
+  }
+]
