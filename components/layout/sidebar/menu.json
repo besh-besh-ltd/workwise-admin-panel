@@ -29,6 +29,13 @@
         "active": false
       },
       {
+        "title": "Private Vendor Mgmt",
+        "link": "/private-vendor-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
         "title": "Other User Management",
         "link": "/other-user-management",
         "class": "",
