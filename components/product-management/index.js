@@ -131,7 +131,7 @@ const ProductManagement = () => {
         setVendorData(lists);
       })
       .catch((error) => {
-        setcatloading(false);
+        setloading(false);
       });
   }
 
