@@ -41,6 +41,7 @@ const ProductManagement = () => {
 
   const [inputValue, setInputValue] = useState("")
   const [selectVal, setSelectValue] = useState("")
+  const [productErrors, setProductErrors] = useState(null)
 
   const customSelectStyles = {
     control: (base) => ({
@@ -193,14 +194,26 @@ const ProductManagement = () => {
       )
       .then((response) => {
         setloading(false);
-        toast.success(response.message);
-        setFile(null);
-        setEnableBulkUpload(false);
+        if (response.errorsObj) {
+          setProductErrors(response.errorsObj)
+          toast.warning("Partially added products.")
+        }
+        else
+          toast.success(response.message);
         getProducts();
       })
       .catch((error) => {
+        if(error.response?.data?.errorsObj) {
+          setProductErrors(error.response?.data?.errorsObj)
+        }
+        toast.error(error.response?.data?.message)
+      })
+      .finally(()=> {
         setloading(false);
-      });
+        setuploadProgress(0);
+        setFile(null);
+        setEnableBulkUpload(false);
+      })
   };
 
   const uploadToServerProd = async () => {
@@ -545,89 +558,89 @@ const ProductManagement = () => {
                     </div>
                   </div>
                 </div> */}
-                
+
                 {/* <div className="col-md-12"> */}
-                  {/* <div className="d-flex justify-content-end flex-wrap"> */}
-                    <div className="col-sm-3">
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Search Products"
-                        onChange={handleSearch}
-                      />
-                    </div>
-                    <div className="col-sm-3">
-                      <Select
-                        id={id}
-                        options={vendorApprovedData}
-                        placeholder="Approved Vendor"
-                        styles={customSelectStyles}
-                        isClearable={true}
-                        instanceId="long-value-select"
-                        onChange={(e) => setSelectedApproveVendor(e ? e.value : "")}
-                      />
-                    </div>
-                    <div className="col-sm-3">
-                      <Select
-                        id={id}
-                        options={vendorData}
-                        placeholder="Select Vendor"
-                        styles={customSelectStyles}
-                        isClearable={true}
-                        instanceId="long-value-select"
-                        onChange={(e) => setSelectedVendor(e ? e.value : "")}
-                      />
-                    </div>
-                    <div className="col-sm-3">
-                      <Select
-                        id={id}
-                        options={isFeaturesArray}
-                        placeholder="Select is featured"
-                        styles={customSelectStyles}
-                        isClearable={true}
-                        instanceId="long-value-select"
-                        onChange={(e) => setSelectedFeatured(e ? e.value : "")}
-                      />
-                    </div>
-                    <div className="d-flex flex-wrap mt-3">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          navigate.push("/product-management/add-product")
-                        }
-                        className="btn btn-primary mr-2"
-                      >
-                        <i className="fa fa-plus"></i> Add Product
-                      </button>
-                    
-                    <button
-                      type="button"
-                      className="btn btn-secondary mr-2"
-                      onClick={() => {
-                        setuploadProgress(0);
-                        setEnableBulkUpload(!enableBulkUpload);
-                      }}
-                    >
-                      Bulk Upload
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary mr-2"
-                      onClick={() => {
-                        setEnableBulkProdUpload(!enableBulkProdUpload);
-                      }}
-                    >
-                      Bulk Product Upload
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-primary mr-2"
-                      onClick={handleExport}
-                    >
-                      Export
-                    </button>
-                    </div>
-                  {/* </div> */}
+                {/* <div className="d-flex justify-content-end flex-wrap"> */}
+                <div className="col-sm-3">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search Products"
+                    onChange={handleSearch}
+                  />
+                </div>
+                <div className="col-sm-3">
+                  <Select
+                    id={id}
+                    options={vendorApprovedData}
+                    placeholder="Approved Vendor"
+                    styles={customSelectStyles}
+                    isClearable={true}
+                    instanceId="long-value-select"
+                    onChange={(e) => setSelectedApproveVendor(e ? e.value : "")}
+                  />
+                </div>
+                <div className="col-sm-3">
+                  <Select
+                    id={id}
+                    options={vendorData}
+                    placeholder="Select Vendor"
+                    styles={customSelectStyles}
+                    isClearable={true}
+                    instanceId="long-value-select"
+                    onChange={(e) => setSelectedVendor(e ? e.value : "")}
+                  />
+                </div>
+                <div className="col-sm-3">
+                  <Select
+                    id={id}
+                    options={isFeaturesArray}
+                    placeholder="Select is featured"
+                    styles={customSelectStyles}
+                    isClearable={true}
+                    instanceId="long-value-select"
+                    onChange={(e) => setSelectedFeatured(e ? e.value : "")}
+                  />
+                </div>
+                <div className="d-flex flex-wrap mt-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate.push("/product-management/add-product")
+                    }
+                    className="btn btn-primary mr-2"
+                  >
+                    <i className="fa fa-plus"></i> Add Product
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary mr-2"
+                    onClick={() => {
+                      setuploadProgress(0);
+                      setEnableBulkUpload(!enableBulkUpload);
+                    }}
+                  >
+                    Upload Product with Vendors
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary mr-2"
+                    onClick={() => {
+                      setEnableBulkProdUpload(!enableBulkProdUpload);
+                    }}
+                  >
+                    Upload Only Products
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary mr-2"
+                    onClick={handleExport}
+                  >
+                    Export
+                  </button>
+                </div>
+                {/* </div> */}
                 {/* </div> */}
               </div>
             )}
@@ -732,7 +745,7 @@ const ProductManagement = () => {
                 <div className="col-md-4"></div>
               </div>
             )}
-          </div>
+          </div>          
 
           <div className="card card-body product-table">
             {loading && <FullLoading />}
@@ -937,6 +950,67 @@ const ProductManagement = () => {
             )}
 
           </div>
+
+          {productErrors &&
+            <div className="card card-body product-table">
+              {loading && <FullLoading />}
+              {!loading && (
+                <>
+                  <h4 className="mb-2 text-danger">Product Errors</h4>
+                  <table className="table table-striped table-hover table-responsive mb-3">
+                    <thead>
+                      <tr>
+                        <th scope="col">Row No.</th>
+                        <th scope="col">Product Name</th>
+                        <th scope="col">Vendor Name</th>
+                        <th scope="col">Vendor Email</th>
+                        <th scope="col">Errors</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {
+                        productErrors.map((item) => {
+                          return (
+                            <tr key={`err_item_${item.Row}`}>
+                              <td>{item.Row || "---"}</td>
+                              <td>{item.productName || "---"}</td>
+                              <td>{item.vendorName || "---"}</td>
+                              <td>{item.vendorEmail || "---"}</td>
+                              <td>
+                                {typeof item.errors === 'string' ?
+                                  item.errors
+                                  :
+                                  item.errors.map((err) => {
+                                    return (
+                                      <p className="mb-0">{err}</p>
+                                    )
+                                  })
+                                }
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {Math.ceil(productErrors.length / 10) > 1 && (
+                <ReactPaginate
+                  breakLabel="..."
+                  nextLabel={<i className="fa fa-angle-right"></i>}
+                  onPageChange={handlePageClick}
+                  pageRangeDisplayed={2}
+                  pageCount={Math.ceil(productErrors.length / 10)}
+                  previousLabel={<i className="fa fa-angle-left"></i>}
+                  renderOnZeroPageCount={null}
+                  className="pagination"
+                />
+              )}
+
+            </div>
+          }
+
         </div>
       </section>
       <DisapproveModal
