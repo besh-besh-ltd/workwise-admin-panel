@@ -63,11 +63,11 @@ const VendorCard = ({ data }) => {
                                                     }
                                                 </td>
                                                 <td>
-                                                    {(prodItem?.quotation_details && prodItem?.quotation_details[0]?.finalization)
-                                                        ? prodItem?.quotation_details[0]?.finalization?.vendor_id === data.vendor_id
-                                                            ? <span className="badge badge-success">This vendor is Finalized</span>
-                                                            : <span className="badge badge-info">Other Vendor Finalized.</span>
-                                                        : <span className="badge badge-secondary">Not Finalized</span>
+                                                    {prodItem?.finalization
+                                                        ? prodItem?.finalization?.vendor_id === data.vendor_id
+                                                            ? <span className="badge badge-success p-2">This vendor is Finalized</span>
+                                                            : <span className="badge badge-danger p-2">Other Vendor Finalized.</span>
+                                                        : <span className="badge badge-warning p-2">Not Finalized</span>
                                                     }
                                                 </td>
                                             </tr>
