@@ -75,6 +75,22 @@
     ]
   },
   {
+    "title": "Service Module",
+    "link": "",
+    "class": "",
+    "icon": "",
+    "active": false,
+    "children": [
+      {
+        "title": "RFQ Management",
+        "link": "/service-module/rfq-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      }
+    ]
+  },
+  {
     "title": "CMS",
     "link": "",
     "class": "",

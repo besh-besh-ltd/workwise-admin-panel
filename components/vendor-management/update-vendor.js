@@ -8,7 +8,8 @@ import {
   handleUpdateVendor,
   handleGetStates,
   handleGetCities,
-  handleGetVendorEditDetails
+  handleGetVendorEditDetails,
+  handleUpdateVendorSpoc
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
@@ -24,9 +25,36 @@ const UpdateVendor = () => {
   const [selectedCityOption, setSelectedCityOption] = useState('');
   const [isStateDisabled, setIsStateDisabled] = useState(true);
   const [isCityDisabled, setIsCityDisabled] = useState(true);
+  const [selectedSpocOption, setSelectedSpocOption] = useState({
+    spoc_name: '',
+    spoc_email: '',
+    spoc_mobile: '',
+    spoc_role: '',
+  });
+  const [spocId,setSpocId] = useState(null);
+
+
+  
   const router = useRouter();
   let id = router.query.id;
   
+  const handleSpocSubmit = (object,resetForm) => {
+    console.log(object,id,spocId);
+    handleUpdateVendorSpoc(object,id,spocId)
+    .then((res) => {
+      resetForm();
+      toast(res.message);
+      getVendorDetails(id);
+    })
+    .catch((error) => {
+      console.log("err", error);
+      let txt = "";
+      for (let x in error?.error?.response?.data?.errors) {
+        txt = error?.error?.response?.data?.errors[x];
+      }
+      toast(txt);
+    });
+  }
   const submitHandler = (values, resetForm) => {
     handleUpdateVendor(values, id)
       .then((res) => {
@@ -51,7 +79,7 @@ const UpdateVendor = () => {
       })
       .catch((err) => console.log("err", err));
   }, [])
-  
+
   const handleCountryChange = (event) => {
     setSelectedCountryOption(event.target.value)
     if (event.target.value !== '') {
@@ -84,7 +112,7 @@ const UpdateVendor = () => {
     let id = event.target.value;
     setSelectedCityOption(id)
   };
-    
+
   const initialValues = {
     name: editDetails?.vendorDetails?.name || "",
     email: editDetails?.vendorDetails?.email || "",
@@ -99,10 +127,6 @@ const UpdateVendor = () => {
     about_vendor_company: editDetails?.companyDetails?.profile || "",
     nature_business: editDetails?.companyDetails?.nature_of_business || "",
     estd_year: editDetails?.companyDetails?.established_year || "",
-    sales_spoc_name: editDetails?.companyDetails?.spoc_name || "",
-    sales_spoc_position: editDetails?.companyDetails?.spoc_role || "",
-    sales_spoc_business_email: editDetails?.companyDetails?.spoc_email || "",
-    sales_spoc_mobile: editDetails?.companyDetails?.spoc_mobile || "",
     gstin: editDetails?.companyDetails?.gstin || "",
     import_export_code: editDetails?.companyDetails?.import_export_code || "",
     cin: editDetails?.companyDetails?.cin || "",
@@ -113,23 +137,45 @@ const UpdateVendor = () => {
     ptr_project_start_date: editDetails?.companyDetails?.project_start_date || "",
     ptr_project_end_date: editDetails?.companyDetails?.project_end_date || ""
   };
+
+  // let spocInitialValues = {
+  //   spoc_name: "",
+  //   spoc_position: "",
+  //   spoc_business_email: "",
+  //   spoc_mobile: "",
+  // };
+  // // initial values of first spoc
+  // if (editDetails.spocDetails && editDetails.spocDetails.length > 0) {
+  //   spocInitialValues = {
+  //     spoc_name: editDetails.spocDetails[0]?.name || "",
+  //     spoc_position: editDetails.spocDetails[0]?.role || "",
+  //     spoc_business_email: editDetails.spocDetails[0]?.email || "",
+  //     spoc_mobile: editDetails.spocDetails[0]?.mobile || "",
+  //   };
+  //   console.log(spocInitialValues);
+  // }
+
+  function getVendorDetails(id){
+    handleGetVendorEditDetails(id)
+    .then(res => {
+      console.log("edit details data..", res.data)
+      seteditDetails(res.data)
+      if (editDetails?.vendorDetails?.city) {
+        setIsCityDisabled(false)
+      } else {
+        setIsCityDisabled(true)
+      }
+      setIsStateDisabled(false)
+      setSelectedCountryOption(editDetails?.vendorDetails?.country)
+      setSelectedStateOption(editDetails?.vendorDetails?.state)
+      setSelectedCityOption(editDetails?.vendorDetails?.city)
+    })
+    .catch((err) => console.log("err", err));
+  }
+
   useEffect(() => {
     if (id) {
-      handleGetVendorEditDetails(id)
-        .then(res => {
-          console.log("edit details data..", res.data)
-          seteditDetails(res.data)
-          if(editDetails?.vendorDetails?.city){
-            setIsCityDisabled(false)
-          }else{
-            setIsCityDisabled(true)
-          }
-          setIsStateDisabled(false)
-          setSelectedCountryOption(editDetails?.vendorDetails?.country)
-          setSelectedStateOption(editDetails?.vendorDetails?.state)
-          setSelectedCityOption(editDetails?.vendorDetails?.city)
-        })
-        .catch((err) => console.log("err", err));
+      getVendorDetails(id);
 
       handleGetCities(editDetails?.vendorDetails?.state)
         .then(res => {
@@ -177,9 +223,9 @@ const UpdateVendor = () => {
                     .required("mobile is required"),
                 })}
                 onSubmit={(values, { resetForm }) => {
-                  values.country =  selectedCountryOption || editDetails?.vendorDetails?.country;
+                  values.country = selectedCountryOption || editDetails?.vendorDetails?.country;
                   values.state = selectedStateOption || editDetails?.vendorDetails?.state;
-                  values.city = selectedCityOption || editDetails?.vendorDetails?.city; 
+                  values.city = selectedCityOption || editDetails?.vendorDetails?.city;
                   submitHandler(values, resetForm);
                 }}
               >
@@ -267,7 +313,7 @@ const UpdateVendor = () => {
                               Prefilled Image -&nbsp;{" "}
                             </label>
                             <p htmlFor="year">
-                             <Image
+                              <Image
                                 width={30}
                                 height={30}
                                 src={
@@ -307,7 +353,7 @@ const UpdateVendor = () => {
                               Prefilled Image -&nbsp;{" "}
                             </label>
                             <p htmlFor="year">
-                             <Image
+                              <Image
                                 width={30}
                                 height={30}
                                 src={
@@ -457,67 +503,10 @@ const UpdateVendor = () => {
                             <div className="form-error">{msg}</div>
                           )}
                         />
+                        {/* this is the spoc details column where we have to change */}
+
                       </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">Sales Spoc Name</label>
-                        <Field
-                          type="text"
-                          name="sales_spoc_name"
-                          class="form-control"
-                          placeholder="Sales SPOC Name"
-                        />
-                        <ErrorMessage
-                          name="sales_spoc_name"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">Sales Spoc position</label>
-                        <Field
-                          type="text"
-                          name="sales_spoc_position"
-                          class="form-control"
-                          placeholder="Sales SPOC Position"
-                        />
-                        <ErrorMessage
-                          name="sales_spoc_position"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">Sales Spoc Business Email</label>
-                        <Field
-                          type="email"
-                          name="sales_spoc_business_email"
-                          class="form-control"
-                          placeholder="Sales spoc business email"
-                        />
-                        <ErrorMessage
-                          name="sales_spoc_business_email"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="sales_spoc_mobile">Sales Spoc Mobile</label>
-                        <Field
-                          type="number"
-                          name="sales_spoc_mobile"
-                          class="form-control"
-                          placeholder="Sales spoc mobile"
-                        />
-                        <ErrorMessage
-                          name="sales_spoc_mobile"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
+
                       <div class="col-6">
                         <label htmlFor="gstin">Gstin</label>
                         <Field
@@ -605,13 +594,13 @@ const UpdateVendor = () => {
                             setFieldValue("ptr_track", files);
                           }}
                         />
-                        {editDetails?.files && editDetails?.files.length != 0 
-                          && editDetails?.files.map((data) =>(
+                        {editDetails?.files && editDetails?.files.length != 0
+                          && editDetails?.files.map((data) => (
                             (data.doc_type == 'ptr' && <span><a href={data.file_path} target="_blank">
                               <i class="fa fa-file"></i> {data.file_name}
                             </a></span>)
-                            ))
-                          }
+                          ))
+                        }
                       </div>
                       <div class="col-6">
                         <label htmlFor="total_employes">Ptr Project Name</label>
@@ -684,14 +673,14 @@ const UpdateVendor = () => {
                             setFieldValue("certifications", files);
                           }}
                         />
-                        {editDetails?.files && editDetails?.files.length != 0 
-                          && editDetails?.files.map((data) =>(
+                        {editDetails?.files && editDetails?.files.length != 0
+                          && editDetails?.files.map((data) => (
                             (data.doc_type == 'crt' && <span><a href={data.file_path} target="_blank">
                               <i class="fa fa-file"></i> {data.file_name}
                             </a></span>)
-                            ))
-                          } 
-                        </div>
+                          ))
+                        }
+                      </div>
                       <div class="col-6">
                         <label htmlFor="brochure">Brochure</label>
                         <Field
@@ -704,13 +693,13 @@ const UpdateVendor = () => {
                             setFieldValue("brochure", files);
                           }}
                         />
-                        {editDetails?.files && editDetails?.files.length != 0 
-                          && editDetails?.files.map((data) =>(
+                        {editDetails?.files && editDetails?.files.length != 0
+                          && editDetails?.files.map((data) => (
                             (data.doc_type == 'brochure' && <span><a href={data.file_path} target="_blank">
                               <i class="fa fa-file"></i> {data.file_name}
                             </a></span>)
-                            ))
-                          } 
+                          ))
+                        }
                       </div>
                     </div>}
                     <div className="d-flex justify-content-end">
@@ -718,6 +707,135 @@ const UpdateVendor = () => {
                         Save
                       </button>
                     </div>
+                  </Form>
+                )}
+              </Formik>
+            </div>
+          </div>
+
+          {/* adding div for spoc details */}
+          <div class="card col-12">
+            <div class="card-body mt-3">
+              <Formik
+                initialValues={{
+                  spoc_name: selectedSpocOption.spoc_name || '',
+                  spoc_email: selectedSpocOption.spoc_email || '',
+                  spoc_role: selectedSpocOption.spoc_role || '',
+                  spoc_mobile: selectedSpocOption.spoc_mobile || ''
+                }}
+                enableReinitialize={true} // This allows the form to update if selectedSpocOption changes
+                onSubmit={(values, { resetForm }) => {
+                  handleSpocSubmit(values,resetForm); // Call your custom submission logic
+                  // setSubmitting(false); // Stop submission after it's handled
+
+                }}
+              >
+                {({ values, handleChange, handleSubmit }) => (
+                  <Form onSubmit={handleSubmit}>
+                    {(editDetails.spocDetails && editDetails.spocDetails?.length > 0) ? (
+                      <div className="row form-common-row mb-4">
+                        <div className="form-group">
+                          <label htmlFor="select-input" className="form-label">
+                            Select Spoc
+                          </label>
+                          <select
+                            id="select-input"
+                            className="form-control"
+                            value={selectedSpocOption.name}
+                            onChange={(e) => {
+                              const selectedOption = JSON.parse(e.target.value);
+                              setSelectedSpocOption({
+                                spoc_name:selectedOption.name,
+                                spoc_email:selectedOption.email,
+                                spoc_mobile:selectedOption.mobile,
+                                spoc_role:selectedOption.role,
+                              }); // Set selected SPOC when chosen
+                              setSpocId(selectedOption.id);
+
+                            }}
+                          >
+                            <option value="">Select an option</option>
+                            {editDetails.spocDetails.length > 0
+                              ? editDetails.spocDetails.map((option) => (
+                                <option key={option.id} value={JSON.stringify(option)}>
+                                  {`${option.name}, ${option.role}`}
+                                </option>
+                              ))
+                              : "No Spoc Found"}
+                          </select>
+                        </div>
+
+                        <div className="col-6">
+                          <label htmlFor="spoc-name">Name</label>
+                          <Field
+                            type="text"
+                            name="spoc_name"
+                            className="form-control"
+                            placeholder="Name"
+                            value={values.spoc_name}
+                            onChange={handleChange}
+                          />
+                          <ErrorMessage
+                            name="name"
+                            render={(msg) => <div className="form-error">{msg}</div>}
+                          />
+                        </div>
+
+                        <div className="col-6">
+                          <label htmlFor="spoc-email">Email</label>
+                          <Field
+                            type="text"
+                            name="spoc_email"
+                            className="form-control"
+                            placeholder="Email"
+                            value={values.spoc_email}
+                            onChange={handleChange}
+                          />
+                          <ErrorMessage
+                            name="email"
+                            render={(msg) => <div className="form-error">{msg}</div>}
+                          />
+                        </div>
+
+                        <div className="col-6">
+                          <label htmlFor="spoc-role">Role</label>
+                          <Field
+                            type="text"
+                            name="spoc_role"
+                            className="form-control"
+                            placeholder="Role"
+                            value={values.spoc_role}
+                            onChange={handleChange}
+                          />
+                          <ErrorMessage
+                            name="role"
+                            render={(msg) => <div className="form-error">{msg}</div>}
+                          />
+                        </div>
+
+                        <div className="col-6">
+                          <label htmlFor="spoc-mobile">Mobile</label>
+                          <Field
+                            type="number"
+                            name="spoc_mobile"
+                            className="form-control"
+                            placeholder="Mobile"
+                            value={values.spoc_mobile}
+                            onChange={handleChange}
+                          />
+                          <ErrorMessage
+                            name="mobile"
+                            render={(msg) => <div className="form-error">{msg}</div>}
+                          />
+                        </div>
+
+                        <div className="d-flex justify-content-end">
+                          <button type="submit" className="btn btn-secondary">
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : "No Spoc Found"}
                   </Form>
                 )}
               </Formik>
