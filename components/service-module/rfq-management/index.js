@@ -92,7 +92,7 @@ const RFQManagement = () => {
                                     name="rfq_status"
                                     options={[
                                         {label: "Open", value: '1'},
-                                        {label: "Closed", value: '0'}
+                                        {label: "Closed", value: '2'}
                                     ]}
                                     placeholder="Select RFQ Status"
                                     styles={customSelectStyles}
