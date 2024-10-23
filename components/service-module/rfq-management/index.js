@@ -87,6 +87,7 @@ const RFQManagement = () => {
                     <div className="card card-body">
                         <div className="row">
                             <div className="col-sm-3">
+                                <label htmlFor="rfq_status">RFQ Status</label>
                                 <Select
                                     id="rfq_status"
                                     name="rfq_status"
@@ -94,13 +95,14 @@ const RFQManagement = () => {
                                         {label: "Open", value: '1'},
                                         {label: "Closed", value: '2'}
                                     ]}
-                                    placeholder="Select RFQ Status"
+                                    placeholder="Select"
                                     styles={customSelectStyles}
                                     isClearable={true}
                                     onChange={handleFilterChange}
                                 />
                             </div>
                             <div className="col-sm-3">
+                                <label htmlFor="admin_service_status">Admin Service Status</label>
                                 <Select
                                     id="admin_service_status"
                                     name="admin_service_status"
@@ -109,7 +111,7 @@ const RFQManagement = () => {
                                         {label: "Working", value: 'Working'},
                                         {label: "Complete", value: 'Complete'}
                                     ]}
-                                    placeholder="Select Admin Status"
+                                    placeholder="Select"
                                     styles={customSelectStyles}
                                     isClearable={true}
                                     onChange={handleFilterChange}
@@ -117,6 +119,7 @@ const RFQManagement = () => {
                             </div>
                             <div className="col-sm-3"></div>
                             <div className="col-sm-3">
+                                <label htmlFor="sort">Sort Order</label>
                                 <Select
                                     id="sort"
                                     name="sort"
@@ -173,9 +176,10 @@ const RFQManagement = () => {
                                                         {rfqItem.admin_service?.status ?
                                                             rfqItem.admin_service?.status == "Working" ?
                                                                 <span className="badge badge-info">Working</span>
-                                                                : <span className="badge badge-success">Complete</span>
+                                                                : rfqItem.admin_service?.status == "Complete" ?
+                                                                    <span className="badge badge-success">Complete</span>
+                                                                    :<span className="badge badge-warning">Pending</span>
                                                             : <span className="badge badge-warning">Pending</span>
-
                                                         }
                                                     </td>
                                                     <td>
