@@ -152,6 +152,7 @@ const RFQManagement = () => {
                                         <th scope="col">RFQ Status</th>
                                         <th scope="col">RFQ Type</th>
                                         <th scope="col">Reverse Auction</th>
+                                        <th scope="col">Total Products</th>
                                         <th scope="col">Quotes Recieved</th>
                                         <th scope="col">Total Vendors</th>
                                         <th scope="col">Admin Status</th>
@@ -170,6 +171,7 @@ const RFQManagement = () => {
                                                     <td>{rfqItem.rfq_status == 1 ? "Open" : "Closed"}</td>
                                                     <td>{rfqItem.rfq_type ? textCapitalize(rfqItem.rfq_type) : "---"}</td>
                                                     <td>{rfqItem.reverse_auction == 1 ? "Enabled" : "Disabled"}</td>
+                                                    <td>{rfqItem.total_products}</td>
                                                     <td>{rfqItem.stats?.quotes_received}</td>
                                                     <td>{rfqItem.stats?.total_vendors}</td>
                                                     <td>
