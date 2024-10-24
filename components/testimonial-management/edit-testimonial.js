@@ -42,11 +42,11 @@ const EditTestimonial = () => {
     payload.append(`description`, values.description);
     payload.append(`status`, values.status);
     payload.append(`url`, values.url);
-    if (selectedFiles?.length > 0) {
-      payload.append(`image`, selectedFiles[0]);
-    } else {
-      payload.append(`image`, "");
-    }
+    // if (selectedFiles?.length > 0) {
+    //   payload.append(`image`, selectedFiles[0]);
+    // } else {
+    //   payload.append(`image`, "");
+    // }
     if (selectedFilesCreated?.length > 0) {
       payload.append(`created_image`, selectedFilesCreated[0]);
     } else {
@@ -208,7 +208,7 @@ const EditTestimonial = () => {
                             </div>
                           </div>
 
-                          <div className="col-md-12">
+                          {/* <div className="col-md-12">
                             <div className="row">
                               <UploadFiles
                                 accept=".png, .jpg, .jpeg, .gif"
@@ -237,7 +237,7 @@ const EditTestimonial = () => {
                                   />
                                 </div>
                               )}
-                          </div>
+                          </div> */}
                           <div className="col-md-12">
                             <div className="row">
                               <UploadFiles

@@ -111,6 +111,7 @@ const TestimonialManagement = () => {
                     <table className="table table-striped table-hover mb-3">
                         <thead>
                             <tr>
+                                <th scope="col">View</th>
                                 <th scope="col">Title</th>
                                 {/* <th scope="col">Image</th> */}
                                 <th scope="col">Description</th>
@@ -124,6 +125,7 @@ const TestimonialManagement = () => {
                                 testimonialList && testimonialList?.map((item) => {
                                     return (
                                         <tr key={item.id}>
+                                            <td>{(item?.page_id == 1) ? "Home Page":"Vendor Page"}</td>
                                             <td>{item?.title}</td>
                                             {/* <td>
                                                 <img
