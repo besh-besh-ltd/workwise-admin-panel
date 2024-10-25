@@ -146,8 +146,10 @@ const RFQDetails = () => {
                                             <strong>Admin Status : </strong>
                                             {rfqDetails.admin_service_details ?
                                                 rfqDetails.admin_service_details[0]?.status == "Working" ?
-                                                    <span className="badge badge-info">Working</span>
-                                                    : <span className="badge badge-success">Complete</span>
+                                                    <span className="badge badge-info">Working</span> :
+                                                    rfqDetails.admin_service_details[0]?.status == "Complete" ?
+                                                     <span className="badge badge-success">Complete</span>
+                                                    : <span className="badge badge-warning">Pending</span>
                                                 : <span className="badge badge-warning">Pending</span>
                                             }
                                         </div>

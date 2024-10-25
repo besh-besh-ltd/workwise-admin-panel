@@ -19,6 +19,7 @@ const AddTestimonial = () => {
     created_name: "",
     description: "",
     status: "",
+    pageId: "",
     url: "",
   };
 
@@ -27,18 +28,31 @@ const AddTestimonial = () => {
     created_name: yup.string().required("Created Name is required"),
     description: yup.string().required("Description is required"),
     status: yup.string().required("Status is required"),
-    url: yup.string().url("Invalid URL").required("URL is required"),
-  });
-
+    pageId: yup.string().required("Page is required"),
+    url: yup.string().url("Invalid URL").required("URL is required")
+});
+  
   const submitHandler = (values, resetForm) => {
-    const payload = new FormData();
-    payload.append(`title`, values.title);
-    payload.append(`created_name`, values.created_name);
-    payload.append(`description`, values.description);
-    payload.append(`status`, values.status);
-    payload.append(`image`, selectedFiles[0]);
-    payload.append(`created_image`, selectedFilesCreated[0]);
-    payload.append(`url`, values.url);
+
+    // TESTOMINAL IMAGE IS REQUIRED
+    if(!selectedFilesCreated[0]){
+      toast.error("Testemonial Image is required");
+      return 0;
+    }
+
+    let payload = {
+      ...values,
+      // image: selectedFiles[0],
+      created_image: selectedFilesCreated[0],
+    }
+    // const payload = new FormData();
+    // payload.append(`title`, values.title);
+    // payload.append(`created_name`, values.created_name);
+    // payload.append(`description`, values.description);
+    // payload.append(`status`, values.status);
+    // payload.append(`image`, selectedFiles[0]);
+    // payload.append(`created_image`, selectedFilesCreated[0]);
+    // payload.append(`url`, values.url);
     /*  selectedFiles.forEach((file, i) => {
       payload.append(`image`, file, file.name);
     }); */
@@ -159,6 +173,28 @@ const AddTestimonial = () => {
                                 />
                               </div>
                             </div>
+
+                            <div className="col-sm-4">
+                              <div className="form-group">
+                                <FormikField
+                                  label="View On"
+                                  type="select"
+                                  isRequired={true}
+                                  selectOptions={[
+                                    {
+                                      label: "Select Page",
+                                      value: "",
+                                      disabled: true,
+                                    },
+                                    { label: "Home Page", value: "1" },
+                                    { label: "Vendor Page", value: "6" },
+                                  ]}
+                                  name="pageId"
+                                  touched={touched}
+                                  errors={errors}
+                                />
+                              </div>
+                            </div>
                             <div className="col-sm-4">
                               <div className="form-group">
                                 <FormikField
@@ -172,7 +208,7 @@ const AddTestimonial = () => {
                             </div>
                           </div>
 
-                          <div className="col-md-12">
+                          {/* <div className="col-md-12">
                             <div className="row">
                               <UploadFiles
                                 accept=".png, .jpg, .jpeg, .gif"
@@ -182,17 +218,16 @@ const AddTestimonial = () => {
                                 isMultiple={false}
                                 touched={touched}
                                 errors={errors}
-                              />
-                              {/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
+                              />                             
                             </div>
-                          </div>
+                          </div> */}
                           <div className="col-md-12">
                             <div className="row">
                               <UploadFiles
                                 accept=".png, .jpg, .jpeg, .gif"
                                 upload={setSelectedFilesCreated}
                                 reset={selectedFilesReset}
-                                label="Testimony Image"
+                                label="Testimony Image *"
                                 isMultiple={false}
                                 touched={touched}
                                 errors={errors}
