@@ -17,16 +17,7 @@ function handleGetPrivateVendorList() {
 }
 
 
-function handleApprovePrivateVendor(vendorObj, status, reason) {
-    const payload = {
-        buyerName: vendorObj.buyer_name,
-        vendorTempId: vendorObj.id,
-        status: status,
-        reject_reason: reason
-    };
-
-    console.log(payload)
-
+function handleApprovePrivateVendor(payload) {
     return new Promise(async (resolve, reject) => {
         try {
             let response = await axiosxdata.put(

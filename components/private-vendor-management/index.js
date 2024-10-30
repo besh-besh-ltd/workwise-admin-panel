@@ -1,47 +1,55 @@
 import { handleApprovePrivateVendor, handleGetPrivateVendorList } from '@/utils/services/private-vendor-management';
 import React, { useEffect, useState } from 'react'
-import { toast, ToastContainer } from 'react-toastify';
-import RejectModal from '../modal/reject-modal';
+import { toast } from 'react-toastify';
+import VendorApprovalModal from '../modal/vendor-approval-modal';
+import Loader from '../shared/Loader';
+
 
 const PrivateVendorManagement = () => {
     const [vendorReviewList, setVendorReviewList] = useState([]);
-    const [selectedVendors, setSelectedVendors] = useState([]);
-    const [individualVendor, setIndividualVendor] = useState({});
+    const [bulkVendors, setBulkVendors] = useState([]);
+    const [selectedVendor, setSelectedVendor] = useState({});
     const [limit, setlimit] = useState(10);
     const [page, setPage] = useState(1);
     const [totalPages, settotalPages] = useState(1);
-    const [openRejectModal, setOpenRejectModal] = useState(false);
+    const [modalState, setModalState] = useState({
+        title: "",
+        prod_string: "",
+        type: "approve",
+        is_open: false
+    });
+    const [loading, setLoading] = useState(false);
+
 
     // Function to handle select/diselect all vendors
-    const toggleSelectedVendors = (e) => {
+    const togglebulkVendors = (e) => {
         const isChecked = e.target.checked;
-        const updatedSelectedVendors = isChecked
+        const updatedbulkVendors = isChecked
             ? vendorReviewList.map((item) => item.id)
             : [];
-        setSelectedVendors(updatedSelectedVendors);
+        setBulkVendors(updatedbulkVendors);
     }
 
     // Function to handle select/diselect individual vendors
     const selectVendor = (e, item) => {
         const vendorId = item.id;
         const isChecked = e.target.checked;
-        let updatedSelectedVendors = [...selectedVendors];
+        let updatedbulkVendors = [...bulkVendors];
 
         if (isChecked) {
-            updatedSelectedVendors.push(vendorId);
+            updatedbulkVendors.push(vendorId);
         } else {
-            updatedSelectedVendors = updatedSelectedVendors.filter(
+            updatedbulkVendors = updatedbulkVendors.filter(
                 (id) => id !== vendorId
             );
         }
-        setSelectedVendors(updatedSelectedVendors);
+        setBulkVendors(updatedbulkVendors);
     }
 
     // Function to fetch all vendors
     const getVendorReviewList = () => {
         handleGetPrivateVendorList()
             .then((res) => {
-                // settotalPages(res.total_count);
                 setVendorReviewList(res.data);
             })
             .catch((error) => {
@@ -54,10 +62,29 @@ const PrivateVendorManagement = () => {
             });
     };
 
-    const approveVendor = (vendorObj, status, reason = '') => {
-        handleApprovePrivateVendor(vendorObj, status, reason)
+    const handleVendorStatusChange = (vendorObj, status, dynamicParam) => {
+        let payload = {
+            buyerName: vendorObj.buyer_name,
+            vendorTempId: vendorObj.id,
+            status: status,
+        };
+
+        if (modalState.type === "approve") {
+            payload = {
+                ...payload,
+                productdetails: dynamicParam
+            }
+        } else {
+            payload = {
+                ...payload,
+                reject_reason: dynamicParam
+            }
+        }
+
+        setLoading(true);
+        handleCloseModal();
+        handleApprovePrivateVendor(payload)
             .then((res) => {
-                console.log(res)
                 toast.success(res.message)
                 getVendorReviewList();
             })
@@ -65,7 +92,32 @@ const PrivateVendorManagement = () => {
                 console.log(error)
                 toast.error(error.response?.data?.error)
             })
-            .finally(() => setOpenRejectModal(close));
+            .finally(() => {
+                setModalState({
+                    title: "",
+                    prod_string: "",
+                    type: "approve",
+                    is_open: false
+                })
+                setLoading(false);
+            });
+    }
+
+    const handleOpenModal = (title, type, vendorItem) => {
+        setSelectedVendor(vendorItem);
+        setModalState({
+            title,
+            type,
+            prod_string: vendorItem?.product_list || "",
+            is_open: true
+        });
+    }
+
+    const handleCloseModal = () => {
+        setModalState((prevState) => ({
+            ...prevState,
+            is_open: false
+        }));
     }
 
     useEffect(() => {
@@ -74,8 +126,8 @@ const PrivateVendorManagement = () => {
 
     return (
         <>
-            <ToastContainer />
-
+            {loading && <Loader />}
+            {/* Page Name Section */}
             <section className="content-header">
                 <div className="container-fluid">
                     <div className="row">
@@ -84,6 +136,7 @@ const PrivateVendorManagement = () => {
                 </div>
             </section>
 
+            {/* Vendor List Section */}
             <section className="content">
                 <div className="card card-body product-table mt-3">
                     <table className="table table-striped table-hover mb-3">
@@ -93,9 +146,9 @@ const PrivateVendorManagement = () => {
                                     <input
                                         type="checkbox"
                                         name="select_all_products"
-                                        checked={selectedVendors.length > 0 && selectedVendors.length === vendorReviewList.length}
+                                        checked={bulkVendors.length > 0 && bulkVendors.length === vendorReviewList.length}
                                         value=""
-                                        onChange={toggleSelectedVendors}
+                                        onChange={togglebulkVendors}
                                     />
                                 </th>
                                 <th>Buyer Name</th>
@@ -117,7 +170,7 @@ const PrivateVendorManagement = () => {
                                                 <input
                                                     type="checkbox"
                                                     name="select_product"
-                                                    checked={selectedVendors.includes(item.id)}
+                                                    checked={bulkVendors.includes(item.id)}
                                                     value=""
                                                     onClick={(e) => selectVendor(e, item)}
                                                 />
@@ -144,21 +197,18 @@ const PrivateVendorManagement = () => {
                                                     <button
                                                         type="button"
                                                         className="btn btn-success"
-                                                        onClick={() => approveVendor(item, 1)}
+                                                        onClick={() => handleOpenModal("Approve Vendor", "approve", item)}
                                                     >
                                                         Approve
                                                     </button>
                                                     {item.status !== 2 &&
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-danger"
-                                                        onClick={() => {
-                                                            setIndividualVendor(item)
-                                                            setOpenRejectModal(true)
-                                                        }}
-                                                    >
-                                                        Reject
-                                                    </button>}
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-danger"
+                                                            onClick={() => handleOpenModal("Reject Vendor", "reject", item)}
+                                                        >
+                                                            Reject
+                                                        </button>}
                                                 </div>
                                             </td>
                                         </tr>
@@ -166,27 +216,17 @@ const PrivateVendorManagement = () => {
                                 })}
                         </tbody>
                     </table>
-                    {/* {Math.ceil(totalPages / 10) > 1 && (
-                        <ReactPaginate
-                            breakLabel="..."
-                            nextLabel={<i className="fa fa-angle-right"></i>}
-                            onPageChange={handlePageClick}
-                            pageRangeDisplayed={2}
-                            pageCount={Math.ceil(totalPages / 10)}
-                            previousLabel={<i className="fa fa-angle-left"></i>}
-                            renderOnZeroPageCount={null}
-                            className="pagination"
-                        />
-                    )} */}
 
                 </div>
             </section>
-            {openRejectModal &&
-                <RejectModal
-                    openRejectModal={openRejectModal}
-                    closeModal={() => setOpenRejectModal(false)}
-                    approveVendor={approveVendor}
-                    data={individualVendor}
+
+            {/* Approve-Reject Modal Area  */}
+            {modalState.is_open &&
+                <VendorApprovalModal
+                    modalState={modalState}
+                    closeModal={handleCloseModal}
+                    handleVendorStatusChange={handleVendorStatusChange}
+                    data={selectedVendor}
                 />
             }
 
