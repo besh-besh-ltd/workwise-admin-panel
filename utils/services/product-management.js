@@ -117,6 +117,28 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
   });
 }
 
+export const approvedProductList = () => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.get(`products/approved-product-list`);
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
+
+export const getProductDetailsById = (id) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.get(`products/vendor-product-details/${id}`);
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
+
 export const deleteProduct = (id) => {
   return new Promise(async (resolve, reject) => {
     try {

@@ -39,9 +39,10 @@ const ProductManagement = () => {
   const [selectedFeatured, setSelectedFeatured] = useState("");
   const router = useRouter();
 
-  const [inputValue, setInputValue] = useState("")
-  const [selectVal, setSelectValue] = useState("")
-  const [productErrors, setProductErrors] = useState(null)
+  const [inputValue, setInputValue] = useState("");
+  const [selectVal, setSelectValue] = useState("");
+  const [productWithVendorErrors, setProductWithVendorErrors] = useState(null);
+  const [productErrors, setProductErrors] = useState(null);
 
   const customSelectStyles = {
     control: (base) => ({
@@ -195,7 +196,7 @@ const ProductManagement = () => {
       .then((response) => {
         setloading(false);
         if (response.errorsObj) {
-          setProductErrors(response.errorsObj)
+          setProductWithVendorErrors(response.errorsObj)
           toast.warning("Partially added products.")
         }
         else
@@ -203,12 +204,12 @@ const ProductManagement = () => {
         getProducts();
       })
       .catch((error) => {
-        if(error.response?.data?.errorsObj) {
-          setProductErrors(error.response?.data?.errorsObj)
+        if (error.response?.data?.errorsObj) {
+          setProductWithVendorErrors(error.response?.data?.errorsObj)
         }
         toast.error(error.response?.data?.message)
       })
-      .finally(()=> {
+      .finally(() => {
         setloading(false);
         setuploadProgress(0);
         setFile(null);
@@ -238,9 +239,12 @@ const ProductManagement = () => {
           },
         }
       )
-      .then((response) => {
+      .then((res) => {
         setloading(false);
-        toast.success(response.message);
+        toast.success(res.message);
+        if (res.errors && res.errors.length > 0) {
+          setProductErrors(res.errors)
+        }
         setProdFile(null);
         setEnableBulkProdUpload(false);
         getProducts();
@@ -745,7 +749,150 @@ const ProductManagement = () => {
                 <div className="col-md-4"></div>
               </div>
             )}
-          </div>          
+          </div>
+
+          {productWithVendorErrors &&
+            <div className="card card-body product-table">
+              {loading && <FullLoading />}
+              {!loading && (
+                <>
+                  <div className="d-flex justify-content-between">
+                    <h4 className="mb-2 text-danger">Product Errors</h4>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={() => setProductWithVendorErrors(null)}
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="table-responsive mb-3">
+                    <table className="table table-striped table-hover">
+                      <thead>
+                        <tr>
+                          <th scope="col">Row No.</th>
+                          <th scope="col">Product Name</th>
+                          <th scope="col">Vendor Name</th>
+                          <th scope="col">Vendor Email</th>
+                          <th scope="col">Errors</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {
+                          productWithVendorErrors.map((item) => {
+                            return (
+                              <tr key={`err_item_${item.Row}`}>
+                                <td>{item.Row || "---"}</td>
+                                <td>{item.productName || "---"}</td>
+                                <td>{item.vendorName || "---"}</td>
+                                <td>{item.vendorEmail || "---"}</td>
+                                <td>
+                                  {typeof item.errors === 'string' ?
+                                    item.errors
+                                    :
+                                    item.errors.map((err) => {
+                                      return (
+                                        <p className="mb-0">{err}</p>
+                                      )
+                                    })
+                                  }
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {Math.ceil(productWithVendorErrors.length / 10) > 1 && (
+                <ReactPaginate
+                  breakLabel="..."
+                  nextLabel={<i className="fa fa-angle-right"></i>}
+                  onPageChange={handlePageClick}
+                  pageRangeDisplayed={2}
+                  pageCount={Math.ceil(productWithVendorErrors.length / 10)}
+                  previousLabel={<i className="fa fa-angle-left"></i>}
+                  renderOnZeroPageCount={null}
+                  className="pagination"
+                />
+              )}
+
+            </div>
+          }
+
+          {productErrors &&
+            <div className="card card-body product-table">
+              {loading && <FullLoading />}
+              {!loading && (
+                <>
+                  <div className="d-flex justify-content-between mb-2">
+                    <h4 className="mb-2 text-danger">Product Errors</h4>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={() => setProductErrors(null)}
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="table-responsive mb-3">
+                  <table className="table table-striped table-hover">
+                    <thead>
+                      <tr>
+                        <th scope="col">Row No.</th>
+                        {/* <th scope="col">Product Name</th>
+                        <th scope="col">Vendor Name</th>
+                        <th scope="col">Vendor Email</th> */}
+                        <th scope="col">Errors</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {
+                        productErrors.map((item) => {
+                          return (
+                            <tr key={`err_item_${item.Row}`}>
+                              <td>{item.Row || "---"}</td>
+                              {/* <td>{item.productName || "---"}</td>
+                              <td>{item.vendorName || "---"}</td>
+                              <td>{item.vendorEmail || "---"}</td> */}
+                              <td>
+                                {typeof item.error === 'string' ?
+                                  item.error
+                                  :
+                                  item.error.map((err) => {
+                                    return (
+                                      <p className="mb-0">{err}</p>
+                                    )
+                                  })
+                                }
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                  </div>
+                </>
+              )}
+
+              {Math.ceil(productErrors.length / 10) > 1 && (
+                <ReactPaginate
+                  breakLabel="..."
+                  nextLabel={<i className="fa fa-angle-right"></i>}
+                  onPageChange={handlePageClick}
+                  pageRangeDisplayed={2}
+                  pageCount={Math.ceil(productErrors.length / 10)}
+                  previousLabel={<i className="fa fa-angle-left"></i>}
+                  renderOnZeroPageCount={null}
+                  className="pagination"
+                />
+              )}
+            </div>
+          }
 
           <div className="card card-body product-table">
             {loading && <FullLoading />}
@@ -897,45 +1044,7 @@ const ProductManagement = () => {
                 </tbody>
               </table>
             )}
-
-            {/* <nav aria-label="Page navigation example">
-              <ul className="pagination">
-                {Array.from(Array(totalPages), (e, i) => {
-                  if (i + 1 === page) {
-                    return (
-                      <li className="active page-item" key={i + 1}>
-                        <a
-                          className="page-link"
-                          href=""
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setpage(i + 1);
-                          }}
-                        >
-                          {i + 1}
-                        </a>
-                      </li>
-                    );
-                  } else {
-                    return (
-                      <li className="page-item" key={i + 1}>
-                        <a
-                          className="page-link"
-                          href=""
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setpage(i + 1);
-                          }}
-                        >
-                          {i + 1}
-                        </a>
-                      </li>
-                    );
-                  }
-                })}
-              </ul>
-            </nav> */}
-
+            
             {Math.ceil(totalPages / 10) > 1 && (
               <ReactPaginate
                 breakLabel="..."
@@ -951,68 +1060,9 @@ const ProductManagement = () => {
 
           </div>
 
-          {productErrors &&
-            <div className="card card-body product-table">
-              {loading && <FullLoading />}
-              {!loading && (
-                <>
-                  <h4 className="mb-2 text-danger">Product Errors</h4>
-                  <table className="table table-striped table-hover table-responsive mb-3">
-                    <thead>
-                      <tr>
-                        <th scope="col">Row No.</th>
-                        <th scope="col">Product Name</th>
-                        <th scope="col">Vendor Name</th>
-                        <th scope="col">Vendor Email</th>
-                        <th scope="col">Errors</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {
-                        productErrors.map((item) => {
-                          return (
-                            <tr key={`err_item_${item.Row}`}>
-                              <td>{item.Row || "---"}</td>
-                              <td>{item.productName || "---"}</td>
-                              <td>{item.vendorName || "---"}</td>
-                              <td>{item.vendorEmail || "---"}</td>
-                              <td>
-                                {typeof item.errors === 'string' ?
-                                  item.errors
-                                  :
-                                  item.errors.map((err) => {
-                                    return (
-                                      <p className="mb-0">{err}</p>
-                                    )
-                                  })
-                                }
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </>
-              )}
-
-              {Math.ceil(productErrors.length / 10) > 1 && (
-                <ReactPaginate
-                  breakLabel="..."
-                  nextLabel={<i className="fa fa-angle-right"></i>}
-                  onPageChange={handlePageClick}
-                  pageRangeDisplayed={2}
-                  pageCount={Math.ceil(productErrors.length / 10)}
-                  previousLabel={<i className="fa fa-angle-left"></i>}
-                  renderOnZeroPageCount={null}
-                  className="pagination"
-                />
-              )}
-
-            </div>
-          }
-
         </div>
       </section>
+
       <DisapproveModal
         show={showRejectModal}
         onHide={handleCloseRejectModal}
