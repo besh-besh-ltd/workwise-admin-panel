@@ -4,47 +4,23 @@ import { toast } from 'react-toastify';
 import VendorApprovalModal from '../modal/vendor-approval-modal';
 import Loader from '../shared/Loader';
 
+const initialState = {
+    title: "",
+    prod_string: "",
+    type: "approve",
+    is_open: false
+};
+
 
 const PrivateVendorManagement = () => {
     const [vendorReviewList, setVendorReviewList] = useState([]);
-    const [bulkVendors, setBulkVendors] = useState([]);
     const [selectedVendor, setSelectedVendor] = useState({});
     const [limit, setlimit] = useState(10);
     const [page, setPage] = useState(1);
     const [totalPages, settotalPages] = useState(1);
-    const [modalState, setModalState] = useState({
-        title: "",
-        prod_string: "",
-        type: "approve",
-        is_open: false
-    });
+    const [modalState, setModalState] = useState(initialState);
     const [loading, setLoading] = useState(false);
 
-
-    // Function to handle select/diselect all vendors
-    const togglebulkVendors = (e) => {
-        const isChecked = e.target.checked;
-        const updatedbulkVendors = isChecked
-            ? vendorReviewList.map((item) => item.id)
-            : [];
-        setBulkVendors(updatedbulkVendors);
-    }
-
-    // Function to handle select/diselect individual vendors
-    const selectVendor = (e, item) => {
-        const vendorId = item.id;
-        const isChecked = e.target.checked;
-        let updatedbulkVendors = [...bulkVendors];
-
-        if (isChecked) {
-            updatedbulkVendors.push(vendorId);
-        } else {
-            updatedbulkVendors = updatedbulkVendors.filter(
-                (id) => id !== vendorId
-            );
-        }
-        setBulkVendors(updatedbulkVendors);
-    }
 
     // Function to fetch all vendors
     const getVendorReviewList = () => {
@@ -62,6 +38,7 @@ const PrivateVendorManagement = () => {
             });
     };
 
+    // Function to approve/disapprove vendor
     const handleVendorStatusChange = (vendorObj, status, dynamicParam) => {
         let payload = {
             buyerName: vendorObj.buyer_name,
@@ -93,12 +70,7 @@ const PrivateVendorManagement = () => {
                 toast.error(error.response?.data?.error)
             })
             .finally(() => {
-                setModalState({
-                    title: "",
-                    prod_string: "",
-                    type: "approve",
-                    is_open: false
-                })
+                setModalState(initialState)
                 setLoading(false);
             });
     }
@@ -142,15 +114,6 @@ const PrivateVendorManagement = () => {
                     <table className="table table-striped table-hover mb-3">
                         <thead>
                             <tr>
-                                <th scope="col">
-                                    <input
-                                        type="checkbox"
-                                        name="select_all_products"
-                                        checked={bulkVendors.length > 0 && bulkVendors.length === vendorReviewList.length}
-                                        value=""
-                                        onChange={togglebulkVendors}
-                                    />
-                                </th>
                                 <th>Buyer Name</th>
                                 <th>Vendor Name</th>
                                 <th>Email</th>
@@ -166,15 +129,6 @@ const PrivateVendorManagement = () => {
                                 vendorReviewList?.map((item) => {
                                     return (
                                         <tr key={item.id}>
-                                            <td>
-                                                <input
-                                                    type="checkbox"
-                                                    name="select_product"
-                                                    checked={bulkVendors.includes(item.id)}
-                                                    value=""
-                                                    onClick={(e) => selectVendor(e, item)}
-                                                />
-                                            </td>
                                             <td>{item?.buyer_name}</td>
                                             <td>{item?.vendor_name}</td>
                                             <td>{item?.email}</td>
