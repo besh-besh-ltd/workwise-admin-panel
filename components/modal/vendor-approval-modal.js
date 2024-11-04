@@ -29,7 +29,6 @@ const CustomSelectOption = (props) => (
 );
 
 
-
 // Modal Component Starts Here
 const VendorApprovalModal = ({
     modalState,
@@ -52,6 +51,7 @@ const VendorApprovalModal = ({
         setRejectreason(e.target.value);
     }
 
+    // Function to fetch vendor approved-by list
     const getVendorApproveList = () => {
         vendorApproveList()
             .then((res) => {
@@ -66,6 +66,7 @@ const VendorApprovalModal = ({
             });
     };
 
+    // Function to format product data along with it's categories 
     const formatGroupedData = (groupedData) => {
         return Object.values(groupedData).flatMap(items =>
             items.map(item => ({
@@ -76,6 +77,7 @@ const VendorApprovalModal = ({
         );
     }
 
+    // Function to filter out unique products with categories
     const groupBySlug = (data) => {
         const groupedData = data.reduce((acc, item) => {
             const slug = item.slug;
@@ -90,6 +92,7 @@ const VendorApprovalModal = ({
         return formatGroupedData(groupedData);
     }
 
+    // Search Product Function
     const getVendorProductList = useCallback((search_key) => {
         setProductLoading(true);
         getAllProducts(20, 1, search_key)
@@ -103,6 +106,7 @@ const VendorApprovalModal = ({
             .finally(() => setProductLoading(false));
     }, []);
 
+    // Debouncing the search product API call for 300ms
     const debounceGetVendorProductList = useCallback(
         (inputValue) => {
             const debounceTimeout = 300;
@@ -114,6 +118,7 @@ const VendorApprovalModal = ({
         [getVendorProductList]
     );
 
+    // Function to get product details by product_id
     const getProductDetails = (selectedOption, id) => {
         if (!id) return;
         getProductDetailsById(id)
@@ -136,6 +141,7 @@ const VendorApprovalModal = ({
             });
     };
 
+    // Function to add product/approved-by in FormData
     const handleSelectChange = (selectedOption, { name }) => {
         if (name === "product") {
             const prodId = selectedOption?.value || null;
