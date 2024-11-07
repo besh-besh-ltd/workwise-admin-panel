@@ -9,11 +9,13 @@ import {
   handleGetStates,
   handleGetCities,
   handleGetVendorEditDetails,
-  handleUpdateVendorSpoc
+  handleUpdateVendorSpoc,
+  addNewSpoc
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
+import spocAddModal from "../modal/spoc-add-modal";
 
 const UpdateVendor = () => {
   const [dtaCount, setdtaCount] = useState(0);
@@ -31,29 +33,29 @@ const UpdateVendor = () => {
     spoc_mobile: '',
     spoc_role: '',
   });
-  const [spocId,setSpocId] = useState(null);
+  const [spocId, setSpocId] = useState(null);
+  const [openAddSpoc,setOpenAddSpoc] = useState(false);
 
 
-  
   const router = useRouter();
   let id = router.query.id;
-  
+
   const handleSpocSubmit = (object,resetForm) => {
     console.log(object,id,spocId);
     handleUpdateVendorSpoc(object,id,spocId)
-    .then((res) => {
-      resetForm();
-      toast(res.message);
-      getVendorDetails(id);
-    })
-    .catch((error) => {
-      console.log("err", error);
-      let txt = "";
-      for (let x in error?.error?.response?.data?.errors) {
-        txt = error?.error?.response?.data?.errors[x];
-      }
-      toast(txt);
-    });
+      .then((res) => {
+        resetForm();
+        toast(res.message);
+        getVendorDetails(id);
+      })
+      .catch((error) => {
+        console.log("err", error);
+        let txt = "";
+        for (let x in error?.error?.response?.data?.errors) {
+          txt = error?.error?.response?.data?.errors[x];
+        }
+        toast(txt);
+      });
   }
   const submitHandler = (values, resetForm) => {
     handleUpdateVendor(values, id)
@@ -157,21 +159,23 @@ const UpdateVendor = () => {
 
   function getVendorDetails(id){
     handleGetVendorEditDetails(id)
-    .then(res => {
-      console.log("edit details data..", res.data)
-      seteditDetails(res.data)
-      if (editDetails?.vendorDetails?.city) {
-        setIsCityDisabled(false)
-      } else {
-        setIsCityDisabled(true)
-      }
-      setIsStateDisabled(false)
-      setSelectedCountryOption(editDetails?.vendorDetails?.country)
-      setSelectedStateOption(editDetails?.vendorDetails?.state)
-      setSelectedCityOption(editDetails?.vendorDetails?.city)
-    })
-    .catch((err) => console.log("err", err));
+      .then(res => {
+        console.log("edit details data..", res.data)
+        seteditDetails(res.data)
+        if (editDetails?.vendorDetails?.city) {
+          setIsCityDisabled(false)
+        } else {
+          setIsCityDisabled(true)
+        }
+        setIsStateDisabled(false)
+        setSelectedCountryOption(editDetails?.vendorDetails?.country)
+        setSelectedStateOption(editDetails?.vendorDetails?.state)
+        setSelectedCityOption(editDetails?.vendorDetails?.city)
+      })
+      .catch((err) => console.log("err", err));
   }
+
+
 
   useEffect(() => {
     if (id) {
@@ -184,6 +188,27 @@ const UpdateVendor = () => {
         .catch((err) => console.log("err", err));
     }
   }, [id, editDetails?.vendorDetails?.country, editDetails?.vendorDetails?.state, editDetails?.vendorDetails?.city])
+
+
+  const handleAddSpoc =  (spocDetails) => {
+    addNewSpoc(spocDetails, id)
+            .then((res) => {
+              toast(res.message, { position: "top-right", });
+            })
+            .catch((error) => {
+                toast(error.message?.response?.data?.message, { position: "top-right", });
+                console.log(error)
+            })
+            .finally(() => {
+                getVendorDetails(id)
+                 handleGetCities(editDetails?.vendorDetails?.state)
+                .then(res => {
+                setCities(res.data.data)
+                })
+                .catch((err) => console.log("err", err));
+              setOpenAddSpoc(false);
+            }) // Call the submission handler
+}
 
   return (
     <>
@@ -715,6 +740,13 @@ const UpdateVendor = () => {
 
           {/* adding div for spoc details */}
           <div class="card col-12">
+          <div className="d-flex justify-content-end">
+                      <button type="submit" class="btn btn-secondary"
+                      onClick={()=>setOpenAddSpoc(true)}
+                      >
+                        Create New Spoc
+                      </button>
+                    </div>
             <div class="card-body mt-3">
               <Formik
                 initialValues={{
@@ -845,6 +877,16 @@ const UpdateVendor = () => {
 
         <ToastContainer />
       </section>
+      {openAddSpoc &&
+        <spocAddModal
+          openModal={openAddSpoc}
+          closeModal={()=> setOpenAddSpoc(false)}
+          vendorId={id}
+          getVendorDetails={getVendorDetails}
+          handleAddSpoc={handleAddSpoc}
+        />
+      }
+
     </>
   );
 };
