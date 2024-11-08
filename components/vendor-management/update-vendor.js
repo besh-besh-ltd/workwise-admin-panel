@@ -15,7 +15,7 @@ import {
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
-import spocAddModal from "../modal/spoc-add-modal";
+import SpocAddModal from "../modal/spoc-add-modal";
 
 const UpdateVendor = () => {
   const [dtaCount, setdtaCount] = useState(0);
@@ -878,7 +878,7 @@ const UpdateVendor = () => {
         <ToastContainer />
       </section>
       {openAddSpoc &&
-        <spocAddModal
+        <SpocAddModal
           openModal={openAddSpoc}
           closeModal={()=> setOpenAddSpoc(false)}
           vendorId={id}

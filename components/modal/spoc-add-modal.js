@@ -25,7 +25,7 @@ const validateSpocSchema = yup.object().shape({
       .required("Mobile number is required"),
   });
 
-const spocAddModal = ({
+const SpocAddModal = ({
     openModal,
     closeModal,
     vendorId,
@@ -145,4 +145,4 @@ const spocAddModal = ({
     )
 }
 
-export default spocAddModal
+export default SpocAddModal
