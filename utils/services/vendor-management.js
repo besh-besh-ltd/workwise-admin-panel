@@ -187,6 +187,20 @@ function handleVendorRfqList(id) {
   });
 }
 
+function addNewSpoc(values, vendorId){
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosxdata.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/update-vendor/${vendorId}/add-spoc`,
+        values
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  })
+} 
+
 export {
   handleGetVendorList,
   handleGetVendorDetails,
@@ -200,5 +214,6 @@ export {
   handleApproveVendor,
   rejectList,
   handleVendorRfqList,
-  handleUpdateVendorSpoc
+  handleUpdateVendorSpoc,
+  addNewSpoc
 };
