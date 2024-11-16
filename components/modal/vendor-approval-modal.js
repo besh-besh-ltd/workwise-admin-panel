@@ -275,7 +275,7 @@ const VendorApprovalModal = ({
                 <Button variant="secondary" onClick={closeModal}>Close</Button>
                 {modalState.type === "reject"
                     ? <Button variant="primary" onClick={() => handleVendorStatusChange(data, 2, rejectReason)}>Reject</Button>
-                    : <Button variant="primary" onClick={() => handleVendorStatusChange(data, 1, productDetails)}>Approve</Button>
+                    : <Button variant="primary" onClick={() => handleVendorStatusChange(data, 3, productDetails)}>Approve</Button>
                 }
             </Modal.Footer>
         </Modal>
