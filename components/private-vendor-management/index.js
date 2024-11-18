@@ -155,7 +155,7 @@ const PrivateVendorManagement = () => {
                                                         type="button"
                                                         className="btn btn-success"
                                                         // onClick={() => handleOpenModal("Approve Vendor", "approve", item)}
-                                                        onClick={()=> handleVendorStatusChange(selectedVendor, 3, [])}
+                                                        onClick={()=> handleVendorStatusChange(item, 3, [])}
                                                     >
                                                         Approve
                                                     </button>
