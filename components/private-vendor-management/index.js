@@ -49,7 +49,8 @@ const PrivateVendorManagement = () => {
         if (modalState.type === "approve") {
             payload = {
                 ...payload,
-                productdetails: dynamicParam
+                // productdetails: dynamicParam,
+                productdetails: []
             }
         } else {
             payload = {
@@ -59,7 +60,8 @@ const PrivateVendorManagement = () => {
         }
 
         setLoading(true);
-        handleCloseModal();
+        if(modalState.type === "reject") handleCloseModal();
+
         handleApprovePrivateVendor(payload)
             .then((res) => {
                 toast.success(res.message)
@@ -135,13 +137,14 @@ const PrivateVendorManagement = () => {
                                             <td>{item?.mobile}</td>
                                             <td>{item?.product_list}</td>
                                             <td>
-                                                <span className={`badge ${item.status === -1 ? 'badge-warning'
+                                                <span className={`badge ${(item.status === -1 || item.status === 3) ? 'badge-warning'
                                                     : item.status === 1 ? 'badge-success'
                                                         : item.status === 2 ? 'badge-danger' : "badge-primary"}`}>
                                                     {
                                                         item.status === -1 ? "Pending"
-                                                            : item.status === 1 ? "Approved"
-                                                                : item.status === 2 ? "Rejected" : "Reviewed"
+                                                            : item.status === 3 ? "Pending(Public)"
+                                                                : item.status === 1 ? "Approved"
+                                                                    : item.status === 2 ? "Rejected" : "Reviewed"
                                                     }
                                                 </span>
                                             </td>
@@ -151,7 +154,8 @@ const PrivateVendorManagement = () => {
                                                     <button
                                                         type="button"
                                                         className="btn btn-success"
-                                                        onClick={() => handleOpenModal("Approve Vendor", "approve", item)}
+                                                        // onClick={() => handleOpenModal("Approve Vendor", "approve", item)}
+                                                        onClick={()=> handleVendorStatusChange(item, 3, [])}
                                                     >
                                                         Approve
                                                     </button>
