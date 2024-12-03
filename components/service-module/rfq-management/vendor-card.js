@@ -1,6 +1,17 @@
 import React from 'react'
 
 const VendorCard = ({ data }) => {
+    const addCommasToNumber = (number) => {
+        if(number<=0 || !number){
+           return 0
+         }
+
+        let numberString = number.toString();
+        let parts = numberString.split(".");
+    
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return parts.join(".");
+      };
 
     return (
         <>
@@ -36,6 +47,7 @@ const VendorCard = ({ data }) => {
                                         <th>Specifications</th>
                                         <th>Quantity</th>
                                         <th>Quote Sent</th>
+                                        <th>Total Price</th>
                                         <th>Finalization</th>
                                     </tr>
                                 </thead>
@@ -58,8 +70,14 @@ const VendorCard = ({ data }) => {
                                                 <td>{prod_qty + " " + prod_unit}</td>
                                                 <td>
                                                     {(prodItem.quotation_details && prodItem.quotation_details.length > 0)
-                                                        ? <span className="badge badge-success">Sent</span>
+                                                        ? (prodItem.quotation_details[0]?.is_regret ? <span className="badge badge-danger">Regretted</span>
+                                                            : ((prodItem.quotation_details[0]?.unit_price > 0) ? <span className="badge badge-success">Sent</span> : <span className="badge badge-warning">Pending</span>))
                                                         : <span className="badge badge-warning">Pending</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    {(prodItem?.quotation_details && prodItem?.quotation_details?.length > 0 && prodItem?.quotation_details[0]?.unit_price > 0) ?
+                                                        addCommasToNumber(prodItem?.quotation_details[0]?.total_price) : "-"
                                                     }
                                                 </td>
                                                 <td>
