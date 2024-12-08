@@ -8,21 +8,24 @@ const validateSpocSchema = yup.object().shape({
     spoc_name: yup
       .string()
       .required("Spoc name is required")
-      .min(2, "Name not less than 2 characters short")
-      .max(50, "Name not more than 50 characters long"),
+      .min(2, "Name must be at least 2 characters long")
+      .max(50, "Name must not exceed 50 characters"),
     spoc_email: yup
       .string()
       .required("Email is required")
       .email("Please enter a valid email address"),
     spoc_mobile: yup
       .string()
-      .matches(
-        /^[\+]?[(]?[0-9]{1,3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,10}$/,
-        "Please enter a valid mobile number"
-      )
-      .min(10, "Minimum 10 digits are required")
-      .max(15, "Mobile number cannot exceed 15 digits")
-      .required("Mobile number is required"),
+      .nullable() // Allows null values
+      .test(
+        "is-valid-mobile",
+        "Please enter a valid mobile number",
+        (value) => {
+          if (!value) return true; // Pass validation if the field is empty
+          const regex = /^[\+]?[(]?[0-9]{1,3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,10}$/;
+          return regex.test(value) && value.length >= 10 && value.length <= 15;
+        }
+      ),
   });
 
 const SpocAddModal = ({

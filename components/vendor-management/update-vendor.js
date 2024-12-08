@@ -41,12 +41,13 @@ const UpdateVendor = () => {
   let id = router.query.id;
 
   const handleSpocSubmit = (object,resetForm) => {
-    console.log(object,id,spocId);
+
     handleUpdateVendorSpoc(object,id,spocId)
       .then((res) => {
         resetForm();
         toast(res.message);
         getVendorDetails(id);
+        setSelectedSpocOption(object);
       })
       .catch((error) => {
         console.log("err", error);
@@ -790,7 +791,7 @@ const UpdateVendor = () => {
                             {editDetails.spocDetails.length > 0
                               ? editDetails.spocDetails.map((option) => (
                                 <option key={option.id} value={JSON.stringify(option)}>
-                                  {`${option.name}, ${option.role}`}
+                                  {`${option.name} ${option.role ? (' ,' + option.role) : ''}`}
                                 </option>
                               ))
                               : "No Spoc Found"}
