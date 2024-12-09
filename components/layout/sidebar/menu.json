@@ -119,6 +119,13 @@
         "active": false
       },
       {
+        "title": "Team Management",
+        "link": "/team-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
         "title": "Testimonial Management",
         "link": "/testimonial-management",
         "class": "",
