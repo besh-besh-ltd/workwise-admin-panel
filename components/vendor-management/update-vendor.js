@@ -245,7 +245,7 @@ const UpdateVendor = () => {
                       "please enter valid mobile number"
                     )
                     .min(10)
-                    .max(11)
+                    .max(15)
                     .required("mobile is required"),
                 })}
                 onSubmit={(values, { resetForm }) => {
