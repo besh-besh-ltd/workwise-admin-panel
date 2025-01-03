@@ -1,15 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import img1 from "../../public/assets/images/products.png";
 import Link from "next/link";
 import FormikField from "@/components/shared/FormikField";
-import UploadFiles from "@/components/shared/ImagesUpload";
 import {
 	categoryList,
 	vendorApproveList,
 	vendorList,
 } from "@/utils/services/rfq";
 import {
-	addProducts,
 	getProducts,
 	handleUpdateProduct,
 } from "@/utils/services/products";
@@ -18,42 +15,24 @@ import { ErrorMessage, Field, FieldArray, Form, Formik } from "formik";
 import { ToastContainer, toast } from "react-toastify";
 import Select from "react-select";
 import { useRouter } from "next/router";
-import Image from "next/image";
+
 
 const EditProduct = () => {
-	const parentSelectRef = useRef();
-	const levelOneSelectRef = useRef();
-	const levelTwoSelectRef = useRef();
-	const levelThreeSelectRef = useRef();
-	const levelFourSelectRef = useRef();
-	const levelFiveSelectRef = useRef();
-	const levelSixSelectRef = useRef();
 	const [catloading, setcatloading] = useState(false);
 	const [categories, setCategories] = useState([]);
-	const [parentCategories, setParentCategories] = useState([]);
-	const [cat_id, setCat_id] = useState("");
-	const [levelOneCat, setlevelOneCat] = useState([]);
-	const [levelTwoCat, setlevelTwoCat] = useState([]);
-	const [levelThreeCat, setlevelThreeCat] = useState([]);
-	const [levelFourCat, setlevelFourCat] = useState([]);
-	const [levelFiveCat, setlevelFiveCat] = useState([]);
-	const [levelSixCat, setlevelSixCat] = useState([]);
+	const [selectedValues, setSelectedValues] = useState([]);
+	const [groupedCategories, setgroupedCategories] = useState(new Map());
+	const [categoryData, setCategoryData] = useState([]);
+
 	const [vendorApprovedList, setVendorApprovedList] = useState([]);
 	const [selectedGalleryFiles, setSelectedGalleryFiles] = useState([]);
 	const [selectedFeaturedFiles, setSelectedFeaturedFiles] = useState([]);
 	const [selectedQapFiles, setSelectedQapFiles] = useState([]);
 	const [selectedTdsFiles, setSelectedTdsFiles] = useState([]);
-	const [levelOneCatSelected, setlevelOneCatSelected] = useState("");
-	const [levelTwoCatSelected, setlevelTwoCatSelected] = useState("");
-	const [levelThreeCatSelected, setlevelThreeCatSelected] = useState("");
-	const [levelFourCatSelected, setlevelFourCatSelected] = useState("");
-	const [levelFiveCatSelected, setlevelFiveCatSelected] = useState("");
-	const [levelSixCatSelected, setlevelSixCatSelected] = useState("");
 	const [mainLoading, setMainLoading] = useState(false);
 	const [vendorData, setVendorData] = useState([]);
 	const [productDetailsData, setProductDetailsData] = useState([]);
 	const [variantData, setVariantData] = useState("");
-	const [categoryData, setCategoryData] = useState([]);
 	const [selectedFile, setSelectedFile] = useState([]);
 	const [fileType, setFileType] = useState([]);
 	const [images, setImages] = useState([]);
@@ -61,13 +40,6 @@ const EditProduct = () => {
 	const [qapFile, setQapFile] = useState(null);
 	const [tdsFile, setTdsFile] = useState(null);
 	const [galleryImages, setGalleryImages] = useState([]);
-	const [parentSelectValue, setParentSelectValue] = useState([]);
-	const [levelOneSelectValue, setlevelOneSelectValue] = useState([]);
-	const [levelTwoSelectValue, setlevelTwoSelectValue] = useState([]);
-	const [levelThreeSelectValue, setlevelThreeSelectValue] = useState([]);
-	const [levelFourSelectValue, setlevelFourSelectValue] = useState([]);
-	const [levelFiveSelectValue, setlevelFiveSelectValue] = useState([]);
-	const [levelSixSelectValue, setlevelSixSelectValue] = useState([]);
 	const [vendorListData, setVendorListData] = useState([])
 	const router = useRouter();
 	const { id } = router.query;
@@ -92,75 +64,45 @@ const EditProduct = () => {
 	}, [id]);
 
 	useEffect(() => {
-		if (
-			categoryData.length > 0 &&
-			categories.length > 0 &&
-			parentCategories.length > 0
-		) {
-			setParentSelectValue(categoryData[0]);
-			setlevelOneSelectValue(categoryData[1]);
-			setlevelTwoSelectValue(categoryData[2]);
-			setlevelThreeSelectValue(categoryData[3]);
-			setlevelFourSelectValue(categoryData[4]);
-			setlevelFiveSelectValue(categoryData[5]);
-			setlevelSixSelectValue(categoryData[6]);
-			parentSelectRef?.current?.setValue(parentSelectValue);
-			levelOneSelectRef?.current?.setValue(levelOneSelectValue);
-			levelTwoSelectRef?.current?.setValue(levelTwoSelectValue);
-			levelThreeSelectRef?.current?.setValue(levelThreeSelectValue);
-			levelFourSelectRef?.current?.setValue(levelFourSelectValue);
-			levelFiveSelectRef?.current?.setValue(levelFiveSelectValue);
-			levelSixSelectRef?.current?.setValue(levelSixSelectValue);
+		if (categoryData.length > 0 && groupedCategories) {
+			const updatedSelectedValues = categoryData.map((item) => item || null);
+			setSelectedValues(updatedSelectedValues);
+
+			const initializedCategories = [];
+
+			updatedSelectedValues.forEach((selectedOption, index) => {
+				const parentId = index === 0 ? 0 : updatedSelectedValues[index - 1]?.value;
+				const currentOptions = groupedCategories.get(parentId) || [];
+
+				if (currentOptions.length > 0)
+					initializedCategories[index] = currentOptions;
+			});
+			setCategories(initializedCategories);
 		}
-	}, [
-		categoryData,
-		categories,
-		parentCategories,
-		levelOneCatSelected,
-		levelTwoCatSelected,
-		levelThreeCatSelected,
-		levelFourCatSelected,
-		levelFiveCatSelected,
-		levelSixCatSelected,
-	]);
+	}, [categoryData, groupedCategories]);
+
 
 	useEffect(() => {
 		getGalleryImage();
 	}, [productDetailsData]);
 
 	const initialValues = {
-		name: productDetailsData.name ? productDetailsData.name : "",
-		description: productDetailsData.description
-			? productDetailsData.description
-			: "",
-		// manufacturer: productDetailsData.manufacturer
-		//   ? productDetailsData.manufacturer
-		//   : "",
-		// availability:
-		//   productDetailsData.availability !== undefined
-		//     ? productDetailsData.availability
-		//     : "",
-		categories: productDetailsData.product_categories
+		name: productDetailsData?.name || "",
+		description: productDetailsData?.description || "",
+		categories: productDetailsData?.product_categories
 			? [productDetailsData.product_categories]
 			: [],
-		featured: productDetailsData.featured ? productDetailsData.featured : "",
+		featured: productDetailsData?.featured || [],
 		status: 1,
-		approved_id:
-			productDetailsData.vendor_approved_by &&
-				productDetailsData.vendor_approved_by?.length > 0
-				? productDetailsData.vendor_approved_by?.map((item) => item)
-				: "",
-		approved_name: productDetailsData.approved_name
-			? productDetailsData.approved_name
+		approved_id: productDetailsData?.vendor_approved_by?.length
+			? [...productDetailsData.vendor_approved_by]
 			: "",
-		variations:
-			variantData.length != 0
-				? variantData
-				: [{ attribute: "", attributeValue: "" }],
-		// vendor: productDetailsData.vendor ? productDetailsData.vendor : "",
+		approved_name: productDetailsData?.approved_name || "",
+		variations: variantData.length
+			? [...variantData]
+			: [{ attribute: "", attributeValue: "" }],
 		is_featured:
-			productDetailsData.is_featured === 0 ||
-				productDetailsData.is_featured === 1
+			productDetailsData?.is_featured === 0 || productDetailsData?.is_featured === 1
 				? productDetailsData.is_featured
 				: "",
 	};
@@ -169,76 +111,55 @@ const EditProduct = () => {
 		control: (base) => ({
 			...base,
 			height: 50,
-			minHeight: 50,
+			minHeight: 50
 		}),
 	};
 
-	const getCategories = () => {
-		setcatloading(true);
-		categoryList()
-			.then((rsp) => {
-				setcatloading(false);
-				let options = [];
-				let parentOptions = [];
-				rsp.data.map((item) => {
-					options.push({ value: item?.id, label: item?.title });
-					if (item.parent_id == 0) {
-						parentOptions.push({ value: item?.id, label: item?.title });
-					}
-				});
-				console.log(rsp.data);
-				setCategories(rsp.data);
-				setParentCategories(parentOptions);
-			})
-			.catch((error) => {
-				setcatloading(false);
-			});
+	const getCategories = async () => {
+		try {
+			setcatloading(true);
+			const res = await categoryList();
+			const groupedData = res.data.reduce((acc, item) => {
+				const parentId = parseInt(item.parent_id) || 0;
+				if (!acc[parentId]) {
+					acc[parentId] = [];
+				}
+				acc[parentId].push({ value: item?.id, label: item?.title });
+				return acc;
+			}, []);
+
+			const catMap = new Map(
+				Object.entries(groupedData).map(([key, value]) => [parseInt(key), value])
+			);
+			setCategories([catMap.get(0)]);
+			setgroupedCategories(catMap);
+		} catch (error) {
+			console.error("Failed to fetch categories:", error);
+		} finally {
+			setcatloading(false);
+		}
+	};
+
+	const hideChildLevels = (level) => {
+		const updatedCategories = categories.slice(0, level);
+		const updatedSelectedValues = selectedValues.slice(0, level);
+
+		setCategories(updatedCategories);
+		setSelectedValues(updatedSelectedValues);
 	};
 
 	const getChildCategories = (id, level) => {
-		let childItems = categories.filter((item) => item.parent_id == id);
-		let options = [];
-		if (childItems.length > 0) {
-			childItems.map((item) => {
-				options.push({ value: item?.id, label: item?.title });
-			});
-		}
-		if (level == 1) {
-			setlevelOneCat(options);
-			setlevelOneCatSelected(id);
-			setlevelTwoCatSelected("");
-			setlevelThreeCatSelected("");
-			setlevelFourCatSelected("");
-			setlevelFiveCatSelected("");
-			setlevelSixCatSelected("");
-		} else if (level == 2) {
-			setlevelTwoCat(options);
-			setlevelTwoCatSelected(id);
-			setlevelThreeCatSelected("");
-			setlevelFourCatSelected("");
-			setlevelFiveCatSelected("");
-			setlevelSixCatSelected("");
-		} else if (level == 3) {
-			setlevelThreeCat(options);
-			setlevelThreeCatSelected(id);
-			setlevelFourCatSelected("");
-			setlevelFiveCatSelected("");
-			setlevelSixCatSelected("");
-		} else if (level == 4) {
-			setlevelFourCat(options);
-			setlevelFourCatSelected(id);
-			setlevelFiveCatSelected("");
-			setlevelSixCatSelected("");
-		} else if (level == 5) {
-			setlevelFiveCat(options);
-			setlevelFiveCatSelected(id);
-			setlevelSixCatSelected("");
-		} else if (level == 6) {
-			setlevelSixCat(options);
-			setlevelSixCatSelected(id);
+		const childItems = groupedCategories.get(id);
+
+		if (childItems && childItems.length > 0) {
+			const updatedCategories = [...categories];
+			updatedCategories[level] = childItems;
+			setCategories(updatedCategories.slice(0, level + 1));
 		} else {
+			setCategories(categories.slice(0, level));
 		}
 	};
+
 	const getVendor = () => {
 		vendorList()
 			.then((rsp) => {
@@ -262,37 +183,33 @@ const EditProduct = () => {
 			}));
 			// lists.unshift({ label: "Select Vendor list", value: "" });
 			// lists.push({ label: "Other", value: "o" });
-			console.log("lists", lists);
 			setVendorApprovedList(lists);
 		});
 	};
-	const getProductDetails = () => {
-		getProducts(id)
-			.then((response) => {
-				console.log("response....", response);
-				setProductDetailsData(response.data);
-				setVendorListData(response.vendor_list)
-				let category = [];
-				response.data.product_categories?.map((data) => {
-					category.push({
-						label: data.category_name,
-						value: data.id,
-					});
-				});
-				console.log("category.....", category);
-				setCategoryData(category);
-				let variant = [];
-				response.data.product_variants.map((data) => {
-					variant.push({
-						attribute: data.variant_name,
-						attributeValue: data.variant_value,
-					});
-				});
-				setVariantData(variant);
-			})
-			.catch((error) => {
-				setcatloading(false);
-			});
+	const getProductDetails = async () => {
+		try {
+			const response = await getProducts(id);
+			const { data, vendor_list } = response;
+
+			setProductDetailsData(data);
+			setVendorListData(vendor_list);
+
+			const category = data.product_categories?.map((item) => ({
+				label: item.category_name,
+				value: item.id,
+			})) || [];
+			setCategoryData(category);
+
+			const variant = data.product_variants.map(({ variant_name, variant_value }) => ({
+				attribute: variant_name,
+				attributeValue: variant_value,
+			})) || [];
+			setVariantData(variant);
+		} catch (error) {
+			console.error("Failed to fetch product details:", error);
+		} finally {
+			setcatloading(false);
+		}
 	};
 
 	// const imageUploadHandler = (events) => {
@@ -329,66 +246,29 @@ const EditProduct = () => {
 	};
 
 	const submitHandler = (values) => {
-		const payload = new FormData();
-		payload.append(`name`, values.name);
-		payload.append(`description`, values.description);
-		// payload.append(`manufacturer`, values.manufacturer);
-		// payload.append(`availability`, values.availability);
-		payload.append(`status`, 1);
-		payload.append(
-			`approved_id`,
-			values.approved_id == "o" ? "" : JSON.stringify(values.approved_id)
-		);
-		payload.append(
-			`approved_name`,
-			values.approved_id == "o" ? values.approved_name : ""
-		);
-		payload.append(`variations`, JSON.stringify(values.variations));
-		console.log(selectedGalleryFiles);
-		selectedGalleryFiles.forEach((file, i) => {
-			payload.append(`gallery`, file, file.name);
-		});
-		selectedFeaturedFiles.forEach((file, i) => {
-			payload.append(`featured`, file, file.name);
-		});
-		selectedQapFiles.forEach((file, i) => {
-			payload.append(`qap`, file, file.name);
-		});
-		selectedTdsFiles.forEach((file, i) => {
-			payload.append(`tds`, file, file.name);
-		});
-		let selectedCategories = [
-			levelOneCatSelected,
-			levelTwoCatSelected,
-			levelThreeCatSelected,
-			levelFourCatSelected,
-			levelFiveCatSelected,
-			levelSixCatSelected,
-		];
-		selectedCategories = selectedCategories.filter(
-			(v) => v != "" && v !== null
-		);
-		console.log("selected categories", selectedCategories);
-		payload.append(`categories`, JSON.stringify(selectedCategories));
-		// payload.append(`vendor`, values.vendor);
-		payload.append(`is_featured`, values.is_featured);
+		let payload = {
+			...values,
+			status: 1,
+			categories: selectedValues
+				.filter(cat => cat != null)
+				.map(cat => cat.value),
+			gallery: selectedGalleryFiles,
+			featured: selectedFeaturedFiles,
+			qap: selectedQapFiles,
+			tds: selectedTdsFiles
+		}
+
 		setMainLoading(true);
 		handleUpdateProduct(payload, id)
 			.then((res) => {
-				console.log("Update product.....", res);
-				// resetForm();
-				toast(res.message);
+				toast.success(res.message);
 				setTimeout(() => {
 					router.push("/product-management");
 				}, 1000);
 			})
 			.catch((error) => {
-				console.log("err", error);
-				let txt = "";
-				for (let x in error?.error?.response?.data?.errors) {
-					txt = error?.error?.response?.data?.errors[x];
-				}
-				toast(txt);
+				console.error(error);
+				toast.error(error.message);
 			});
 	};
 
@@ -461,225 +341,43 @@ const EditProduct = () => {
 																		</div>
 																	</div>
 
-																	{!catloading && (
+																	{!catloading && categories?.length > 0 &&
 																		<>
-																			<div className="col-md-3">
-																				<div className="form-group">
-																					<Select
-																						ref={parentSelectRef}
-																						options={parentCategories}
-																						placeholder="Select Category"
-																						isClearable={true}
-																						value={parentSelectValue}
-																						styles={customSelectStyles}
-																						onChange={(e) => {
-																							setlevelOneCat([]);
-																							setlevelTwoCat([]);
-																							setlevelThreeCat([]);
-																							setlevelFourCat([]);
-																							setlevelFiveCat([]);
-																							setlevelSixCat([]);
-																							getChildCategories(e?.value, "1");
-																							if (e && e.value) {
-																								setParentSelectValue({
-																									label: e.label,
-																									value: e.value,
-																								});
-																								setFieldValue("categories", [
-																									e.value,
-																								]);
-																								setCat_id(e.value);
-																							} else {
-																								setFieldValue("categories", []);
-																							}
-																						}}
-																					/>
-																				</div>
+																			<div className="form-group mb-0">
+																				<label htmlFor="categories">Categories *</label>
+																				{touched.categories && errors.categories && (
+																					<div className="text-danger">{errors.categories}</div>
+																				)}
 																			</div>
-																			{levelOneCat &&
-																				levelOneCat.length > 0 && (
-																					<div className="col-md-3">
-																						<div className="form-group">
-																							<Select
-																								ref={levelOneSelectRef}
-																								options={levelOneCat}
-																								placeholder="Select Sub Category"
-																								isClearable={true}
-																								value={levelOneSelectValue}
-																								styles={customSelectStyles}
-																								onChange={(e) => {
-																									getChildCategories(
-																										e?.value,
-																										"2"
-																									);
-																									if (e && e.value) {
-																										setlevelOneSelectValue({
-																											label: e.label,
-																											value: e.value,
-																										});
-																										setCat_id(e.value);
-																									} else {
-																										setCat_id("");
-																									}
-																								}}
-																							/>
-																						</div>
-																					</div>
-																				)}
-																			{levelTwoCat &&
-																				levelTwoCat.length > 0 && (
-																					<div className="col-md-3">
-																						<div className="form-group">
-																							<Select
-																								ref={levelTwoSelectRef}
-																								options={levelTwoCat}
-																								placeholder="Select Sub Category"
-																								isClearable={true}
-																								value={levelTwoSelectValue}
-																								styles={customSelectStyles}
-																								onChange={(e) => {
-																									getChildCategories(
-																										e?.value,
-																										"3"
-																									);
-																									if (e && e.value) {
-																										setlevelTwoSelectValue({
-																											label: e.label,
-																											value: e.value,
-																										});
-																										setCat_id(e.value);
-																									} else {
-																										setCat_id("");
-																									}
-																								}}
-																							/>
-																						</div>
-																					</div>
-																				)}
-																			{levelThreeCat &&
-																				levelThreeCat.length > 0 && (
-																					<div className="col-md-3">
-																						<div className="form-group">
-																							<Select
-																								ref={levelThreeSelectRef}
-																								options={levelThreeCat}
-																								value={levelThreeSelectValue}
-																								placeholder="Select Sub Category"
-																								isClearable={true}
-																								styles={customSelectStyles}
-																								onChange={(e) => {
-																									getChildCategories(
-																										e?.value,
-																										"4"
-																									);
-																									if (e && e.value) {
-																										setlevelThreeSelectValue({
-																											label: e.label,
-																											value: e.value,
-																										});
-																										setCat_id(e.value);
-																									} else {
-																										setCat_id("");
-																									}
-																								}}
-																							/>
-																						</div>
-																					</div>
-																				)}
+																			{categories.map((options, index) => (
+																				<div className="col-md-3" key={`cat_level_${index}`}>
+																					<div className="form-group">
+																						<Select
+																							id={`category_level_${index}`}
+																							options={options}
+																							placeholder={`Select ${index == 0 ? 'Category' : 'Sub-category'}`}
+																							isClearable={index !== 0}
+																							value={selectedValues[index] || null}
+																							styles={customSelectStyles}
+																							onChange={(selectedOption) => {
+																								const updatedSelectedValues = [...selectedValues];
+																								updatedSelectedValues[index] = selectedOption || null;
 
-																			{levelFourCat &&
-																				levelFourCat.length > 0 && (
-																					<div className="col-md-3">
-																						<div className="form-group">
-																							<Select
-																								ref={levelFourSelectRef}
-																								options={levelFourCat}
-																								value={levelFourSelectValue}
-																								placeholder="Select Sub Category"
-																								isClearable={true}
-																								styles={customSelectStyles}
-																								onChange={(e) => {
-																									getChildCategories(
-																										e?.value,
-																										"5"
-																									);
-																									if (e && e.value) {
-																										setlevelFourSelectValue({
-																											label: e.label,
-																											value: e.value,
-																										});
-																										setCat_id(e.value);
-																									} else {
-																										setCat_id("");
-																									}
-																								}}
-																							/>
-																						</div>
-																					</div>
-																				)}
+																								const truncatedValues = updatedSelectedValues.slice(0, index + 1);
+																								setSelectedValues(truncatedValues);
 
-																			{levelFiveCat &&
-																				levelFiveCat.length > 0 && (
-																					<div className="col-md-3">
-																						<div className="form-group">
-																							<Select
-																								ref={levelFiveSelectRef}
-																								options={levelFiveCat}
-																								value={levelFiveSelectValue}
-																								placeholder="Select Sub Category"
-																								isClearable={true}
-																								styles={customSelectStyles}
-																								onChange={(e) => {
-																									getChildCategories(
-																										e?.value,
-																										"6"
-																									);
-																									if (e && e.value) {
-																										setlevelFiveSelectValue({
-																											label: e.label,
-																											value: e.value,
-																										});
-																										setCat_id(e.value);
-																									} else {
-																										setCat_id("");
-																									}
-																								}}
-																							/>
-																						</div>
+																								if (selectedOption) {
+																									getChildCategories(selectedOption.value, index + 1);
+																								} else {
+																									hideChildLevels(index);
+																								}
+																							}}
+																						/>
 																					</div>
-																				)}
-																			{levelSixCat &&
-																				levelSixCat.length > 0 && (
-																					<div className="col-md-3">
-																						<div className="form-group">
-																							<Select
-																								ref={levelSixSelectRef}
-																								options={levelSixCat}
-																								value={levelSixSelectValue}
-																								placeholder="Select Sub Category"
-																								isClearable={true}
-																								styles={customSelectStyles}
-																								onChange={(e) => {
-																									getChildCategories(
-																										e?.value,
-																										"7"
-																									);
-																									if (e && e.value) {
-																										setlevelSixSelectValue({
-																											label: e.label,
-																											value: e.value,
-																										});
-																										setCat_id(e.value);
-																									} else {
-																										setCat_id("");
-																									}
-																								}}
-																							/>
-																						</div>
-																					</div>
-																				)}
+																				</div>
+																			))}
 																		</>
-																	)}
+																	}
 
 																	<div className="col-md-12">
 																		<div className="form-group">
@@ -742,7 +440,7 @@ const EditProduct = () => {
                                       errors={errors}
                                     />
                                   </div> */}
-																		<div className="form-group">
+																		{/* <div className="form-group">
 																			<label htmlFor="approved_id">
 																				Approved Vendor
 																			</label>
@@ -776,10 +474,10 @@ const EditProduct = () => {
 																				component="div"
 																				className="form-error"
 																			/>
-																		</div>
+																		</div> */}
 																	</div>
 
-																	{values.approved_id == "o" && (
+																	{/* {values.approved_id == "o" && (
 																		<div className="col-md-8">
 																			<div className="form-group">
 																				<FormikField
@@ -791,25 +489,32 @@ const EditProduct = () => {
 																				/>
 																			</div>
 																		</div>
-																	)}
+																	)} */}
 
 																	<div className="col-md-12">
 																		<div className="row">
-																			<label>Upload Product Images</label>
-																			<Field
-																				id="gallery"
-																				name="gallery"
-																				type="file"
-																				className="file-control"
-																				value={undefined}
-																				multiple
-																				ref={imageUploader}
-																				onChange={(event) => {
-																					handleImageChange(event);
-																					gallery = event.target.files;
-																					setFieldValue("gallery", gallery);
-																				}}
-																			/>
+																			<div className="form-group">
+																				<label>
+																					Upload Product Images
+																					<small className="form-text d-inline-flex text-muted ms-2">
+																						( Accepted formats: .jpg, .jpeg, .png, .webp. Maximum size: 2MB. Limit: 8 Images )
+																					</small>
+																				</label>
+																				<Field
+																					id="gallery"
+																					name="gallery"
+																					type="file"
+																					className="file-control"
+																					value={undefined}
+																					multiple
+																					ref={imageUploader}
+																					onChange={(event) => {
+																						handleImageChange(event);
+																						gallery = event.target.files;
+																						setFieldValue("gallery", gallery);
+																					}}
+																				/>
+																			</div>
 																		</div>
 																	</div>
 																	<div className="gallery-image-pane d-flex">
@@ -851,29 +556,36 @@ const EditProduct = () => {
 
 																	<div className="col-md-12">
 																		<div className="row featured-image">
-																			<label>Upload Featured Image</label>
-																			<Field
-																				id="file"
-																				name="featured"
-																				type="file"
-																				className="file-control"
-																				touched={touched}
-																				errors={errors}
-																				value={undefined}
-																				onChange={(e) => {
-																					const selectFiles = e.target.files[0];
-																					setFieldValue(
-																						"featured",
-																						selectFiles
-																					);
-																					setImage(
-																						URL.createObjectURL(selectFiles)
-																					);
-																					setSelectedFeaturedFiles([
-																						selectFiles,
-																					]);
-																				}}
-																			/>
+																			<div className="form-group">
+																				<label>
+																					Upload Featured Image
+																					<small className="form-text d-inline-flex text-muted ms-2">
+																						( Accepted formats: .jpg, .jpeg, .png, .webp. Maximum size: 2MB. Limit: 1 Image )
+																					</small>
+																				</label>
+																				<Field
+																					id="file"
+																					name="featured"
+																					type="file"
+																					className="file-control"
+																					touched={touched}
+																					errors={errors}
+																					value={undefined}
+																					onChange={(e) => {
+																						const selectFiles = e.target.files[0];
+																						setFieldValue(
+																							"featured",
+																							selectFiles
+																						);
+																						setImage(
+																							URL.createObjectURL(selectFiles)
+																						);
+																						setSelectedFeaturedFiles([
+																							selectFiles,
+																						]);
+																					}}
+																				/>
+																			</div>
 																			{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
 
 																			{productDetailsData.product_images &&
@@ -884,7 +596,7 @@ const EditProduct = () => {
 																					(data, index) => {
 																						return (
 																							data.is_featured == 1 && (
-																								<div className="mt-2 mb-2">
+																								<div className="m-2">
 																									<img
 																										key={index}
 																										ref={uploadedImage}
@@ -916,28 +628,35 @@ const EditProduct = () => {
 																	</div>
 																	<div className="col-md-12">
 																		<div className="row qap-file">
-																			<label>Upload QAP File</label>
-																			<Field
-																				id="qap-file"
-																				name="qap"
-																				accept=".pdf"
-																				type="file"
-																				className="file-control"
-																				touched={touched}
-																				errors={errors}
-																				value={undefined}
-																				onChange={(e) => {
-																					const qap = e.target.files[0];
-																					setFieldValue("qap", qap);
-																					setQapFile(URL.createObjectURL(qap));
-																					setSelectedQapFiles([qap]);
-																				}}
-																			/>
+																			<div className="form-group">
+																				<label>
+																					Upload QAP File
+																					<small className="form-text d-inline-flex text-muted ms-2">
+																						( Accepted formats: .pdf. Maximum size: 2MB. Limit: 1 File )
+																					</small>
+																				</label>
+																				<Field
+																					id="qap-file"
+																					name="qap"
+																					accept=".pdf"
+																					type="file"
+																					className="file-control"
+																					touched={touched}
+																					errors={errors}
+																					value={undefined}
+																					onChange={(e) => {
+																						const qap = e.target.files[0];
+																						setFieldValue("qap", qap);
+																						setQapFile(URL.createObjectURL(qap));
+																						setSelectedQapFiles([qap]);
+																					}}
+																				/>
+																			</div>
 																			{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
 
 																			{productDetailsData?.qap_new_file_name &&
 																				!qapFile && (
-																					<div className="mt-2 mb-2">
+																					<div className="m-2">
 																						<>
 																							<a
 																								href={
@@ -959,28 +678,35 @@ const EditProduct = () => {
 																	</div>
 																	<div className="col-md-12">
 																		<div className="row qap-file">
-																			<label>Upload TDS File</label>
-																			<Field
-																				id="tds-file"
-																				name="tds"
-																				accept=".pdf"
-																				type="file"
-																				className="file-control"
-																				touched={touched}
-																				errors={errors}
-																				value={undefined}
-																				onChange={(e) => {
-																					const tds = e.target.files[0];
-																					setFieldValue("tds", tds);
-																					setTdsFile(URL.createObjectURL(tds));
-																					setSelectedTdsFiles([tds]);
-																				}}
-																			/>
+																			<div className="form-group">
+																				<label>
+																					Upload TDS File
+																					<small className="form-text d-inline-flex text-muted ms-2">
+																						( Accepted formats: .pdf. Maximum size: 2MB. Limit: 1 File )
+																					</small>
+																				</label>
+																				<Field
+																					id="tds-file"
+																					name="tds"
+																					accept=".pdf"
+																					type="file"
+																					className="file-control"
+																					touched={touched}
+																					errors={errors}
+																					value={undefined}
+																					onChange={(e) => {
+																						const tds = e.target.files[0];
+																						setFieldValue("tds", tds);
+																						setTdsFile(URL.createObjectURL(tds));
+																						setSelectedTdsFiles([tds]);
+																					}}
+																				/>
+																			</div>
 																			{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
 
 																			{productDetailsData?.tds_new_file_name &&
 																				!tdsFile && (
-																					<div className="mt-2 mb-2">
+																					<div className="m-2">
 																						<>
 																							<a
 																								href={
@@ -1003,7 +729,7 @@ const EditProduct = () => {
 
 																	<div className="prod-spec-sec p-0 pt-3">
 																		<div className="col-md-12">
-																			<div className="specification ">
+																			<div className="form-group specification ">
 																				<label>Product Variants</label>
 																				<FieldArray name="variations">
 																					{({ push, remove }) => (
@@ -1129,42 +855,43 @@ const EditProduct = () => {
 							</div>
 						</div>
 					</div>
-					<div className="row vendor-list-row">
-						<div className="card col-md-12">
-							<div className="card-header">Vendor List</div>
-							<div className="product-variants">
-								<table className="table table-striped table-hover mb-3">
-									<thead>
-										<tr>
-											<th scope="col">Sl. No.</th>
-											<th scope="col">Name</th>
-											<th scope="col">Approved By</th>
-										</tr>
-									</thead>
-									<tbody>
-										{vendorListData &&
-											vendorListData.length != 0 &&
-											vendorListData.map((item, index) => {
-												return (
-													<tr key={item.id}>
-														<td>{index + 1}</td>
-														<td>{item.vendor_name ? item.vendor_name : '--'}</td>
-														<td className="d-flex">{item.vendor_approved_by &&
-                                                            item.vendor_approved_by.length != 0 &&
-                                                            item.vendor_approved_by.map((data, index) => {
-                                                                return (
-                                                                    <div key={index}>
-                                                                        {data.name}{data !== item.vendor_approved_by[item.vendor_approved_by.length - 1] && <span>,&nbsp;</span>}
-                                                                    </div>
-                                                                )
-                                                            })}
-														</td>
-													</tr>
-												);
-											})}
-									</tbody>
-								</table>
-							</div>
+					<div className="card col-12">
+						<div className="card-header">Vendor List</div>
+						<div className="card-body">
+							<table className="table table-striped table-hover mb-3">
+								<thead>
+									<tr>
+										<th scope="col">Sl. No.</th>
+										<th scope="col">Name</th>
+										<th scope="col">Approved By</th>
+									</tr>
+								</thead>
+								<tbody>
+									{vendorListData &&
+										vendorListData.length != 0 &&
+										vendorListData.map((item, index) => {
+											return (
+												<tr key={item.id}>
+													<td>{index + 1}</td>
+													<td>{item.vendor_name ? item.vendor_name : '--'}</td>
+													<td>
+														<span className="d-flex">
+															{item.vendor_approved_by &&
+																item.vendor_approved_by.length != 0 &&
+																item.vendor_approved_by.map((data, index) => {
+																	return (
+																		<span className="badge text-bg-info rounded-pill py-1 px-3" key={index}>
+																			{data.name}{data !== item.vendor_approved_by[item.vendor_approved_by.length - 1] && <span>,&nbsp;</span>}
+																		</span>
+																	)
+																})}
+														</span>
+													</td>
+												</tr>
+											);
+										})}
+								</tbody>
+							</table>
 						</div>
 					</div>
 				</div>
