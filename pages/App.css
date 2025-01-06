@@ -15015,7 +15015,7 @@ margin-bottom: 15px;
   width: 100%;
   border: 1px solid #a5a5a5;
 
-  background: #fff !important;
+  /* background: #fff !important; */
   border-radius: 6px;
   font-size: 14px;
   line-height: 24px;

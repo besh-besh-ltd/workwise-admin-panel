@@ -13,37 +13,24 @@ import { ErrorMessage, Field, FieldArray, Form, Formik } from "formik";
 import { ToastContainer, toast } from "react-toastify";
 import Select from "react-select";
 import { useRouter } from "next/router";
-import Image from "next/image";
+
 
 const AddProduct = () => {
 	const [isClient, setIsClient] = useState(false);
 	const [catloading, setcatloading] = useState(false);
 	const [categories, setCategories] = useState([]);
-	const [parentCategories, setParentCategories] = useState([]);
-	const [cat_id, setCat_id] = useState("");
-	const [levelOneCat, setlevelOneCat] = useState([]);
-	const [levelTwoCat, setlevelTwoCat] = useState([]);
-	const [levelThreeCat, setlevelThreeCat] = useState([]);
-	const [levelFourCat, setlevelFourCat] = useState([]);
-	const [levelFiveCat, setlevelFiveCat] = useState([]);
-	const [levelSixCat, setlevelSixCat] = useState([]);
+	const [selectedValues, setSelectedValues] = useState([]);
+	const [groupedCategories, setgroupedCategories] = useState(new Map());
+
 	const [vendorApprovedList, setVendorApprovedList] = useState([]);
-	const [selectedGalleryFilesReset, setSelectedGalleryFilesReset] =
-		useState(false);
+	const [selectedGalleryFilesReset, setSelectedGalleryFilesReset] = useState(false);
 	const [selectedGalleryFiles, setSelectedGalleryFiles] = useState([]);
-	const [selectedFeaturedFilesReset, setSelectedFeaturedFilesReset] =
-		useState(false);
+	const [selectedFeaturedFilesReset, setSelectedFeaturedFilesReset] = useState(false);
 	const [selectedFeaturedFiles, setSelectedFeaturedFiles] = useState([]);
 	const [selectedTdsFilesReset, setSelectedTdsFilesReset] = useState(false);
 	const [selectedTdsFiles, setSelectedTdsFiles] = useState([]);
 	const [selectedQapFilesReset, setSelectedQapFilesReset] = useState(false);
 	const [selectedQapFiles, setSelectedQapFiles] = useState([]);
-	const [levelOneCatSelected, setlevelOneCatSelected] = useState("");
-	const [levelTwoCatSelected, setlevelTwoCatSelected] = useState("");
-	const [levelThreeCatSelected, setlevelThreeCatSelected] = useState("");
-	const [levelFourCatSelected, setlevelFourCatSelected] = useState("");
-	const [levelFiveCatSelected, setlevelFiveCatSelected] = useState("");
-	const [levelSixCatSelected, setlevelSixCatSelected] = useState("");
 	const [mainLoading, setMainLoading] = useState(false);
 	const [vendorData, setVendorData] = useState([]);
 	const router = useRouter();
@@ -88,9 +75,9 @@ const AddProduct = () => {
 		// manufacturer: "",
 		// availability: "",
 		categories: [],
-		featured: "",
-		tds: "",
-		qap: "",
+		featured: [],
+		tds: [],
+		qap: [],
 		status: 1,
 		approved_id: "",
 		approved_name: "",
@@ -107,26 +94,51 @@ const AddProduct = () => {
 		}),
 	};
 
-	const getCategories = () => {
-		setcatloading(true);
-		categoryList()
-			.then((rsp) => {
-				setcatloading(false);
-				let options = [];
-				let parentOptions = [];
-				rsp.data.map((item) => {
-					options.push({ value: item?.id, label: item?.title });
-					if (item.parent_id == 0) {
-						parentOptions.push({ value: item?.id, label: item?.title });
-					}
-				});
-				setCategories(rsp.data);
-				setParentCategories(parentOptions);
-			})
-			.catch((error) => {
-				setcatloading(false);
-			});
+	const getCategories = async () => {
+		try {
+			setcatloading(true);
+			const res = await categoryList();
+			const groupedData = res.data.reduce((acc, item) => {
+				const parentId = parseInt(item.parent_id) || 0;
+				if (!acc[parentId]) {
+					acc[parentId] = [];
+				}
+				acc[parentId].push({ value: item?.id, label: item?.title });
+				return acc;
+			}, []);
+
+			const catMap = new Map(
+				Object.entries(groupedData).map(([key, value]) => [parseInt(key), value])
+			);
+			setCategories([catMap.get(0)]);
+			setgroupedCategories(catMap);
+		} catch (error) {
+			console.error("Failed to fetch categories:", error);
+		} finally {
+			setcatloading(false);
+		}
 	};
+
+	const hideChildLevels = (level) => {
+		const updatedCategories = categories.slice(0, level);
+		const updatedSelectedValues = selectedValues.slice(0, level);
+
+		setCategories(updatedCategories);
+		setSelectedValues(updatedSelectedValues);
+	};
+
+	const getChildCategories = (id, level) => {
+		const childItems = groupedCategories.get(id);
+
+		if (childItems && childItems.length > 0) {
+			const updatedCategories = [...categories];
+			updatedCategories[level] = childItems;
+			setCategories(updatedCategories.slice(0, level + 1));
+		} else {
+			setCategories(categories.slice(0, level));
+		}
+	};
+
 	const getVendor = () => {
 		vendorList()
 			.then((rsp) => {
@@ -142,50 +154,6 @@ const AddProduct = () => {
 				setcatloading(false);
 			});
 	};
-	const getChildCategories = (id, level) => {
-		let childItems = categories.filter((item) => item.parent_id == id);
-		let options = [];
-		if (childItems.length > 0) {
-			childItems.map((item) => {
-				options.push({ value: item?.id, label: item?.title });
-			});
-		}
-		if (level == 1) {
-			setlevelOneCat(options);
-			setlevelOneCatSelected(id);
-			setlevelTwoCatSelected("");
-			setlevelThreeCatSelected("");
-			setlevelFourCatSelected("");
-			setlevelFiveCatSelected("");
-			setlevelSixCatSelected("");
-		} else if (level == 2) {
-			setlevelTwoCat(options);
-			setlevelTwoCatSelected(id);
-			setlevelThreeCatSelected("");
-			setlevelFourCatSelected("");
-			setlevelFiveCatSelected("");
-			setlevelSixCatSelected("");
-		} else if (level == 3) {
-			setlevelThreeCat(options);
-			setlevelThreeCatSelected(id);
-			setlevelFourCatSelected("");
-			setlevelFiveCatSelected("");
-			setlevelSixCatSelected("");
-		} else if (level == 4) {
-			setlevelFourCat(options);
-			setlevelFourCatSelected(id);
-			setlevelFiveCatSelected("");
-			setlevelSixCatSelected("");
-		} else if (level == 5) {
-			setlevelFiveCat(options);
-			setlevelFiveCatSelected(id);
-			setlevelSixCatSelected("");
-		} else if (level == 6) {
-			setlevelSixCat(options);
-			setlevelSixCatSelected(id);
-		} else {
-		}
-	};
 
 	const getVendorApproveList = () => {
 		vendorApproveList().then((res) => {
@@ -200,66 +168,29 @@ const AddProduct = () => {
 	};
 
 	const submitHandler = (values) => {
-		const payload = new FormData();
-		payload.append(`name`, values.name);
-		payload.append(`description`, values.description);
-		// payload.append(`manufacturer`, values.manufacturer);
-		// payload.append(`availability`, values.availability);
-		payload.append(`status`, 1);
-		payload.append(
-			`approved_id`,
-			values.approved_id == "o" ? "" : JSON.stringify(values.approved_id)
-		);
-		payload.append(
-			`approved_name`,
-			values.approved_id == "o" ? values.approved_name : ""
-		);
-		payload.append(`variations`, JSON.stringify(values.variations));
-		selectedGalleryFiles.forEach((file, i) => {
-			payload.append(`gallery`, file, file.name);
-		});
-		selectedFeaturedFiles.forEach((file, i) => {
-			payload.append(`featured`, file, file.name);
-		});
-		selectedQapFiles.forEach((file, i) => {
-			payload.append(`qap`, file, file.name);
-		});
-		selectedTdsFiles.forEach((file, i) => {
-			payload.append(`tds`, file, file.name);
-		});
-		let selectedCategories = [
-			levelOneCatSelected,
-			levelTwoCatSelected,
-			levelThreeCatSelected,
-			levelFourCatSelected,
-			levelFiveCatSelected,
-			levelSixCatSelected,
-		];
-		selectedCategories = selectedCategories.filter(
-			(v) => v != "" && v !== null
-		);
-		payload.append(`categories`, JSON.stringify(selectedCategories));
-		// payload.append(`vendor`, values.vendor);
-		payload.append(`is_featured`, values.is_featured);
+		let payload = {
+			...values,
+			status: 1,
+			categories: selectedValues
+				.filter(cat => cat != null)
+				.map(cat => cat.value),
+			gallery: selectedGalleryFiles,
+			featured: selectedFeaturedFiles,
+			qap: selectedQapFiles,
+			tds: selectedTdsFiles
+		}
+
 		setMainLoading(true);
 		addProducts(payload)
 			.then((res) => {
-				toast(res.message);
+				toast.success(res.message);
 				setTimeout(() => {
 					router.push("/product-management");
 				}, 1000);
 			})
 			.catch((error) => {
-				if (error.message.response.status === 400) {
-					if (error.message.response.data.status === 2) {
-						let txt = "";
-						for (let x in error?.message?.response?.data?.errors) {
-							txt = error?.message?.response?.data?.errors[x];
-						}
-						toast(txt);
-					}
-				}
-				setMainLoading(false);
+				console.error(error);
+				toast.error(error.message);
 			});
 	};
 
@@ -286,7 +217,6 @@ const AddProduct = () => {
 								<div className="row">
 									<div className="col-md-12">
 										<div className="add-prod-con">
-											<span className="title">Add Products</span>
 											<Formik
 												enableReinitialize={true}
 												initialValues={initialValues}
@@ -335,160 +265,43 @@ const AddProduct = () => {
 																</div>
 															</div>
 
-															{!catloading && (
+															{!catloading && categories?.length > 0 &&
 																<>
-																	<div className="col-md-3">
-																		<div className="form-group">
-																			<Select
-																				options={parentCategories}
-																				placeholder="Select Category"
-																				isClearable={true}
-																				styles={customSelectStyles}
-																				onChange={(e) => {
-																					setlevelOneCat([]);
-																					setlevelTwoCat([]);
-																					setlevelThreeCat([]);
-																					setlevelFourCat([]);
-																					setlevelFiveCat([]);
-																					setlevelSixCat([]);
-																					getChildCategories(e?.value, "1");
-																					if (e && e.value) {
-																						setCat_id(e.value);
-																						setFieldValue("categories", [
-																							e.value,
-																						]);
-																					} else {
-																						setFieldValue("categories", []);
-																					}
-																				}}
-																			/>
-																		</div>
-																	</div>
-																	{levelOneCat && levelOneCat.length > 0 && (
-																		<div className="col-md-3">
-																			<div className="form-group">
-																				<Select
-																					options={levelOneCat}
-																					placeholder="Select Sub Category"
-																					isClearable={true}
-																					styles={customSelectStyles}
-																					onChange={(e) => {
-																						getChildCategories(e?.value, "2");
-																						if (e && e.value) {
-																							setCat_id(e.value);
-																						} else {
-																							setCat_id("");
-																						}
-																					}}
-																				/>
-																			</div>
-																		</div>
-																	)}
-																	{levelTwoCat && levelTwoCat.length > 0 && (
-																		<div className="col-md-3">
-																			<div className="form-group">
-																				<Select
-																					options={levelTwoCat}
-																					placeholder="Select Sub Category"
-																					isClearable={true}
-																					styles={customSelectStyles}
-																					onChange={(e) => {
-																						getChildCategories(e?.value, "3");
-																						if (e && e.value) {
-																							setCat_id(e.value);
-																						} else {
-																							setCat_id("");
-																						}
-																					}}
-																				/>
-																			</div>
-																		</div>
-																	)}
-																	{levelThreeCat &&
-																		levelThreeCat.length > 0 && (
-																			<div className="col-md-3">
-																				<div className="form-group">
-																					<Select
-																						options={levelThreeCat}
-																						placeholder="Select Sub Category"
-																						isClearable={true}
-																						styles={customSelectStyles}
-																						onChange={(e) => {
-																							getChildCategories(e?.value, "4");
-																							if (e && e.value) {
-																								setCat_id(e.value);
-																							} else {
-																								setCat_id("");
-																							}
-																						}}
-																					/>
-																				</div>
-																			</div>
+																	<div className="form-group mb-0">
+																		<label htmlFor="categories">Categories *</label>
+																		{touched.categories && errors.categories && (
+																			<div className="text-danger">{errors.categories}</div>
 																		)}
+																	</div>
+																	{categories.map((options, index) => (
+																		<div className="col-md-3" key={`cat_level_${index}`}>
+																			<div className="form-group">
+																				<Select
+																					id={`category_level_${index}`}
+																					options={options}
+																					placeholder={`Select ${index == 0 ? 'Category' : 'Sub-category'}`}
+																					isClearable={index !== 0}
+																					value={selectedValues[index] || null}
+																					styles={customSelectStyles}
+																					onChange={(selectedOption) => {
+																						const updatedSelectedValues = [...selectedValues];
+																						updatedSelectedValues[index] = selectedOption || null;
 
-																	{levelFourCat && levelFourCat.length > 0 && (
-																		<div className="col-md-3">
-																			<div className="form-group">
-																				<Select
-																					options={levelFourCat}
-																					placeholder="Select Sub Category"
-																					isClearable={true}
-																					styles={customSelectStyles}
-																					onChange={(e) => {
-																						getChildCategories(e?.value, "5");
-																						if (e && e.value) {
-																							setCat_id(e.value);
-																						} else {
-																							setCat_id("");
-																						}
-																					}}
-																				/>
-																			</div>
-																		</div>
-																	)}
+																						const truncatedValues = updatedSelectedValues.slice(0, index + 1);
+																						setSelectedValues(truncatedValues);
 
-																	{levelFiveCat && levelFiveCat.length > 0 && (
-																		<div className="col-md-3">
-																			<div className="form-group">
-																				<Select
-																					options={levelFiveCat}
-																					placeholder="Select Sub Category"
-																					isClearable={true}
-																					styles={customSelectStyles}
-																					onChange={(e) => {
-																						getChildCategories(e?.value, "6");
-																						if (e && e.value) {
-																							setCat_id(e.value);
+																						if (selectedOption) {
+																							getChildCategories(selectedOption.value, index + 1);
 																						} else {
-																							setCat_id("");
+																							hideChildLevels(index);
 																						}
 																					}}
 																				/>
 																			</div>
 																		</div>
-																	)}
-																	{levelSixCat && levelSixCat.length > 0 && (
-																		<div className="col-md-3">
-																			<div className="form-group">
-																				<Select
-																					options={levelSixCat}
-																					placeholder="Select Sub Category"
-																					isClearable={true}
-																					styles={customSelectStyles}
-																					onChange={(e) => {
-																						getChildCategories(e?.value, "7");
-																						if (e && e.value) {
-																							setCat_id(e.value);
-																						} else {
-																							setCat_id("");
-																						}
-																					}}
-																				/>
-																			</div>
-																		</div>
-																	)}
+																	))}
 																</>
-															)}
+															}
 
 															<div className="col-md-12">
 																<div className="form-group">
@@ -551,7 +364,7 @@ const AddProduct = () => {
                                     errors={errors}
                                   />
                                 </div> */}
-																<div className="form-group">
+																{/* <div className="form-group">
 																	<label htmlFor="approved_id">
 																		Approved Vendor
 																	</label>
@@ -574,10 +387,10 @@ const AddProduct = () => {
 																		component="div"
 																		className="form-error"
 																	/>
-																</div>
+																</div> */}
 															</div>
 
-															{values.approved_id == "o" && (
+															{/* {values.approved_id == "o" && (
 																<div className="col-md-8">
 																	<div className="form-group">
 																		<FormikField
@@ -589,7 +402,7 @@ const AddProduct = () => {
 																		/>
 																	</div>
 																</div>
-															)}
+															)} */}
 
 															<div className="col-md-12">
 																<div className="row">
@@ -687,21 +500,21 @@ const AddProduct = () => {
 
 																								{values.variations.length >
 																									1 && (
-																									<div className="col-md-3">
-																										<div className="form-group">
-																											<Link
-																												href="/"
-																												onClick={(event) => {
-																													event.preventDefault();
-																													remove(index);
-																												}}
-																												className="btn btn-primary"
-																											>
-																												Remove
-																											</Link>
+																										<div className="col-md-3">
+																											<div className="form-group">
+																												<Link
+																													href="/"
+																													onClick={(event) => {
+																														event.preventDefault();
+																														remove(index);
+																													}}
+																													className="btn btn-primary"
+																												>
+																													Remove
+																												</Link>
+																											</div>
 																										</div>
-																									</div>
-																								)}
+																									)}
 																							</div>
 																						)
 																					)}
