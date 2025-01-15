@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import axiosInstance from "axios";
+import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct } from "@/utils/services/product-management";
+import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct } from "@/utils/services/product-management";
 import axiosFormData from "@/utils/axios/form-data";
 import FullLoading from "../loading/FullLoading";
 import { ToastContainer, toast } from "react-toastify";
@@ -10,9 +8,31 @@ import ReactPaginate from "react-paginate";
 import { productExport } from "@/utils/services/product-management";
 import DisapproveModal from "../modal/disapprove-modal";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
-import Select from "react-select";
+import Select, { components } from "react-select";
 import { vendorApproveList } from "@/utils/services/rfq";
 import { vendorList } from "@/utils/services/rfq";
+
+// Custom styles for Product Select Component
+const customStyles = {
+  option: (provided, state) => ({
+    ...provided,
+    marginBottom: '1px solid #000',
+    color: state.isSelected ? '#0d6efd' : '#212529',
+    backgroundColor: state.isSelected ? '#f0f0f0' : provided.backgroundColor,
+  }),
+};
+
+// Modified Select Component to show category along with Product Name
+const CustomSelectOption = (props) => (
+  <components.Option {...props}>
+    <div>
+      {props.data.label}
+      <br />
+      <small>{props.data.categories}</small>
+    </div>
+  </components.Option>
+);
+
 
 const ProductManagement = () => {
   const navigate = useRouter();
@@ -32,7 +52,6 @@ const ProductManagement = () => {
   const [reasonList, setReasonList] = useState([]);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [searchString, setSearchString] = useState('');
-  const [vendorApprovedData, setVendorApprovedList] = useState([]);
   const [selectedApproveVendor, setSelectedApproveVendor] = useState("");
   const [vendorData, setVendorData] = useState([]);
   const [selectedVendor, setSelectedVendor] = useState("");
@@ -43,6 +62,16 @@ const ProductManagement = () => {
   const [selectVal, setSelectValue] = useState("");
   const [productWithVendorErrors, setProductWithVendorErrors] = useState(null);
   const [productErrors, setProductErrors] = useState(null);
+
+  const [productLoading, setProductLoading] = useState(false);
+  const [vendorApprovedList, setVendorApprovedList] = useState([]);
+  const [vendorProductsList, setVendorProductsList] = useState([]);
+  const [openProductMap, setOpenProductMap] = useState(false);
+  const [productMapObj, setproductMapObj] = useState({
+    product: null,
+    vendor: null,
+    approved_by: null
+  });
 
   const customSelectStyles = {
     control: (base) => ({
@@ -112,15 +141,6 @@ const ProductManagement = () => {
   }
   const handlePageClick = (e) => {
     setPage(e.selected + 1);
-  };
-  const getVendorApproveList = () => {
-    vendorApproveList().then((res) => {
-      let lists = res.data.map((s) => ({
-        label: s.vendor_approve,
-        value: s.id,
-      }));
-      setVendorApprovedList(lists);
-    });
   };
 
   const getVendor = () => {
@@ -360,6 +380,111 @@ const ProductManagement = () => {
       });
   }
 
+  // Function to fetch vendor approved-by list
+  const getVendorApproveList = () => {
+    vendorApproveList()
+      .then((res) => {
+        let approved_options = res.data.map((s) => ({
+          label: s.vendor_approve,
+          value: s.id,
+        }));
+        setVendorApprovedList(approved_options);
+      })
+      .catch((error) => {
+        console.log(error)
+      });
+  };
+
+  // Function to format product data along with it's categories 
+  const formatGroupedData = (groupedData) => {
+    return Object.values(groupedData).flatMap(items =>
+      items.map(item => ({
+        value: item.id,
+        label: item.name,
+        categories: item.product_categories.map(cat => cat.category_name).join(" | ")
+      }))
+    );
+  }
+
+  // Function to filter out unique products with categories
+  const groupBySlug = (data) => {
+    const groupedData = data.reduce((acc, item) => {
+      const slug = item.slug;
+      if (!acc[slug]) acc[slug] = [];
+
+      const isUnique = !acc[slug].some((existingItem) =>
+        JSON.stringify(existingItem.product_categories) === JSON.stringify(item.product_categories)
+      );
+      if (isUnique) acc[slug].push(item);
+      return acc;
+    }, {});
+    return formatGroupedData(groupedData);
+  }
+
+  // Search Product Function
+  const getVendorProductList = useCallback((search_key) => {
+    setProductLoading(true);
+    getAllProducts(20, 1, search_key)
+      .then((res) => {
+        const product_options = groupBySlug(res.data);
+        setVendorProductsList(product_options);
+      })
+      .catch((error) => {
+        console.log(error);
+      })
+      .finally(() => setProductLoading(false));
+  }, []);
+
+  // Debouncing the search product API call for 300ms
+  const debounceGetVendorProductList = useCallback(
+    (inputValue) => {
+      const debounceTimeout = 300;
+      clearTimeout(window.debounceTimer);
+      window.debounceTimer = setTimeout(() => {
+        getVendorProductList(inputValue);
+      }, debounceTimeout);
+    },
+    [getVendorProductList]
+  );
+
+  const handleMappingObj = (selectedOption, { name }) => {
+    if (name === "approved_by" && !productMapObj.product) {
+      toast.error("Please Choose a Product First.", { position: "top-right" })
+      return
+    }
+    setproductMapObj((prevState) => ({
+      ...prevState,
+      [name]: selectedOption
+    }));
+  }
+
+  const handleSubmitMapping = async () => {
+    const { product, vendor, approved_by } = productMapObj;
+    if (!product || !vendor) {
+      toast.error("Product and Vendor fields are required.");
+      return;
+    }
+    try {
+      const payload = {
+        product_id: product.value,
+        vendor_id: vendor.value,
+        approved_by: approved_by?.map((item) => item.value) || null
+      }
+      const res = await mapVendorWithProduct(payload);
+      toast.success(res.message)
+      setproductMapObj({
+        product: null,
+        vendor: null,
+        approved_by: null
+      });
+      setOpenProductMap(false);
+      getProducts();
+    } catch (error) {
+      console.log(error)
+      toast.error(error.message?.response?.data?.message)
+    }
+  }
+
   useEffect(() => {
     getReasonList();
     getVendorApproveList();
@@ -384,7 +509,7 @@ const ProductManagement = () => {
       <section className="content">
         <div className="container-fluid">
           <div className="card card-body">
-            {!enableBulkUpload && !enableBulkProdUpload && (
+            {!enableBulkUpload && !enableBulkProdUpload && !openProductMap && (
               <div className="row">
                 {/* <div className="col-md-8">
                   <div className="input-group buyers-search">
@@ -576,7 +701,7 @@ const ProductManagement = () => {
                 <div className="col-sm-3">
                   <Select
                     id={id}
-                    options={vendorApprovedData}
+                    options={vendorApprovedList}
                     placeholder="Approved Vendor"
                     styles={customSelectStyles}
                     isClearable={true}
@@ -617,7 +742,7 @@ const ProductManagement = () => {
                     <i className="fa fa-plus"></i> Add Product
                   </button>
 
-                  <button
+                  {/* <button
                     type="button"
                     className="btn btn-secondary mr-2"
                     onClick={() => {
@@ -635,6 +760,16 @@ const ProductManagement = () => {
                     }}
                   >
                     Upload Only Products
+                  </button> */}
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary mr-2"
+                    onClick={() => {
+                      setOpenProductMap(true)
+                    }}
+                  >
+                    Map Product with Vendor
                   </button>
                   <button
                     type="button"
@@ -749,6 +884,79 @@ const ProductManagement = () => {
                 <div className="col-md-4"></div>
               </div>
             )}
+            {openProductMap && (
+              <div className="row">
+                <div className="col-12 d-flex justify-content-between">
+                  <h2 className="fs-4 mb-3">Map Product with Vendor</h2>
+                  <button
+                    type="button"
+                    className="btn btn-danger mb-3"
+                    onClick={() => setOpenProductMap(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="col-6 col-md-4">
+                  <label htmlFor="product">Product Name *</label>
+                  <Select
+                    name="product"
+                    options={vendorProductsList}
+                    value={productMapObj.product}
+                    components={{ Option: CustomSelectOption }}
+                    styles={customStyles}
+                    isLoading={productLoading}
+                    onInputChange={debounceGetVendorProductList}
+                    isClearable={false}
+                    isSearchable
+                    placeholder="Select Product"
+                    onChange={handleMappingObj}
+                    noOptionsMessage={() => "Please enter atleast 3 words"}
+                  />
+                </div>
+                <div className="col-6 col-md-4">
+                  <label htmlFor="vendor">Vendor *</label>
+                  <Select
+                    name="vendor"
+                    options={vendorData}
+                    value={productMapObj.vendor}
+                    isClearable={false}
+                    isSearchable
+                    placeholder="Select Vendor"
+                    onChange={handleMappingObj}
+                  />
+                </div>
+                <div className="col-6 col-md-4">
+                  <label htmlFor="approved_by">Approved By</label>
+                  <Select
+                    name="approved_by"
+                    options={vendorApprovedList}
+                    isMulti
+                    isSearchable
+                    isClearable={false}
+                    onChange={handleMappingObj}
+                    placeholder="Approved By"
+                  />
+                </div>
+
+                <div className="col-12 d-flex justify-content-end my-3">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleSubmitMapping}
+                  >
+                    Submit
+                  </button>
+                </div>
+
+                <div className="col-12 mt-3">
+                  <p className=" border rounded-3 p-2 bg-light">
+                    <b>Note: </b>
+                    If you don't find the Product or Vendor, please add them first and retry.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {productWithVendorErrors &&
@@ -840,41 +1048,41 @@ const ProductManagement = () => {
                   </div>
 
                   <div className="table-responsive mb-3">
-                  <table className="table table-striped table-hover">
-                    <thead>
-                      <tr>
-                        <th scope="col">Row No.</th>
-                        {/* <th scope="col">Product Name</th>
+                    <table className="table table-striped table-hover">
+                      <thead>
+                        <tr>
+                          <th scope="col">Row No.</th>
+                          {/* <th scope="col">Product Name</th>
                         <th scope="col">Vendor Name</th>
                         <th scope="col">Vendor Email</th> */}
-                        <th scope="col">Errors</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {
-                        productErrors.map((item) => {
-                          return (
-                            <tr key={`err_item_${item.Row}`}>
-                              <td>{item.Row || "---"}</td>
-                              {/* <td>{item.productName || "---"}</td>
+                          <th scope="col">Errors</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {
+                          productErrors.map((item) => {
+                            return (
+                              <tr key={`err_item_${item.Row}`}>
+                                <td>{item.Row || "---"}</td>
+                                {/* <td>{item.productName || "---"}</td>
                               <td>{item.vendorName || "---"}</td>
                               <td>{item.vendorEmail || "---"}</td> */}
-                              <td>
-                                {typeof item.error === 'string' ?
-                                  item.error
-                                  :
-                                  item.error.map((err) => {
-                                    return (
-                                      <p className="mb-0">{err}</p>
-                                    )
-                                  })
-                                }
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
+                                <td>
+                                  {typeof item.error === 'string' ?
+                                    item.error
+                                    :
+                                    item.error.map((err) => {
+                                      return (
+                                        <p className="mb-0">{err}</p>
+                                      )
+                                    })
+                                  }
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
                   </div>
                 </>
               )}
@@ -899,7 +1107,7 @@ const ProductManagement = () => {
             {!loading && (
               <table className="table table-striped table-hover table-responsive mb-3">
                 <thead>
-                  <tr>
+                  <tr className="text-nowrap">
                     <th scope="col">
                       <input
                         type="checkbox"
@@ -923,7 +1131,7 @@ const ProductManagement = () => {
                   {products &&
                     products.map((item) => {
                       return (
-                        <tr key={item.id}>
+                        <tr key={item.id} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
                           <td>
                             <input
                               type="checkbox"
@@ -1031,10 +1239,10 @@ const ProductManagement = () => {
                                 className="fa fa-edit"
                                 onClick={() => handleUpdateProduct(item)}
                               ></span>
-                              <span
+                              {/* <span
                                 onClick={() => handleDeleteProduct(item.id)}
                                 class="fa fa-trash ml-2">
-                              </span>
+                              </span> */}
                             </div>
 
                           </td>
@@ -1044,7 +1252,7 @@ const ProductManagement = () => {
                 </tbody>
               </table>
             )}
-            
+
             {Math.ceil(totalPages / 10) > 1 && (
               <ReactPaginate
                 breakLabel="..."

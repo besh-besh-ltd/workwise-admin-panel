@@ -15081,3 +15081,22 @@ margin-bottom: 15px;
 .form-common-row .col-6, .col-4{
   padding-bottom: 8px;
 }
+.deleted-row, .deleted-row td {
+  position: relative;
+  background-color: #ffe8e8e6;  
+  opacity: 0.7;
+}
+.deleted-row::after {
+  content: "Deleted By Admin";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  color: #eb061c;  
+  font-weight: bold;
+  font-size: 20px;  
+  padding: 2px 8px;
+  border-radius: 4px;
+  z-index: 1;
+}

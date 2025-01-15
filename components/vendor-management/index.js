@@ -295,7 +295,7 @@ const VendorManagement = () => {
               <tbody>
                 {vendorData.map((item) => {
                   return (
-                    <tr key={item.name}>
+                    <tr key={item.name} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
                       <td>{item.name}</td>
                       <td>{item.email}</td>
                       <td>{item.mobile}</td>
@@ -365,10 +365,10 @@ const VendorManagement = () => {
                             className="fa fa-edit mr-3"
                             onClick={() => handleUpdateVendor(item)}
                           ></span>
-                          <span
+                          {/* <span
                             className="fa fa-trash"
                             onClick={() => handleDeleteBudget(item.id)}
-                          ></span>
+                          ></span> */}
                         </div>
                         {/* </div> */}
                       </td>

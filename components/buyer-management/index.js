@@ -227,7 +227,7 @@ const BuyerManagement = () => {
                 <tbody>
                   {BuyerData.map((item) => {
                     return (
-                      <tr key={item.name}>
+                      <tr key={item.name} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
                         <td>{item.name}</td>
                         <td>{item.organization_name}</td>
                         <td>{item.email}</td>
@@ -283,10 +283,10 @@ const BuyerManagement = () => {
                             className="fa fa-edit mr-3"
                             onClick={() => handleUpdateVendor(item)}
                           ></span>
-                          <span
+                          {/* <span
                             className="fa fa-trash"
                             onClick={() => handleDeleteBudget(item.id)}
-                          ></span>
+                          ></span> */}
                         </td>
                       </tr>
                     );
