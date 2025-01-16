@@ -1201,6 +1201,8 @@ const ProductManagement = () => {
                                   </OverlayTrigger>}
                               </div>
                             )}
+                            <p className="text-sm text-capitalize text-nowrap mt-2 mb-1"><b>Added By: </b>{item.added_by}</p>
+                            <p className="text-sm text-capitalize text-nowrap mb-1"><b>Approved By: </b>{item.vendor_approved_by}</p>
                           </td>
 
                           <td>
