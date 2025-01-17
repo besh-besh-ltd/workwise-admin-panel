@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   handleDeleteVendorProfile,
   handleGetVendorList,
@@ -14,6 +13,7 @@ import { Field, Form, Formik } from "formik";
 import * as yup from "yup";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import DisapproveModal from "../modal/disapprove-modal";
+import { getAdminProfile } from "@/utils/services/login";
 
 const VendorManagement = () => {
   const [vendorData, setVendorData] = useState([]);
@@ -31,6 +31,7 @@ const VendorManagement = () => {
   const [selectedVendorId, setSelectedVendorId] = useState("");
   const [id, setId] = useState();
   const router = useRouter();
+  const [userType, setUserType] = useState(null);
 
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
@@ -138,9 +139,15 @@ const VendorManagement = () => {
     router.push(`/vendor-management/update-vendor/${item.id}`);
   };
 
-  useEffect(() => {
-    getBuyerList();
-  }, [page]);
+  const getUserProfile = async () => {
+    try {
+      const res = await getAdminProfile();
+      setUserType(res.data?.user_type || null);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   const handlePageClick = (e) => {
     setPage(e.selected + 1);
   };
@@ -168,6 +175,11 @@ const VendorManagement = () => {
   };
 
   useEffect(() => {
+    getBuyerList();
+  }, [page]);
+
+  useEffect(() => {
+    getUserProfile();
     getRejectList();
   }, []);
 
@@ -301,55 +313,39 @@ const VendorManagement = () => {
                       <td>{item.mobile}</td>
                       <td>{item.organization_name}</td>
                       <td>
-                        {item.status == 0 ? (
+                        {userType && userType == 6 ? (
+                          <p>{item.status === 0 ? 'Disapproved' : 'Approved'}</p>
+                        ) : (
                           <div className="d-flex flex-row align-items-center">
-                            <OverlayTrigger
-                              placement="top"
-                              overlay={
-                                <Tooltip id="tooltip1">
-                                  Click to approve
-                                </Tooltip>
-                              }
-                            >
-                              <button
-                                className="btn btn-secondary bg-success"
-                                onClick={() => submitApproveVendor(item.id, 1)}
-                              >
-                                Approve
-                              </button>
-                            </OverlayTrigger>
-
-                            {/* {item?.status === 0 && item?.reject_reason &&
+                            {item.status === 0 ? (
                               <OverlayTrigger
                                 placement="top"
-                                overlay={
-                                  <Tooltip id="tooltip1">
-                                    {item?.reject_reason}
-                                  </Tooltip>
-                                }
+                                overlay={<Tooltip id={`approve-tooltip-${item.id}`}>Click to approve</Tooltip>}
                               >
-                                <span className="fa fa-info-circle ml-2"></span>
-                              </OverlayTrigger>} */}
+                                <button
+                                  className="btn btn-secondary bg-success"
+                                  onClick={() => submitApproveVendor(item.id, 1)}
+                                >
+                                  Approve
+                                </button>
+                              </OverlayTrigger>
+                            ) : (
+                              <OverlayTrigger
+                                placement="top"
+                                overlay={<Tooltip id={`disapprove-tooltip-${item.id}`}>Click to disapprove</Tooltip>}
+                              >
+                                <button
+                                  className="btn btn-secondary bg-danger"
+                                  onClick={() => submitApproveVendor(item.id, 0)}
+                                >
+                                  Disapprove
+                                </button>
+                              </OverlayTrigger>
+                            )}
                           </div>
-                        ) : (
-                          <OverlayTrigger
-                            placement="top"
-                            overlay={
-                              <Tooltip id="tooltip1">
-                                Click to Disapprove
-                              </Tooltip>
-                            }
-                          >
-                            <button
-                              className="btn btn-secondary bg-danger"
-                              // onClick={() => openRejectModal(item.id, 0)}
-                              onClick={() => submitApproveVendor(item.id, 0)}
-                            >
-                              Disapprove
-                            </button>
-                          </OverlayTrigger>
                         )}
                       </td>
+
                       <td>
                         {/* <div className="card-footer bg-transparent border-secondary"> */}
                         <div className="d-flex">

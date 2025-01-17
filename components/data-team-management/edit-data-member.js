@@ -7,13 +7,13 @@ import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import { updateSubAdmin, getSubAdminDetails } from '@/utils/services/subadmin-management';
 
-const EditSubadmin = () => {
+const EditDataMemberPage = () => {
   const router = useRouter();
 
-  const [subAdminData, setSubAdminData] = useState(null);
+  const [dataMemberData, setdataMemberData] = useState(null);
   const initialValues = {
-    name: subAdminData ? subAdminData[0]?.name : "",
-    mobile: subAdminData ? subAdminData[0]?.mobile : "",
+    name: dataMemberData ? dataMemberData[0]?.name : "",
+    mobile: dataMemberData ? dataMemberData[0]?.mobile : "",
     image: ""
   }
 
@@ -31,10 +31,10 @@ const EditSubadmin = () => {
     image: yup.mixed().nullable().required("Please select a file"),
   });
 
-  const handleSubadminData = () => {
+  const handledataMemberData = () => {
     getSubAdminDetails(router?.query?.id)
       .then((res) => {
-        setSubAdminData(res.data)
+        setdataMemberData(res.data)
       })
       .catch((err) => console.log("err", err));
   }
@@ -45,7 +45,7 @@ const EditSubadmin = () => {
         resetForm();
         toast(res.message);
         setTimeout(() => {
-          router.push("/subadmin-management");
+          router.push("/data-team-management");
         }, 1000);
       })
       .catch((error) => {
@@ -59,7 +59,7 @@ const EditSubadmin = () => {
 
   useEffect(() => {
     if(router?.query?.id){
-      handleSubadminData();
+      handledataMemberData();
     }
   }, [router])
   return (
@@ -68,7 +68,7 @@ const EditSubadmin = () => {
       <div className="content-header">
         <div className="container-fluid">
           <div className="row mb-2">
-            <h1 className="m-0 text-dark">Edit Subadmin</h1>
+            <h1 className="m-0 text-dark">Edit Data Member</h1>
           </div>
         </div>
       </div>
@@ -76,7 +76,7 @@ const EditSubadmin = () => {
       <section className="content p-2">
         <div className="container-fluid">
           <div className="text-left pb-4">
-            <Link className="btn btn-primary" href="/subadmin-management">
+            <Link className="btn btn-primary" href="/data-team-management">
               <span className="fa fa-angle-left mr-2"></span>Go Back
             </Link>
           </div>
@@ -164,4 +164,4 @@ const EditSubadmin = () => {
   )
 }
 
-export default EditSubadmin
+export default EditDataMemberPage

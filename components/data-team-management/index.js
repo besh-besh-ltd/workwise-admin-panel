@@ -6,18 +6,19 @@ import DeleteModal from '../modal/delete-modal';
 import { getSubAdminList } from '@/utils/services/subadmin-management';
 import { capitalize } from '../shared/TitleCase';
 
-const SubadminManagement = () => {
+const DataTeamManagement = () => {
     const router = useRouter();
-    const [subAdminList, setSubAdminList] = useState([]);
+    const [dataTeamList, setDataTeamList] = useState([]);
     const [limit, setlimit] = useState(10);
     const [page, setPage] = useState(1);
     const [totalPages, settotalPages] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [id, setId] = useState();
     const [searchString, setSearchString] = useState('');
-    const userTypeRef = useRef(5);
+    const userTypeRef = useRef(6);
 
     const handleClose = () => setShowModal(false);
+    
     const handleDeleteItem = (id) => {
         setShowModal(true);
         setId(id);
@@ -35,23 +36,23 @@ const SubadminManagement = () => {
         router.push(`/role-permission/${item.id}`);
     }
 
-    const getSubAdmin = () => {
+    const getDataTeamList = () => {
         getSubAdminList(page, limit, searchString, userTypeRef.current)
             .then((res) => {
                 settotalPages(res.total_count);
-                setSubAdminList(res.data);
+                setDataTeamList(res.data);
             })
             .catch((err) => {
                 console.log("err", err)
             });
     }
 
-    const handleSubAdminUpdate = (item) => {
-        router.push(`/subadmin-management/edit-subadmin/${item.id}`);
+    const handleDataTeamUpdate = (item) => {
+        router.push(`/data-team-management/edit-data-member/${item.id}`);
     }
 
     useEffect(() => {
-        getSubAdmin();
+        getDataTeamList();
     }, [page, searchString])
 
     return (
@@ -60,7 +61,7 @@ const SubadminManagement = () => {
             <div className="content-header">
                 <div className="container-fluid">
                     <div className="row">
-                        <h1 className="m-0 text-dark">SubAdmin List</h1>
+                        <h1 className="m-0 text-dark">Data Member List</h1>
                     </div>
                 </div>
             </div>
@@ -71,11 +72,11 @@ const SubadminManagement = () => {
                         <button
                             type="button"
                             onClick={() =>
-                                router.push("/subadmin-management/add-subadmin")
+                                router.push("/data-team-management/add-data-member")
                             }
                             className="btn btn-primary mr-2"
                         >
-                            <i className="fa fa-plus"></i> Add Subadmin
+                            <i className="fa fa-plus"></i> Add Member
                         </button>
                     </div>
                 </div>
@@ -86,7 +87,7 @@ const SubadminManagement = () => {
                             <input
                                 type="text"
                                 className="form-control form-control-sm"
-                                placeholder="Search SubAdmin"
+                                placeholder="Search Member"
                                 onChange={handleSearch}
                             />
                         </div>
@@ -102,7 +103,7 @@ const SubadminManagement = () => {
                         </thead>
                         <tbody>
                             {
-                                subAdminList && subAdminList?.map((item, index) => {
+                                dataTeamList && dataTeamList?.map((item, index) => {
                                     return (
                                         <tr key={index}>
                                             <td>{capitalize(item?.name)}</td>
@@ -113,14 +114,14 @@ const SubadminManagement = () => {
                                                     className="fa fa-eye mr-3"
                                                     onClick={() =>
                                                         router.push(
-                                                            `/subadmin-management/subadmin-details/${item.id}`
+                                                            `/data-team-management/data-member-details/${item.id}`
                                                         )
                                                     }
                                                 ></span>
                                                 <span
                                                     className="fa fa-edit"
-                                                    data-toggle="tooltip" title="Edit Subadmin"
-                                                    onClick={() => handleSubAdminUpdate(item)}
+                                                    data-toggle="tooltip" title="Edit Member"
+                                                    onClick={() => handleDataTeamUpdate(item)}
                                                 ></span>
                                                 <span
                                                     className="fa fa-trash ml-3"
@@ -138,43 +139,7 @@ const SubadminManagement = () => {
                             }
                         </tbody>
                     </table>
-                    {/* <nav aria-label="Page navigation example">
-                        <ul className="pagination">
-                            {Array.from(Array(totalPages), (e, i) => {
-                                if (i + 1 === page) {
-                                    return (
-                                        <li className="active page-item" key={i + 1}>
-                                            <a
-                                                className="page-link"
-                                                href=""
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    setpage(i + 1);
-                                                }}
-                                            >
-                                                {i + 1}
-                                            </a>
-                                        </li>
-                                    );
-                                } else {
-                                    return (
-                                        <li className="page-item" key={i + 1}>
-                                            <a
-                                                className="page-link"
-                                                href=""
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    setpage(i + 1);
-                                                }}
-                                            >
-                                                {i + 1}
-                                            </a>
-                                        </li>
-                                    );
-                                }
-                            })}
-                        </ul>
-                    </nav> */}
+                    
                     {Math.ceil(totalPages / 10) > 1 && (
                         <ReactPaginate
                             breakLabel="..."
@@ -192,10 +157,9 @@ const SubadminManagement = () => {
             <DeleteModal
                 show={showModal}
                 onHide={handleClose}
-            // data={submitDeleteSection}
             />
         </>
     )
 }
 
-export default SubadminManagement
+export default DataTeamManagement

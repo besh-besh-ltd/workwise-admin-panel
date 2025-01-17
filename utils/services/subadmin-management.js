@@ -35,19 +35,12 @@ export const updateSubAdmin = (values, id) => {
     });
 }
 
-export const getSubAdminList = (page = 1, limit = 10, name) => {
+export const getSubAdminList = (page = 1, limit = 10, name, userType) => {
     return new Promise(async (resolve, reject) => {
         try {
-            let response;
-            if (name) {
-                response = await axiosInstance.get(
-                    `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/roles/subadmin-list?page=${page}&limit=${limit}&name=${name}`
-                );
-            } else {
-                response = await axiosInstance.get(
-                    `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/roles/subadmin-list?page=${page}&limit=${limit}`
-                );
-            }
+            const response = await axiosInstance.get(
+                `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/roles/subadmin-list?page=${page}&limit=${limit}${name ? `&name=${name}` : ''}${userType ? `&userType=${userType}` : ''}`
+            );            
             resolve(response);
         } catch (error) {
             reject({ message: error });

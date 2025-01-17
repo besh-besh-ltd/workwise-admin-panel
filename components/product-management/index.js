@@ -11,6 +11,7 @@ import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import Select, { components } from "react-select";
 import { vendorApproveList } from "@/utils/services/rfq";
 import { vendorList } from "@/utils/services/rfq";
+import { getAdminProfile } from "@/utils/services/login";
 
 // Custom styles for Product Select Component
 const customStyles = {
@@ -57,6 +58,7 @@ const ProductManagement = () => {
   const [selectedVendor, setSelectedVendor] = useState("");
   const [selectedFeatured, setSelectedFeatured] = useState("");
   const router = useRouter();
+  const [userType, setUserType] = useState(null);
 
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
@@ -142,6 +144,15 @@ const ProductManagement = () => {
   const handlePageClick = (e) => {
     setPage(e.selected + 1);
   };
+
+  const getUserProfile = async () => {
+    try {
+      const res = await getAdminProfile();
+      setUserType(res.data.user_type);
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   const getVendor = () => {
     vendorList()
@@ -486,6 +497,7 @@ const ProductManagement = () => {
   }
 
   useEffect(() => {
+    getUserProfile();
     getReasonList();
     getVendorApproveList();
     getVendor();
@@ -1156,52 +1168,53 @@ const ProductManagement = () => {
                           <td className="subcatstd">{getSubCats(item)}</td>
                           <td>{item?.vendor_name}</td>
                           <td>
-                            {item?.is_approve === 1 ? (
-                              <OverlayTrigger
-                                placement="top"
-                                overlay={
-                                  <Tooltip id="tooltip1">
-                                    Click to Disapprove
-                                  </Tooltip>
-                                }
-                              >
-                                <button
-                                  className="btn btn-secondary bg-danger"
-                                  onClick={() => openRejectModal(item.id)}
-                                >
-                                  Disapprove
-                                </button>
-                              </OverlayTrigger>
-                            ) : (
-                              <div className="d-flex flex-row align-items-center">
+                            {(userType && userType != 6) && (
+                              item?.is_approve === 1 ? (
                                 <OverlayTrigger
                                   placement="top"
                                   overlay={
-                                    <Tooltip id="tooltip1">Click to approve</Tooltip>
+                                    <Tooltip id="tooltip1">
+                                      Click to Disapprove
+                                    </Tooltip>
                                   }
                                 >
                                   <button
-                                    className="btn btn-secondary bg-success"
-                                    onClick={() => handleAcceptRejectProduct(item.id, '1')}
+                                    className="btn btn-secondary bg-danger mb-2"
+                                    onClick={() => openRejectModal(item.id)}
                                   >
-                                    Approve
+                                    Disapprove
                                   </button>
                                 </OverlayTrigger>
-
-                                {item?.is_approve === 0 && item?.reject_reason &&
+                              ) : (
+                                <div className="d-flex flex-row align-items-center">
                                   <OverlayTrigger
                                     placement="top"
                                     overlay={
-                                      <Tooltip id="tooltip1">
-                                        {item?.reject_reason}
-                                      </Tooltip>
+                                      <Tooltip id="tooltip1">Click to approve</Tooltip>
                                     }
                                   >
-                                    <span className="fa fa-info-circle ml-2"></span>
-                                  </OverlayTrigger>}
-                              </div>
-                            )}
-                            <p className="text-sm text-capitalize text-nowrap mt-2 mb-1"><b>Added By: </b>{item.added_by}</p>
+                                    <button
+                                      className="btn btn-secondary bg-success mb-2"
+                                      onClick={() => handleAcceptRejectProduct(item.id, '1')}
+                                    >
+                                      Approve
+                                    </button>
+                                  </OverlayTrigger>
+
+                                  {item?.is_approve === 0 && item?.reject_reason &&
+                                    <OverlayTrigger
+                                      placement="top"
+                                      overlay={
+                                        <Tooltip id="tooltip1">
+                                          {item?.reject_reason}
+                                        </Tooltip>
+                                      }
+                                    >
+                                      <span className="fa fa-info-circle ml-2"></span>
+                                    </OverlayTrigger>}
+                                </div>
+                              ))}
+                            <p className="text-sm text-capitalize text-nowrap mb-1"><b>Added By: </b>{item.added_by}</p>
                             <p className="text-sm text-capitalize text-nowrap mb-1"><b>Approved By: </b>{item.vendor_approved_by}</p>
                           </td>
 
