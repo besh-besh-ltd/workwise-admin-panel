@@ -55,7 +55,7 @@ function handleGetCities(id) {
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/general/cities/${id}`
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/general/cities${id ? `/${id}` : ''}`
       );
       resolve(response);
     } catch (error) {

@@ -774,6 +774,7 @@ const ProductManagement = () => {
                     Upload Only Products
                   </button> */}
 
+
                   <button
                     type="button"
                     className="btn btn-secondary mr-2"
@@ -783,13 +784,15 @@ const ProductManagement = () => {
                   >
                     Map Product with Vendor
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary mr-2"
-                    onClick={handleExport}
-                  >
-                    Export
-                  </button>
+
+                  {userType != 6 &&
+                    <button
+                      type="button"
+                      className="btn btn-primary mr-2"
+                      onClick={handleExport}
+                    >
+                      Export
+                    </button>}
                 </div>
                 {/* </div> */}
                 {/* </div> */}
@@ -1250,10 +1253,11 @@ const ProductManagement = () => {
                                   )
                                 }
                               ></span>
-                              <span
-                                className="fa fa-edit"
-                                onClick={() => handleUpdateProduct(item)}
-                              ></span>
+                              {userType != 6 &&
+                                <span
+                                  className="fa fa-edit"
+                                  onClick={() => handleUpdateProduct(item)}
+                                ></span>}
                               {/* <span
                                 onClick={() => handleDeleteProduct(item.id)}
                                 class="fa fa-trash ml-2">
@@ -1268,19 +1272,21 @@ const ProductManagement = () => {
               </table>
             )}
 
-            {Math.ceil(totalPages / 10) > 1 && (
-              <ReactPaginate
-                breakLabel="..."
-                nextLabel={<i className="fa fa-angle-right"></i>}
-                onPageChange={handlePageClick}
-                pageRangeDisplayed={2}
-                pageCount={Math.ceil(totalPages / 10)}
-                previousLabel={<i className="fa fa-angle-left"></i>}
-                renderOnZeroPageCount={null}
-                className="pagination"
-              />
-            )}
-
+            <div className="d-flex justify-content-between align-items-center">
+              <p><b>Total Products: </b>{totalPages}</p>
+              {Math.ceil(totalPages / 10) > 1 && (
+                <ReactPaginate
+                  breakLabel="..."
+                  nextLabel={<i className="fa fa-angle-right"></i>}
+                  onPageChange={handlePageClick}
+                  pageRangeDisplayed={2}
+                  pageCount={Math.ceil(totalPages / 10)}
+                  previousLabel={<i className="fa fa-angle-left"></i>}
+                  renderOnZeroPageCount={null}
+                  className="pagination"
+                />
+              )}
+            </div>
           </div>
 
         </div>

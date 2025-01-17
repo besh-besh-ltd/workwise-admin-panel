@@ -246,14 +246,14 @@ const VendorManagement = () => {
                       />
                     </div>
 
-                    <div class="col-3">
+                    {/* <div class="col-3">
                       <Field
                         type="text"
                         name="name"
                         class="form-control"
                         placeholder="Search name"
                       />
-                    </div>
+                    </div> */}
                     <div className="col-1 d-flex flex-column">
                       <button type="submit" class="btn btn-info ">
                         Search
@@ -357,10 +357,11 @@ const VendorManagement = () => {
                               )
                             }
                           ></span>
-                          <span
-                            className="fa fa-edit mr-3"
-                            onClick={() => handleUpdateVendor(item)}
-                          ></span>
+                          {userType != 6 &&
+                            <span
+                              className="fa fa-edit mr-3"
+                              onClick={() => handleUpdateVendor(item)}
+                            ></span>}
                           {/* <span
                             className="fa fa-trash"
                             onClick={() => handleDeleteBudget(item.id)}
@@ -412,18 +413,21 @@ const VendorManagement = () => {
               </ul>
             </nav> */}
 
-            {Math.ceil(totalPages / 10) > 1 && (
-              <ReactPaginate
-                breakLabel="..."
-                nextLabel={<i className="fa fa-angle-right"></i>}
-                onPageChange={handlePageClick}
-                pageRangeDisplayed={2}
-                pageCount={Math.ceil(totalPages / 10)}
-                previousLabel={<i className="fa fa-angle-left"></i>}
-                renderOnZeroPageCount={null}
-                className="pagination"
-              />
-            )}
+            <div className="d-flex justify-content-between align-items-center">
+              <p><b>Total Vendors: </b>{totalPages}</p>
+              {Math.ceil(totalPages / 10) > 1 && (
+                <ReactPaginate
+                  breakLabel="..."
+                  nextLabel={<i className="fa fa-angle-right"></i>}
+                  onPageChange={handlePageClick}
+                  pageRangeDisplayed={2}
+                  pageCount={Math.ceil(totalPages / 10)}
+                  previousLabel={<i className="fa fa-angle-left"></i>}
+                  renderOnZeroPageCount={null}
+                  className="pagination"
+                />
+              )}
+            </div>
 
             <DeleteModal
               show={showModal}
