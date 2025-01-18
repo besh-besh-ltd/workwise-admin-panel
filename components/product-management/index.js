@@ -1169,7 +1169,7 @@ const ProductManagement = () => {
                             {item?.is_approve === 1 ? "Approved" : "Rejected"}
                           </td>
                           <td className="subcatstd">{getSubCats(item)}</td>
-                          <td>{item?.vendor_name}</td>
+                          <td>{ item?.vendor ? item?.vendor_name: "-"}</td>
                           <td>
                             {(userType && userType != 6) && (
                               item?.is_approve === 1 ? (
