@@ -7,9 +7,9 @@ import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import { createSubAdmin } from '@/utils/services/subadmin-management';
 
-const AddSubadmin = () => {
+const AddDataMemberPage = () => {
     const router = useRouter();
-    const userTypeRef = useRef(5);
+    const userTypeRef = useRef(6);
 
     const initialValues = {
         name: "",
@@ -43,7 +43,7 @@ const AddSubadmin = () => {
         // .matches(/^(?=.*\d)(?=.*[A-Z]).{6,16}$/, "Password should be atleast 6 characters one UpperCase one Number"),
         confirm_password: yup.string()
             .oneOf([yup.ref("password"),], "Password must match")
-            .required("Cinfirm Password field is required"),
+            .required("Confirm Password field is required"),
         // .matches(/^(?=.*\d)(?=.*[A-Z]).{6,16}$/, "Password should be atleast 6 characters one UpperCase one Number"),
         image: yup.mixed().nullable().required("Please select a file"),
     });
@@ -54,7 +54,7 @@ const AddSubadmin = () => {
                 resetForm();
                 toast(res.message);
                 setTimeout(() => {
-                    router.push("/subadmin-management");
+                    router.push("/data-team-management");
                 }, 1000);
             })
             .catch((error) => {
@@ -71,7 +71,7 @@ const AddSubadmin = () => {
             <div className="content-header">
                 <div className="container-fluid">
                     <div className="row mb-2">
-                        <h1 className="m-0 text-dark">Add Subadmin</h1>
+                        <h1 className="m-0 text-dark">Add Data Member</h1>
                     </div>
                 </div>
             </div>
@@ -79,7 +79,7 @@ const AddSubadmin = () => {
             <section className="content p-2">
                 <div className="container-fluid">
                     <div className="text-left pb-4">
-                        <Link className="btn btn-primary" href="/subadmin-management">
+                        <Link className="btn btn-primary" href="/data-team-management">
                             <span className="fa fa-angle-left mr-2"></span>Go Back
                         </Link>
                     </div>
@@ -210,4 +210,4 @@ const AddSubadmin = () => {
     )
 }
 
-export default AddSubadmin
+export default AddDataMemberPage

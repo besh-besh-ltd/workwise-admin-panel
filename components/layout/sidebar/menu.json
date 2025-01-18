@@ -214,6 +214,13 @@
         "active": false
       },
       {
+        "title": "Data Team Management",
+        "link": "/data-team-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
         "title": "Roles and Permissions",
         "link": "/role-permission",
         "class": "",

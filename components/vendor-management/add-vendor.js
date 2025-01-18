@@ -20,7 +20,8 @@ const AddVendor = () => {
   const router = useRouter();
 
   const submitHandler = (values, resetForm) => {
-    handleAddVendor(values)
+    const orgName = values.organization_name;
+    handleAddVendor({ ...values, name: orgName })
       .then((res) => {
         resetForm();
         toast(res.message);
@@ -125,7 +126,7 @@ const AddVendor = () => {
               <Formik
                 initialValues={initialValues}
                 validationSchema={yup.object().shape({
-                  name: yup.string().required("Name is required"),
+                  // name: yup.string().required("Name is required"),
                   organization_name: yup
                     .string()
                     .required("Organization is required"),
@@ -148,7 +149,6 @@ const AddVendor = () => {
                     .required("mobile is required"),
                 })}
                 onSubmit={(values, { resetForm }) => {
-                  console.log("values,", values);
                   values.country = selectedCountryOption;
                   values.state = selectedStateOption;
                   values.city = selectedCityOption;
@@ -158,7 +158,7 @@ const AddVendor = () => {
                 {({ errors, touched, values, handleChange, setFieldValue }) => (
                   <Form>
                     <div class="row form-common-row mb-4">
-                      <div class="col-6">
+                      {/* <div class="col-6">
                         <label htmlFor="name">Name</label>
                         <Field
                           type="text"
@@ -172,7 +172,7 @@ const AddVendor = () => {
                             <div className="form-error">{msg}</div>
                           )}
                         />
-                      </div>
+                      </div> */}
                       <div class="col-6">
                         <label htmlFor="organization_Name">
                           Organization Name
