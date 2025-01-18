@@ -33,8 +33,7 @@ const AddVendor = () => {
         // console.error(error.response.data.errors.message);
         let errorFlag = true;
         for (let x in err?.error?.response?.data?.errors) {
-          errorFlag = err?.error?.response?.data?.errors[x];
-          toast.error(txt || "Something went wrong");
+          toast.error(err?.error?.response?.data?.errors[x] || "Something went wrong");
           errorFlag = false;
         }
 
