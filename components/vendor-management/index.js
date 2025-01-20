@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   handleDeleteVendorProfile,
   handleGetVendorList,
@@ -14,6 +13,14 @@ import { Field, Form, Formik } from "formik";
 import * as yup from "yup";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import DisapproveModal from "../modal/disapprove-modal";
+import { getAdminProfile } from "@/utils/services/login";
+
+const intializeVendorCount = {
+  total: 0,
+  approved: 0,
+  disapproved: 0,
+  deleted: 0,
+};
 
 const VendorManagement = () => {
   const [vendorData, setVendorData] = useState([]);
@@ -27,10 +34,12 @@ const VendorManagement = () => {
   const [limit, setlimit] = useState(10);
   const [page, setPage] = useState(1);
   const [totalPages, settotalPages] = useState(null);
+  const [vendorCount, setVendorCount] = useState(intializeVendorCount);
   const [rejectListData, setRejectListData] = useState([]);
   const [selectedVendorId, setSelectedVendorId] = useState("");
   const [id, setId] = useState();
   const router = useRouter();
+  const [userType, setUserType] = useState(null);
 
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
@@ -59,10 +68,19 @@ const VendorManagement = () => {
     )
       .then((res) => {
         settotalPages(res.total_count);
+        setVendorCount({
+          total: res.total_count,
+          approved: res.active_vendors,
+          disapproved: res.deactivated_vendors,
+          deleted: res.deleted_vendors,
+        });
         res.data.map((item) => (item.isChecked = false));
         setVendorData(res.data);
       })
-      .catch((err) => console.log("err", err));
+      .catch((err) => {
+        console.log("err", err);
+        setVendorCount(intializeVendorCount);
+      });
   };
 
   const submitDeleteBlog = () => {
@@ -80,19 +98,6 @@ const VendorManagement = () => {
       });
     setTimeout(handleClose(), 10000);
   };
-
-  /*   const submitApproveVendor = (id) => {
-    handleApproveVendor(id)
-      .then((res) => toast(res.message))
-      .catch((error) => {
-        let txt = "";
-        for (let x in error.error.response.data.errors) {
-          txt = error.error.response.data.errors[x];
-        }
-        toast(txt);
-      });
-    setTimeout(handleClose(), 10000);
-  }; */
 
   const getRejectList = () => {
     rejectList()
@@ -138,9 +143,15 @@ const VendorManagement = () => {
     router.push(`/vendor-management/update-vendor/${item.id}`);
   };
 
-  useEffect(() => {
-    getBuyerList();
-  }, [page]);
+  const getUserProfile = async () => {
+    try {
+      const res = await getAdminProfile();
+      setUserType(res.data?.user_type || null);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   const handlePageClick = (e) => {
     setPage(e.selected + 1);
   };
@@ -163,11 +174,26 @@ const VendorManagement = () => {
       .then((res) => {
         setVendorData(res.data);
         settotalPages(Math.ceil(res.total_count / limit));
+        setVendorCount({
+          total: res.total_count,
+          approved: res.active_vendors,
+          disapproved: res.deactivated_vendors,
+          deleted: res.deleted_vendors,
+        });
+        console.log("res", res);
       })
-      .catch((err) => console.log("err", err));
+      .catch((err) => {
+        console.log("err", err);
+        setVendorCount(intializeVendorCount);
+      });
   };
 
   useEffect(() => {
+    getBuyerList();
+  }, [page]);
+
+  useEffect(() => {
+    getUserProfile();
     getRejectList();
   }, []);
 
@@ -210,21 +236,6 @@ const VendorManagement = () => {
               }) => (
                 <Form>
                   <div className="row">
-                    {/* <div class="col-2">
-                      <Field
-                        as="select"
-                        name="verified"
-                        class="form-control"
-                        placeholder="Verified"
-                      >
-                        <option value="" disabled>
-                          Select Verified
-                        </option>
-                        <option value="t">True</option>
-                        <option value="f">False</option>
-                      </Field>
-                    </div> */}
-
                     <div class="col-3">
                       <Field
                         type="text"
@@ -234,14 +245,6 @@ const VendorManagement = () => {
                       />
                     </div>
 
-                    <div class="col-3">
-                      <Field
-                        type="text"
-                        name="name"
-                        class="form-control"
-                        placeholder="Search name"
-                      />
-                    </div>
                     <div className="col-1 d-flex flex-column">
                       <button type="submit" class="btn btn-info ">
                         Search
@@ -295,61 +298,45 @@ const VendorManagement = () => {
               <tbody>
                 {vendorData.map((item) => {
                   return (
-                    <tr key={item.name}>
+                    <tr key={item.name} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
                       <td>{item.name}</td>
                       <td>{item.email}</td>
                       <td>{item.mobile}</td>
                       <td>{item.organization_name}</td>
                       <td>
-                        {item.status == 0 ? (
+                        {userType && userType == 6 ? (
+                          <p>{item.status === 0 ? 'Disapproved' : 'Approved'}</p>
+                        ) : (
                           <div className="d-flex flex-row align-items-center">
-                            <OverlayTrigger
-                              placement="top"
-                              overlay={
-                                <Tooltip id="tooltip1">
-                                  Click to approve
-                                </Tooltip>
-                              }
-                            >
-                              <button
-                                className="btn btn-secondary bg-success"
-                                onClick={() => submitApproveVendor(item.id, 1)}
-                              >
-                                Approve
-                              </button>
-                            </OverlayTrigger>
-
-                            {/* {item?.status === 0 && item?.reject_reason &&
+                            {item.status === 0 ? (
                               <OverlayTrigger
                                 placement="top"
-                                overlay={
-                                  <Tooltip id="tooltip1">
-                                    {item?.reject_reason}
-                                  </Tooltip>
-                                }
+                                overlay={<Tooltip id={`approve-tooltip-${item.id}`}>Click to approve</Tooltip>}
                               >
-                                <span className="fa fa-info-circle ml-2"></span>
-                              </OverlayTrigger>} */}
+                                <button
+                                  className="btn btn-secondary bg-success"
+                                  onClick={() => submitApproveVendor(item.id, 1)}
+                                >
+                                  Approve
+                                </button>
+                              </OverlayTrigger>
+                            ) : (
+                              <OverlayTrigger
+                                placement="top"
+                                overlay={<Tooltip id={`disapprove-tooltip-${item.id}`}>Click to disapprove</Tooltip>}
+                              >
+                                <button
+                                  className="btn btn-secondary bg-danger"
+                                  onClick={() => submitApproveVendor(item.id, 0)}
+                                >
+                                  Disapprove
+                                </button>
+                              </OverlayTrigger>
+                            )}
                           </div>
-                        ) : (
-                          <OverlayTrigger
-                            placement="top"
-                            overlay={
-                              <Tooltip id="tooltip1">
-                                Click to Disapprove
-                              </Tooltip>
-                            }
-                          >
-                            <button
-                              className="btn btn-secondary bg-danger"
-                              // onClick={() => openRejectModal(item.id, 0)}
-                              onClick={() => submitApproveVendor(item.id, 0)}
-                            >
-                              Disapprove
-                            </button>
-                          </OverlayTrigger>
                         )}
                       </td>
+
                       <td>
                         {/* <div className="card-footer bg-transparent border-secondary"> */}
                         <div className="d-flex">
@@ -361,14 +348,15 @@ const VendorManagement = () => {
                               )
                             }
                           ></span>
-                          <span
-                            className="fa fa-edit mr-3"
-                            onClick={() => handleUpdateVendor(item)}
-                          ></span>
-                          <span
+                          {userType != 6 &&
+                            <span
+                              className="fa fa-edit mr-3"
+                              onClick={() => handleUpdateVendor(item)}
+                            ></span>}
+                          {/* <span
                             className="fa fa-trash"
                             onClick={() => handleDeleteBudget(item.id)}
-                          ></span>
+                          ></span> */}
                         </div>
                         {/* </div> */}
                       </td>
@@ -378,56 +366,31 @@ const VendorManagement = () => {
               </tbody>
             </table>
 
-            {/* <nav aria-label="Page navigation example">
-              <ul className="pagination">
-                {Array.from(Array(totalPages), (e, i) => {
-                  if (i + 1 === page) {
-                    return (
-                      <li className="active page-item" key={i + 1}>
-                        <a
-                          className="page-link"
-                          href=""
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setpage(i + 1);
-                          }}
-                        >
-                          {i + 1}
-                        </a>
-                      </li>
-                    );
-                  } else {
-                    return (
-                      <li className="page-item" key={i + 1}>
-                        <a
-                          className="page-link"
-                          href=""
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setpage(i + 1);
-                          }}
-                        >
-                          {i + 1}
-                        </a>
-                      </li>
-                    );
-                  }
-                })}
-              </ul>
-            </nav> */}
+            <div className="row d-flex justify-content-between align-items-center">
+              <div className="col-md-5">
+                <div className="row">
+                  <p className="col-md-6 mb-1"> <b>Total Vendors: </b> {vendorCount.total} </p>
+                  <p className="col-md-6 mb-1"><b>Total Deleted Vendors: </b> {vendorCount.deleted} </p>
+                  <p className="col-md-6 mb-1"><b>Total Active Vendors: </b> {vendorCount.approved} </p>
+                  <p className="col-md-6 mb-1"><b>Total Deactive Vendors: </b> {vendorCount.disapproved} </p>
+                </div>
+              </div>
 
-            {Math.ceil(totalPages / 10) > 1 && (
-              <ReactPaginate
-                breakLabel="..."
-                nextLabel={<i className="fa fa-angle-right"></i>}
-                onPageChange={handlePageClick}
-                pageRangeDisplayed={2}
-                pageCount={Math.ceil(totalPages / 10)}
-                previousLabel={<i className="fa fa-angle-left"></i>}
-                renderOnZeroPageCount={null}
-                className="pagination"
-              />
-            )}
+              <div className="col-md-7">
+                {Math.ceil(totalPages / 10) > 1 && (
+                  <ReactPaginate
+                    breakLabel="..."
+                    nextLabel={<i className="fa fa-angle-right"></i>}
+                    onPageChange={handlePageClick}
+                    pageRangeDisplayed={2}
+                    pageCount={Math.ceil(totalPages / 10)}
+                    previousLabel={<i className="fa fa-angle-left"></i>}
+                    renderOnZeroPageCount={null}
+                    className="pagination mb-0"
+                  />
+                )}
+              </div>
+            </div>
 
             <DeleteModal
               show={showModal}

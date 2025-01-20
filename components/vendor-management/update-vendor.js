@@ -180,8 +180,9 @@ const UpdateVendor = () => {
 
   useEffect(() => {
     if (id) {
-      getVendorDetails(id);
-
+      getVendorDetails(id);      
+    }
+    if (editDetails?.vendorDetails?.state && editDetails?.vendorDetails?.state != null && editDetails?.vendorDetails?.state != 'null') {
       handleGetCities(editDetails?.vendorDetails?.state)
         .then(res => {
           setCities(res.data.data)

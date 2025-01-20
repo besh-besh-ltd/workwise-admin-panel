@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Form, Formik, Field, ErrorMessage } from "formik";
+import { Form, Formik, Field, ErrorMessage, FieldArray } from "formik";
 import * as yup from "yup";
 import {
   handleAddVendor,
@@ -12,6 +12,7 @@ import { useRouter } from "next/router";
 const AddVendor = () => {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
+  const [spocs, setSpocs] = useState([]);
   const [selectedCountryOption, setSelectedCountryOption] = useState("");
   const [selectedStateOption, setSelectedStateOption] = useState("");
   const [selectedCityOption, setSelectedCityOption] = useState("");
@@ -20,7 +21,8 @@ const AddVendor = () => {
   const router = useRouter();
 
   const submitHandler = (values, resetForm) => {
-    handleAddVendor(values)
+    const orgName = values.organization_name;
+    handleAddVendor({ ...values, name: orgName })
       .then((res) => {
         resetForm();
         toast(res.message);
@@ -29,11 +31,16 @@ const AddVendor = () => {
       .catch((err) => {
         // console.log("err", err);
         // console.error(error.response.data.errors.message);
-        let txt = "Something went wrong";
+        let errorFlag = true;
         for (let x in err?.error?.response?.data?.errors) {
-          txt = err?.error?.response?.data?.errors[x];
+          toast.error(err?.error?.response?.data?.errors[x] || "Something went wrong");
+          errorFlag = false;
         }
-        toast.error(txt);
+
+        if (errorFlag){
+          toast.error("Something went wrong");
+        }
+
       });
   };
   useEffect(() => {
@@ -96,10 +103,6 @@ const AddVendor = () => {
     // contact_number: "",
     nature_business: "",
     estd_year: "",
-    sales_spoc_name: "",
-    sales_spoc_position: "",
-    sales_spoc_business_email: "",
-    sales_spoc_mobile: "",
     gstin: "",
     import_export_code: "",
     cin: "",
@@ -109,6 +112,7 @@ const AddVendor = () => {
     ptr_project_description: "",
     ptr_project_start_date: "",
     ptr_project_end_date: "",
+    spocs: [],
   };
 
   return (
@@ -125,7 +129,7 @@ const AddVendor = () => {
               <Formik
                 initialValues={initialValues}
                 validationSchema={yup.object().shape({
-                  name: yup.string().required("Name is required"),
+                  // name: yup.string().required("Name is required"),
                   organization_name: yup
                     .string()
                     .required("Organization is required"),
@@ -148,7 +152,6 @@ const AddVendor = () => {
                     .required("mobile is required"),
                 })}
                 onSubmit={(values, { resetForm }) => {
-                  console.log("values,", values);
                   values.country = selectedCountryOption;
                   values.state = selectedStateOption;
                   values.city = selectedCityOption;
@@ -158,7 +161,7 @@ const AddVendor = () => {
                 {({ errors, touched, values, handleChange, setFieldValue }) => (
                   <Form>
                     <div class="row form-common-row mb-4">
-                      <div class="col-6">
+                      {/* <div class="col-6">
                         <label htmlFor="name">Name</label>
                         <Field
                           type="text"
@@ -172,7 +175,7 @@ const AddVendor = () => {
                             <div className="form-error">{msg}</div>
                           )}
                         />
-                      </div>
+                      </div> */}
                       <div class="col-6">
                         <label htmlFor="organization_Name">
                           Organization Name
@@ -220,21 +223,6 @@ const AddVendor = () => {
                           )}
                         />
                       </div>
-                      {/* <div class="col-6">
-                        <label htmlFor="contact_number">Official Contact Number</label>
-                        <Field
-                          type="number"
-                          name="contact_number"
-                          class="form-control"
-                          placeholder="Contact Number"
-                        />
-                        <ErrorMessage
-                          name="contact_number"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div> */}
                       <div class="col-6">
                         <label htmlFor="image">Image</label>
                         <Field
@@ -411,72 +399,7 @@ const AddVendor = () => {
                           )}
                         />
                       </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">Sales Spoc Name</label>
-                        <Field
-                          type="text"
-                          name="sales_spoc_name"
-                          class="form-control"
-                          placeholder="Sales SPOC Name"
-                        />
-                        <ErrorMessage
-                          name="sales_spoc_name"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">
-                          Sales Spoc position
-                        </label>
-                        <Field
-                          type="text"
-                          name="sales_spoc_position"
-                          class="form-control"
-                          placeholder="Sales SPOC Position"
-                        />
-                        <ErrorMessage
-                          name="sales_spoc_position"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">
-                          Sales Spoc Business Email
-                        </label>
-                        <Field
-                          type="email"
-                          name="sales_spoc_business_email"
-                          class="form-control"
-                          placeholder="Sales spoc business email"
-                        />
-                        <ErrorMessage
-                          name="sales_spoc_business_email"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="sales_spoc_mobile">
-                          Sales Spoc Mobile
-                        </label>
-                        <Field
-                          type="number"
-                          name="sales_spoc_mobile"
-                          class="form-control"
-                          placeholder="Sales spoc mobile"
-                        />
-                        <ErrorMessage
-                          name="sales_spoc_mobile"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
+
                       <div class="col-6">
                         <label htmlFor="gstin">Gstin</label>
                         <Field
@@ -674,9 +597,95 @@ const AddVendor = () => {
                           )}
                         />
                       </div>
+
+                      {/* SPOC Section */}
+                      <div className="mt-4">
+                      <h5>Vendor SPOCs</h5>
+                      <FieldArray
+                        name="spocs"
+                        render={(arrayHelpers) => (
+                          <>
+                            {values.spocs.map((spoc, index) => (
+                              <div key={index} className="row mb-3">
+                                <div className="col-3">
+                                  <label>Name</label>
+                                  <Field
+                                    type="text"
+                                    name={`spocs[${index}].spoc_name`}
+                                    className="form-control"
+                                    placeholder="Name"
+                                  />
+                                  <ErrorMessage
+                                    name={`spocs[${index}].spoc_name`}
+                                    component="div"
+                                    className="form-error"
+                                  />
+                                </div>
+                                <div className="col-3">
+                                  <label>Email</label>
+                                  <Field
+                                    type="email"
+                                    name={`spocs[${index}].spoc_email`}
+                                    className="form-control"
+                                    placeholder="Email"
+                                  />
+                                  <ErrorMessage
+                                    name={`spocs[${index}].spoc_email`}
+                                    component="div"
+                                    className="form-error"
+                                  />
+                                </div>
+                                <div className="col-3">
+                                  <label>Mobile</label>
+                                  <Field
+                                    type="text"
+                                    name={`spocs[${index}].spoc_mobile`}
+                                    className="form-control"
+                                    placeholder="Mobile"
+                                  />
+                                </div>
+                                <div className="col-2">
+                                  <label>Position</label>
+                                  <Field
+                                    type="text"
+                                    name={`spocs[${index}].spoc_role`}
+                                    className="form-control"
+                                    placeholder="Position"
+                                  />
+                                </div>
+                                <div className="col-1 mt-4">
+                                  <button
+                                    type="button"
+                                    className="btn btn-danger btn-sm"
+                                    onClick={() => arrayHelpers.remove(index)}
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              onClick={() =>
+                                arrayHelpers.push({
+                                  spoc_name: "",
+                                  spoc_role: "",
+                                  spoc_email: "",
+                                  spoc_mobile: "",
+                                })
+                              }
+                            >
+                              Add SPOC
+                            </button>
+                          </>
+                        )}
+                      />
                     </div>
-                    <div className="d-flex justify-content-end">
-                      <button type="submit" class="btn btn-secondary">
+                    </div>
+
+                    <div className="d-flex justify-content-end mt-4">
+                      <button type="submit" className="btn btn-secondary">
                         Save
                       </button>
                     </div>

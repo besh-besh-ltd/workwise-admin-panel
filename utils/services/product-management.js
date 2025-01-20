@@ -184,3 +184,17 @@ export const rejectListProduct = () => {
     }
   });
 }
+
+export const mapVendorWithProduct = (values) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/map-vendor-with-product`,
+        values
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};

@@ -366,10 +366,10 @@ const OtherUserManagement = () => {
                                 )
                               }
                             ></span>
-                            <span
+                            {/* <span
                               className="fa fa-trash"
                               onClick={() => handleDeleteBudget(item.id)}
-                            ></span>
+                            ></span> */}
                           </div>
                         </div>
                       </td>
