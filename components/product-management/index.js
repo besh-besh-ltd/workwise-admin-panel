@@ -74,6 +74,7 @@ const ProductManagement = () => {
     vendor: null,
     approved_by: null
   });
+  const [totalCount, setTotalCount] = useState({ total_count: 0, disapprove_count: 0, approve_count: 0 });
 
   const customSelectStyles = {
     control: (base) => ({
@@ -293,6 +294,7 @@ const ProductManagement = () => {
         setloading(false);
         // settotalPages(Math.ceil(res.total_count / limit));
         settotalPages(res.total_count);
+        setTotalCount({ total_count: res.total_count, disapprove_count: res.disapprove_count, approve_count: res.approve_count });
         res.data.map((item) => (item.isChecked = false));
         setproducts(res.data);
       })
@@ -435,6 +437,7 @@ const ProductManagement = () => {
   // Search Product Function
   const getVendorProductList = useCallback((search_key) => {
     setProductLoading(true);
+    setVendorProductsList([]); // Clear previous product list
     getAllProducts(20, 1, search_key)
       .then((res) => {
         const product_options = groupBySlug(res.data);
@@ -475,6 +478,7 @@ const ProductManagement = () => {
       toast.error("Product and Vendor fields are required.");
       return;
     }
+
     try {
       const payload = {
         product_id: product.value,
@@ -507,6 +511,7 @@ const ProductManagement = () => {
     getProducts();
   }, [page, searchString, selectedApproveVendor, selectedVendor, selectedFeatured]);
 
+  
   return (
     <>
       <ToastContainer />
@@ -523,184 +528,6 @@ const ProductManagement = () => {
           <div className="card card-body">
             {!enableBulkUpload && !enableBulkProdUpload && !openProductMap && (
               <div className="row">
-                {/* <div className="col-md-8">
-                  <div className="input-group buyers-search">
-                    <div className="input-group-prepend">
-                      <span className="input-group-text" id="basic-addon1">
-                        @
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Search"
-                      aria-label="Username"
-                      aria-describedby="basic-addon1"
-                    />
-                  </div>
-                  <div className="d-flex mt-4">
-                    <div className="nav-item dropdown">
-                      <Link
-                        href="#"
-                        className="nav-link dropdown-header"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="true"
-                      >
-                        Ch
-                      </Link>
-                      <div className={`dropdown-menu  "show"`}>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title">
-                            System Notification
-                          </h3>
-                        </button>
-
-                        <div className="dropdown-divider"></div>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title"></h3>
-                        </button>
-                        <div className="dropdown-divider"></div>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title"></h3>
-                        </button>
-                        <div className="dropdown-divider"></div>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title"></h3>
-                        </button>
-                        <div className="dropdown-divider"></div>
-                      </div>
-                    </div>
-                    <div className="nav-item dropdown ml-3">
-                      <Link
-                        href="#"
-                        className="nav-link dropdown-header"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="true"
-                      >
-                        Industry
-                      </Link>
-                      <div className={`dropdown-menu "show"`}>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title">Logo</h3>
-                        </button>
-
-                        <div className="dropdown-divider"></div>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title">Site Title</h3>
-                        </button>
-                        <div className="dropdown-divider"></div>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title">
-                            SMTP Configuration
-                          </h3>
-                        </button>
-                        <div className="dropdown-divider"></div>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title">Admin Email</h3>
-                        </button>
-                        <div className="dropdown-divider"></div>
-                      </div>
-                    </div>
-                    <div className="nav-item dropdown ml-3">
-                      <Link
-                        href="#"
-                        className="nav-link dropdown-header"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="true"
-                      >
-                        User Type
-                      </Link>
-                      <div className={`dropdown-menu "show"`}>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title">Edit Profile</h3>
-                        </button>
-
-                        <div className="dropdown-divider"></div>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title">Logout</h3>
-                        </button>
-                        <div className="dropdown-divider"></div>
-                      </div>
-                    </div>
-                    <div className="nav-item dropdown ml-3">
-                      <Link
-                        href=""
-                        className="nav-link dropdown-header"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="true"
-                      >
-                        Verification Status
-                      </Link>
-                      <div className={`dropdown-menu "show"`}>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title">Edit Profile</h3>
-                        </button>
-
-                        <div className="dropdown-divider"></div>
-                        <button className="dropdown-item">
-                          <h3 className="dropdown-item-title">Logout</h3>
-                        </button>
-                        <div className="dropdown-divider"></div>
-                      </div>
-                    </div>
-                    <button type="button" className="btn btn-primary ml-3">
-                      Search / Filter
-                    </button>
-                  </div>
-                </div> */}
-                {/* <div className="col-md-1">
-                  <div className=" nav-item dropdown mt-0">
-                    <Link
-                      href="#"
-                      className="nav-link dropdown-header"
-                      data-bs-toggle="dropdown"
-                      aria-expanded="true"
-                    >
-                      Items per page: {limit}
-                    </Link>
-                    <div className={`dropdown-menu "show"`}>
-                      <button
-                        className="dropdown-item"
-                        onClick={() => setlimit(10)}
-                      >
-                        <h3 className="dropdown-item-title">10</h3>
-                      </button>
-                      <div className="dropdown-divider"></div>
-                      <button
-                        className="dropdown-item"
-                        onClick={() => setlimit(20)}
-                      >
-                        <h3 className="dropdown-item-title">20</h3>
-                      </button>
-                      <div className="dropdown-divider"></div>
-                      <button
-                        className="dropdown-item"
-                        onClick={() => setlimit(30)}
-                      >
-                        <h3 className="dropdown-item-title">30</h3>
-                      </button>
-                      <div className="dropdown-divider"></div>
-                      <button
-                        className="dropdown-item"
-                        onClick={() => setlimit(50)}
-                      >
-                        <h3 className="dropdown-item-title">50</h3>
-                      </button>
-                      <div className="p-2">
-                        <label>Custom number</label>
-                        <input
-                          className="form-control"
-                          placeholder="E.g. 11"
-                          onChange={(e) =>
-                            setlimit(e.target.value < 1 ? 10 : e.target.value)
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div> */}
-
-                {/* <div className="col-md-12"> */}
                 {/* <div className="d-flex justify-content-end flex-wrap"> */}
                 <div className="col-sm-3">
                   <input
@@ -753,26 +580,6 @@ const ProductManagement = () => {
                   >
                     <i className="fa fa-plus"></i> Add Product
                   </button>
-
-                  {/* <button
-                    type="button"
-                    className="btn btn-secondary mr-2"
-                    onClick={() => {
-                      setuploadProgress(0);
-                      setEnableBulkUpload(!enableBulkUpload);
-                    }}
-                  >
-                    Upload Product with Vendors
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary mr-2"
-                    onClick={() => {
-                      setEnableBulkProdUpload(!enableBulkProdUpload);
-                    }}
-                  >
-                    Upload Only Products
-                  </button> */}
 
 
                   <button
@@ -915,6 +722,7 @@ const ProductManagement = () => {
                 <div className="col-6 col-md-4">
                   <label htmlFor="product">Product Name *</label>
                   <Select
+                    key={vendorProductsList.length}  // Ensures component re-renders
                     name="product"
                     options={vendorProductsList}
                     value={productMapObj.product}
@@ -922,11 +730,11 @@ const ProductManagement = () => {
                     styles={customStyles}
                     isLoading={productLoading}
                     onInputChange={debounceGetVendorProductList}
-                    isClearable={false}
+                    isClearable
                     isSearchable
                     placeholder="Select Product"
                     onChange={handleMappingObj}
-                    noOptionsMessage={() => "Please enter atleast 3 words"}
+                    noOptionsMessage={() => "No Product Available"}
                   />
                 </div>
                 <div className="col-6 col-md-4">
@@ -1273,7 +1081,12 @@ const ProductManagement = () => {
             )}
 
             <div className="d-flex justify-content-between align-items-center">
-              <p><b>Total Products: </b>{totalPages}</p>
+            <div>
+            <p><b>Total Products: </b>{totalCount.total_count}</p>
+            <p><b>Total Approved Products: </b>{totalCount.approve_count}</p>
+            <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p>
+
+            </div>
               {Math.ceil(totalPages / 10) > 1 && (
                 <ReactPaginate
                   breakLabel="..."
