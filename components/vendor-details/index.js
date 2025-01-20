@@ -16,6 +16,7 @@ const VendorDetails = () => {
   const router = useRouter();
   const id = router?.query?.id;
   const [vendorDeails, setVendorDeails] = useState("");
+  const [vendorSpocDeails, setVendorSpocDeails] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showDisableModal, setShowDisableModal] = useState(false);
   const [vendorRfqList, setVendorRfqList] = useState([]);
@@ -47,7 +48,10 @@ const VendorDetails = () => {
   const getVendorDetails = () => {
     if (id != undefined) {
       handleGetVendorDetails(id)
-        .then((res) => setVendorDeails(res.data[0]))
+        .then((res) => {
+          setVendorDeails(res.data[0]);
+          setVendorSpocDeails(res?.spocDetails);
+        })
         .catch((error) => {
           let txt = "";
           for (let x in error.error.response.data.errors) {
@@ -202,6 +206,43 @@ const VendorDetails = () => {
               </ul>
             </div>
           </div>
+
+          <h4 className=" mt-4 ml-2"> Vendor SPOCs </h4>
+          <div className="d-flex flex-wrap">
+            {vendorSpocDeails?.map((item, index) => {
+              return (
+                <div
+                  className="card m-2 p-3"
+                  style={{ width: "24rem" }}
+                  key={index}
+                >
+                  <div className="card-body">
+                    <p className="card-text">
+                      <strong>Name:</strong> {item.name || "N/A"}
+                    </p>
+                    <p className="card-text">
+                      <strong>Email:</strong> {item.email || "N/A"}
+                    </p>
+                    <p className="card-text">
+                      <strong>Mobile:</strong> {item.mobile || "N/A"}
+                    </p>
+                    <p className="card-text">
+                      <strong>Role:</strong> {item.role || "N/A"}
+                    </p>
+                    <p className="card-text">
+                      <strong>Created At:</strong>{" "}
+                      {new Date(item.created_at).toLocaleString()}
+                    </p>
+                    <p className="card-text">
+                      <strong>Last Updated At:</strong>{" "}
+                      {new Date(item.updated_at).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           {vendorDeails?.profile && (
             <div className="d-flex ">
               <div className="card col-12 mr-5" style={{ height: "200px" }}>
@@ -364,7 +405,6 @@ const VendorDetails = () => {
               </div>
             </div>
           )}
-
           {vendorRfqList && vendorRfqList.length > 0 && (
             <>
               <div>
@@ -407,7 +447,6 @@ const VendorDetails = () => {
               </div>
             </>
           )}
-
           {/*  <div className="d-flex justify-content-end pb-5">
             <button type="button" class="btn btn-success mr-3">
               Approve Vendor
