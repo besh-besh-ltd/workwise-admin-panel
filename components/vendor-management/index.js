@@ -366,26 +366,30 @@ const VendorManagement = () => {
               </tbody>
             </table>
 
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <p> <b>Total Vendors: </b> {vendorCount.total} </p>
-                <p><b>Total delete Vendors: </b> {vendorCount.deleted} </p>
-                <p><b>Total active Vendors: </b> {vendorCount.approved} </p>
-                <p><b>Total deactive Vendors: </b> {vendorCount.disapproved} </p>
+            <div className="row d-flex justify-content-between align-items-center">
+              <div className="col-md-5">
+                <div className="row">
+                  <p className="col-md-6 mb-1"> <b>Total Vendors: </b> {vendorCount.total} </p>
+                  <p className="col-md-6 mb-1"><b>Total Deleted Vendors: </b> {vendorCount.deleted} </p>
+                  <p className="col-md-6 mb-1"><b>Total Active Vendors: </b> {vendorCount.approved} </p>
+                  <p className="col-md-6 mb-1"><b>Total Deactive Vendors: </b> {vendorCount.disapproved} </p>
+                </div>
               </div>
 
-              {Math.ceil(totalPages / 10) > 1 && (
-                <ReactPaginate
-                  breakLabel="..."
-                  nextLabel={<i className="fa fa-angle-right"></i>}
-                  onPageChange={handlePageClick}
-                  pageRangeDisplayed={2}
-                  pageCount={Math.ceil(totalPages / 10)}
-                  previousLabel={<i className="fa fa-angle-left"></i>}
-                  renderOnZeroPageCount={null}
-                  className="pagination"
-                />
-              )}
+              <div className="col-md-7">
+                {Math.ceil(totalPages / 10) > 1 && (
+                  <ReactPaginate
+                    breakLabel="..."
+                    nextLabel={<i className="fa fa-angle-right"></i>}
+                    onPageChange={handlePageClick}
+                    pageRangeDisplayed={2}
+                    pageCount={Math.ceil(totalPages / 10)}
+                    previousLabel={<i className="fa fa-angle-left"></i>}
+                    renderOnZeroPageCount={null}
+                    className="pagination mb-0"
+                  />
+                )}
+              </div>
             </div>
 
             <DeleteModal
