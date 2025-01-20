@@ -15,6 +15,13 @@ import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import DisapproveModal from "../modal/disapprove-modal";
 import { getAdminProfile } from "@/utils/services/login";
 
+const intializeVendorCount = {
+  total: 0,
+  approved: 0,
+  disapproved: 0,
+  deleted: 0,
+};
+
 const VendorManagement = () => {
   const [vendorData, setVendorData] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -27,6 +34,7 @@ const VendorManagement = () => {
   const [limit, setlimit] = useState(10);
   const [page, setPage] = useState(1);
   const [totalPages, settotalPages] = useState(null);
+  const [vendorCount, setVendorCount] = useState(intializeVendorCount);
   const [rejectListData, setRejectListData] = useState([]);
   const [selectedVendorId, setSelectedVendorId] = useState("");
   const [id, setId] = useState();
@@ -60,10 +68,19 @@ const VendorManagement = () => {
     )
       .then((res) => {
         settotalPages(res.total_count);
+        setVendorCount({
+          total: res.total_count,
+          approved: res.active_vendors,
+          disapproved: res.deactivated_vendors,
+          deleted: res.deleted_vendors,
+        });
         res.data.map((item) => (item.isChecked = false));
         setVendorData(res.data);
       })
-      .catch((err) => console.log("err", err));
+      .catch((err) => {
+        console.log("err", err);
+        setVendorCount(intializeVendorCount);
+      });
   };
 
   const submitDeleteBlog = () => {
@@ -81,19 +98,6 @@ const VendorManagement = () => {
       });
     setTimeout(handleClose(), 10000);
   };
-
-  /*   const submitApproveVendor = (id) => {
-    handleApproveVendor(id)
-      .then((res) => toast(res.message))
-      .catch((error) => {
-        let txt = "";
-        for (let x in error.error.response.data.errors) {
-          txt = error.error.response.data.errors[x];
-        }
-        toast(txt);
-      });
-    setTimeout(handleClose(), 10000);
-  }; */
 
   const getRejectList = () => {
     rejectList()
@@ -170,8 +174,18 @@ const VendorManagement = () => {
       .then((res) => {
         setVendorData(res.data);
         settotalPages(Math.ceil(res.total_count / limit));
+        setVendorCount({
+          total: res.total_count,
+          approved: res.active_vendors,
+          disapproved: res.deactivated_vendors,
+          deleted: res.deleted_vendors,
+        });
+        console.log("res", res);
       })
-      .catch((err) => console.log("err", err));
+      .catch((err) => {
+        console.log("err", err);
+        setVendorCount(intializeVendorCount);
+      });
   };
 
   useEffect(() => {
@@ -222,21 +236,6 @@ const VendorManagement = () => {
               }) => (
                 <Form>
                   <div className="row">
-                    {/* <div class="col-2">
-                      <Field
-                        as="select"
-                        name="verified"
-                        class="form-control"
-                        placeholder="Verified"
-                      >
-                        <option value="" disabled>
-                          Select Verified
-                        </option>
-                        <option value="t">True</option>
-                        <option value="f">False</option>
-                      </Field>
-                    </div> */}
-
                     <div class="col-3">
                       <Field
                         type="text"
@@ -246,14 +245,6 @@ const VendorManagement = () => {
                       />
                     </div>
 
-                    {/* <div class="col-3">
-                      <Field
-                        type="text"
-                        name="name"
-                        class="form-control"
-                        placeholder="Search name"
-                      />
-                    </div> */}
                     <div className="col-1 d-flex flex-column">
                       <button type="submit" class="btn btn-info ">
                         Search
@@ -375,58 +366,30 @@ const VendorManagement = () => {
               </tbody>
             </table>
 
-            {/* <nav aria-label="Page navigation example">
-              <ul className="pagination">
-                {Array.from(Array(totalPages), (e, i) => {
-                  if (i + 1 === page) {
-                    return (
-                      <li className="active page-item" key={i + 1}>
-                        <a
-                          className="page-link"
-                          href=""
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setpage(i + 1);
-                          }}
-                        >
-                          {i + 1}
-                        </a>
-                      </li>
-                    );
-                  } else {
-                    return (
-                      <li className="page-item" key={i + 1}>
-                        <a
-                          className="page-link"
-                          href=""
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setpage(i + 1);
-                          }}
-                        >
-                          {i + 1}
-                        </a>
-                      </li>
-                    );
-                  }
-                })}
-              </ul>
-            </nav> */}
+            <div className="row d-flex justify-content-between align-items-center">
+              <div className="col-md-5">
+                <div className="row">
+                  <p className="col-md-6 mb-1"> <b>Total Vendors: </b> {vendorCount.total} </p>
+                  <p className="col-md-6 mb-1"><b>Total Deleted Vendors: </b> {vendorCount.deleted} </p>
+                  <p className="col-md-6 mb-1"><b>Total Active Vendors: </b> {vendorCount.approved} </p>
+                  <p className="col-md-6 mb-1"><b>Total Deactive Vendors: </b> {vendorCount.disapproved} </p>
+                </div>
+              </div>
 
-            <div className="d-flex justify-content-between align-items-center">
-              <p><b>Total Vendors: </b>{totalPages}</p>
-              {Math.ceil(totalPages / 10) > 1 && (
-                <ReactPaginate
-                  breakLabel="..."
-                  nextLabel={<i className="fa fa-angle-right"></i>}
-                  onPageChange={handlePageClick}
-                  pageRangeDisplayed={2}
-                  pageCount={Math.ceil(totalPages / 10)}
-                  previousLabel={<i className="fa fa-angle-left"></i>}
-                  renderOnZeroPageCount={null}
-                  className="pagination"
-                />
-              )}
+              <div className="col-md-7">
+                {Math.ceil(totalPages / 10) > 1 && (
+                  <ReactPaginate
+                    breakLabel="..."
+                    nextLabel={<i className="fa fa-angle-right"></i>}
+                    onPageChange={handlePageClick}
+                    pageRangeDisplayed={2}
+                    pageCount={Math.ceil(totalPages / 10)}
+                    previousLabel={<i className="fa fa-angle-left"></i>}
+                    renderOnZeroPageCount={null}
+                    className="pagination mb-0"
+                  />
+                )}
+              </div>
             </div>
 
             <DeleteModal
