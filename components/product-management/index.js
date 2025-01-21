@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct } from "@/utils/services/product-management";
 import axiosFormData from "@/utils/axios/form-data";
@@ -437,8 +437,7 @@ const ProductManagement = () => {
   // Search Product Function
   const getVendorProductList = useCallback((search_key) => {
     setProductLoading(true);
-    setVendorProductsList([]); // Clear previous product list
-    getAllProducts(20, 1, search_key)
+    getAllProducts(100, 1, search_key)
       .then((res) => {
         const product_options = groupBySlug(res.data);
         setVendorProductsList(product_options);
@@ -511,7 +510,7 @@ const ProductManagement = () => {
     getProducts();
   }, [page, searchString, selectedApproveVendor, selectedVendor, selectedFeatured]);
 
-  
+
   return (
     <>
       <ToastContainer />
@@ -722,7 +721,6 @@ const ProductManagement = () => {
                 <div className="col-6 col-md-4">
                   <label htmlFor="product">Product Name *</label>
                   <Select
-                    key={vendorProductsList.length}  // Ensures component re-renders
                     name="product"
                     options={vendorProductsList}
                     value={productMapObj.product}
@@ -977,7 +975,7 @@ const ProductManagement = () => {
                             {item?.is_approve === 1 ? "Approved" : "Rejected"}
                           </td>
                           <td className="subcatstd">{getSubCats(item)}</td>
-                          <td>{ item?.vendor ? item?.vendor_name: "-"}</td>
+                          <td>{item?.vendor ? item?.vendor_name : "-"}</td>
                           <td>
                             {(userType && userType != 6) && (
                               item?.is_approve === 1 ? (
@@ -1081,12 +1079,12 @@ const ProductManagement = () => {
             )}
 
             <div className="d-flex justify-content-between align-items-center">
-            <div>
-            <p><b>Total Products: </b>{totalCount.total_count}</p>
-            <p><b>Total Approved Products: </b>{totalCount.approve_count}</p>
-            <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p>
+              <div>
+                <p><b>Total Products: </b>{totalCount.total_count}</p>
+                <p><b>Total Approved Products: </b>{totalCount.approve_count}</p>
+                <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p>
 
-            </div>
+              </div>
               {Math.ceil(totalPages / 10) > 1 && (
                 <ReactPaginate
                   breakLabel="..."
