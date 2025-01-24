@@ -23,13 +23,16 @@ const customStyles = {
   }),
 };
 
-// Modified Select Component to show category along with Product Name
+// Modified Select Component to show email along with vendor Name
 const CustomSelectOption = (props) => (
   <components.Option {...props}>
     <div>
-      {props.data.label}
+   <strong> {props?.data?.label } </strong>
       <br />
-      <small>{props.data.categories}</small>
+      <p className="row">
+        <small>{props?.data?.email}</small>
+        <small className="ms-3">{props?.data?.phone}</small>
+      </p>
     </div>
   </components.Option>
 );
@@ -60,10 +63,14 @@ const ProductManagement = () => {
   const router = useRouter();
   const [userType, setUserType] = useState(null);
 
+
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
   const [productWithVendorErrors, setProductWithVendorErrors] = useState(null);
   const [productErrors, setProductErrors] = useState(null);
+
+  const [mapMultipleProductsWithVendor, setMapMultipleProductsWithVendor] = useState([])
+  const [isAddingDataProcessing, setIsAddingDataProcessing] = useState(false);
 
   const [productLoading, setProductLoading] = useState(false);
   const [vendorApprovedList, setVendorApprovedList] = useState([]);
@@ -102,7 +109,7 @@ const ProductManagement = () => {
   const indexNum = (cell, row, enumObject, index) => {
     return <div>{index + 1}</div>;
   };
-  const addressEdit = (cell, row) => {
+  const addressEdit = (_cell, row) => {
     console.log(row);
     return (
       <div>
@@ -159,8 +166,10 @@ const ProductManagement = () => {
     vendorList()
       .then((rsp) => {
         let lists = rsp.data.map((s) => ({
-          label: s.name,
+          label: s.organization_name ? s.organization_name : s.name,  // Fallback to name if organization_name is null
           value: s.id,
+          email: s.email || "Email Not Available",  // Handle null email
+          phone: s.mobile || "Phone Not Available", // Handle null phone
         }));
         setVendorData(lists);
       })
@@ -437,6 +446,12 @@ const ProductManagement = () => {
   // Search Product Function
   const getVendorProductList = useCallback((search_key) => {
     setProductLoading(true);
+      // Reset only the product field when data is loading
+      setproductMapObj((prevState) => ({
+        ...prevState,
+        product: null,
+      }));
+  
     setVendorProductsList([]); // Clear previous product list
     getAllProducts(20, 1, search_key)
       .then((res) => {
@@ -470,10 +485,21 @@ const ProductManagement = () => {
       ...prevState,
       [name]: selectedOption
     }));
-  }
+  }  
 
   const handleSubmitMapping = async () => {
-    const { product, vendor, approved_by } = productMapObj;
+
+    if(!mapMultipleProductsWithVendor || mapMultipleProductsWithVendor?.length<=0)  {
+        toast.error("select products and vendors to add");
+        return 0
+      }
+
+      setIsAddingDataProcessing(true);
+
+    for (const productMap of mapMultipleProductsWithVendor) {
+
+    const { product, vendor, approved_by } = productMap;
+    
     if (!product || !vendor) {
       toast.error("Product and Vendor fields are required.");
       return;
@@ -500,6 +526,34 @@ const ProductManagement = () => {
     }
   }
 
+  setproductMapObj({
+    product: null,
+    vendor: null,
+    approved_by: null
+  });
+
+  setMapMultipleProductsWithVendor([])
+  setIsAddingDataProcessing(false);
+  }
+
+
+
+  const handleAddProductForBulk = async () => {
+
+    const { product, vendor, approved_by } = productMapObj;
+
+    if (!product || !vendor) {
+      toast.error("Product and Vendor fields are required.");
+      return;
+    }
+
+    setMapMultipleProductsWithVendor((prevState) => [...prevState, productMapObj]);
+      
+    toast.success("Product added for bulk submission.");
+  }
+
+
+
   useEffect(() => {
     getUserProfile();
     getReasonList();
@@ -512,6 +566,13 @@ const ProductManagement = () => {
   }, [page, searchString, selectedApproveVendor, selectedVendor, selectedFeatured]);
 
   
+  const handleRemoveProduct = (index) => {
+    setMapMultipleProductsWithVendor((prevState) => prevState.filter((_, i) => i !== index));
+    toast.success("Product removed successfully.");
+  };
+  
+  console.log(vendorData)
+
   return (
     <>
       <ToastContainer />
@@ -719,26 +780,9 @@ const ProductManagement = () => {
                   </button>
                 </div>
 
+              <div className="row mb-4">
                 <div className="col-6 col-md-4">
-                  <label htmlFor="product">Product Name *</label>
-                  <Select
-                    key={vendorProductsList.length}  // Ensures component re-renders
-                    name="product"
-                    options={vendorProductsList}
-                    value={productMapObj.product}
-                    components={{ Option: CustomSelectOption }}
-                    styles={customStyles}
-                    isLoading={productLoading}
-                    onInputChange={debounceGetVendorProductList}
-                    isClearable
-                    isSearchable
-                    placeholder="Select Product"
-                    onChange={handleMappingObj}
-                    noOptionsMessage={() => "No Product Available"}
-                  />
-                </div>
-                <div className="col-6 col-md-4">
-                  <label htmlFor="vendor">Vendor *</label>
+                  <label htmlFor="vendor" className="form-label fw-bold">Vendor *</label>
                   <Select
                     name="vendor"
                     options={vendorData}
@@ -747,10 +791,54 @@ const ProductManagement = () => {
                     isSearchable
                     placeholder="Select Vendor"
                     onChange={handleMappingObj}
-                  />
-                </div>
-                <div className="col-6 col-md-4">
-                  <label htmlFor="approved_by">Approved By</label>
+                    components={{ Option: CustomSelectOption }}
+                    className="mb-3"
+                    />
+                  </div>
+
+                   <div className="col-6 col-md-4">
+                     <label htmlFor="product" className="form-label fw-bold">Product Name *</label>
+                     <input
+                       type="text"
+                       name="product"
+                       className="form-control mb-3"
+                       placeholder="Search Products by name"
+                       onChange={(e) => debounceGetVendorProductList(e.target.value)}
+                     />
+                 
+                     <div className="border rounded p-3">
+                       <h5 className="mt-2 mb-3"> {productLoading ? "Searching Products": "Select Product"} </h5>
+                  
+                       {!productLoading && vendorProductsList?.length > 0 ? (
+                         vendorProductsList.map((item, index) => (
+                           <div
+                             className="d-flex justify-content-between align-items-center border-bottom py-2"
+                             key={item.label + "_" + index}
+                           >
+                             <div>
+                               <p className="mb-0 fw-bold">{item.label}</p>
+                               <p className="text-muted">{item.categories}</p>
+                             </div>
+                             <button
+                               className={`btn ${productMapObj?.product?.value === item.value ? "btn-danger" : "btn-primary"} btn-sm`}
+                               onClick={() =>
+                                 productMapObj?.product?.value === item.value
+                                   ? handleMappingObj(null, { name: "product" })
+                                   : handleMappingObj(item, { name: "product" })
+                               }
+                             >
+                               {productMapObj?.product?.value === item.value ? "Remove" : "Select"}
+                             </button>
+                           </div>
+                         ))
+                       ) : (
+                         <p className="text-muted">No Product Available</p>
+                       )}
+                     </div>
+                   </div>
+
+                    <div className="col-6 col-md-4">
+                      <label htmlFor="approved_by" className="form-label fw-bold">Approved By</label>
                   <Select
                     name="approved_by"
                     options={vendorApprovedList}
@@ -759,16 +847,83 @@ const ProductManagement = () => {
                     isClearable={false}
                     onChange={handleMappingObj}
                     placeholder="Approved By"
+                        className="mb-3"
                   />
+                    </div>
                 </div>
 
-                <div className="col-12 d-flex justify-content-end my-3">
+               <div className="text-end">
+                    <button
+                      type="button"
+                      className="btn btn-primary px-4"
+                      onClick={handleAddProductForBulk}
+                      disabled={isAddingDataProcessing}
+                    >
+                      {isAddingDataProcessing ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          Uploading...
+                        </>
+                      ) : (
+                        "Add Product"
+                      )}
+                    </button>
+                  </div>
+
+                   
+                   {/* Display Mapped Products */}
+                   {mapMultipleProductsWithVendor.length > 0 && (
+                     <div className="mt-4">
+                       <h5 className="mb-3 fw-bold">Mapped Products</h5>
+                       <div className="border rounded p-3 bg-light">
+                         {mapMultipleProductsWithVendor.map((item, index) => (
+                           <div
+                             key={index}
+                             className="d-flex justify-content-between align-items-center border-bottom py-2"
+                           >
+                             <div>
+                               <p className="mb-0 fw-bold">{item.product.label}</p>
+                               <p className="text-muted">{item.product.categories}</p>
+                               <small><b>Vendor:</b> {item.vendor.label}</small>
+                               <br />
+                               <small><b>Approved By:</b> {item?.approved_by?.map(a => a.label)?.join(", ")}</small>
+                             </div>
+                             <button
+                                 disabled={isAddingDataProcessing}
+                               className="btn btn-danger btn-sm"
+                               onClick={() => handleRemoveProduct(index)}
+                             >
+                                {isAddingDataProcessing ? (
+                                <>
+                                  <span className="spinner-border spinner-border-sm me-2"></span>
+                                  Uploading...
+                                </>
+                              ) : (
+                                "Remove"
+                              )}
+                             </button>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+
+
+                <div className="col-12 d-flex justify-content-end gap-4 my-3">
                   <button
                     type="button"
                     className="btn btn-secondary"
+                    disabled={isAddingDataProcessing}
                     onClick={handleSubmitMapping}
                   >
-                    Submit
+                    {isAddingDataProcessing ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Uploading...
+                    </>
+                  ) : (
+                    "Submit"
+                  )}
                   </button>
                 </div>
 
