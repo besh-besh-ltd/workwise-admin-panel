@@ -192,6 +192,8 @@ const AddProduct = () => {
 				console.error(error);
 				toast.error(error.message);
 			});
+
+			setMainLoading(false);
 	};
 
 	return (
@@ -565,8 +567,23 @@ const AddProduct = () => {
 														<button
 															type="submit"
 															className="page-link btn btn-secondary"
+															disabled={mainLoading}
 														>
-															Save
+
+                            <button
+                              type="submit"
+                              className="page-link btn btn-secondary"
+                              disabled={mainLoading}
+                            >
+                              {mainLoading ? (
+                                <>
+                                  <span className="spinner-border spinner-border-sm me-2"></span>
+                                  Saving...
+                                </>
+                              ) : (
+                                "Save"
+                              )}
+                            </button>
 														</button>
 													</Form>
 												)}
