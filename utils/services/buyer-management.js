@@ -2,6 +2,21 @@ import axiosInstance from "../axios/index";
 import axiosFormData from "../axios/form-data";
 import axiosxdata from "../axios/xxx-form-data";
 
+
+export const AddBuyerOnPortalByAdmin = (values) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let response = await axiosInstance.post(
+				`/users/user-registration`,
+				values
+			);
+			resolve(response);
+		} catch (error) {
+			reject({ message: error });
+		}
+	});
+};
+
 function handleGetBuyerList(limit = 10, page = 1, verified, organization, name) {
   return new Promise(async (resolve, reject) => {
     try {

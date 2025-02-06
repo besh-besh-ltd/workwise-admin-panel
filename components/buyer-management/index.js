@@ -116,8 +116,9 @@ const BuyerManagement = () => {
     <>
       <div className="content-header">
         <div className="container-fluid">
-          <div className="row">
+          <div className="d-flex justify-content-between ">
             <h1 class="m-0 text-dark">Buyers</h1>
+            <Link href={"/buyer-management/add-buyer"} className="btn btn-secondary  " style={{maxWidth:"200px"}} > Add New Buyer </Link>
           </div>
         </div>
       </div>
