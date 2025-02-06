@@ -220,6 +220,7 @@ const BuyerManagement = () => {
                     <th scope="col">Spoc</th>
                     <th scope="col">Email</th>
                     <th scope="col">Contacts</th>
+                    <th scope="col">Created At</th>
                     {/* <th scope="col">Region</th> */}
                     {/* <th scope="col">Approval Status</th> */}
                     <th scope="col">Action</th>
@@ -233,6 +234,13 @@ const BuyerManagement = () => {
                         <td>{item.organization_name}</td>
                         <td>{item.email}</td>
                         <td>{item.mobile}</td>
+                        <td style={{ width: "100px" }}>
+                         {new Date(item.created_at).toLocaleDateString("en-GB", {
+                           day: "numeric",
+                           month: "short",
+                           year: "numeric",
+                         })}
+                       </td>
                         {/* <td>{item.country}</td> */}
                         {/* <td>
                           {item.status == 0 ? (
