@@ -292,6 +292,7 @@ const VendorManagement = () => {
                   <th scope="col">Mobile</th>
                   <th scope="col">Organization</th>
                   <th scope="col">Approval Status</th>
+                  <th scope="col">Created At</th>
                   <th scope="col">Action</th>
                 </tr>
               </thead>
@@ -336,6 +337,14 @@ const VendorManagement = () => {
                           </div>
                         )}
                       </td>
+
+                      <td style={{ width: "100px" }}>
+                       {new Date(item.created_at).toLocaleDateString("en-GB", {
+                         day: "numeric",
+                         month: "short",
+                         year: "numeric",
+                       })}
+                     </td>
 
                       <td>
                         {/* <div className="card-footer bg-transparent border-secondary"> */}
