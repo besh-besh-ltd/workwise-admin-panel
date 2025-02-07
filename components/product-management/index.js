@@ -1102,6 +1102,7 @@ const ProductManagement = () => {
                     <th scope="col">Image</th>
                     <th scope="col">TDS</th>
                     <th scope="col">QAP</th>
+                    <th scope="col">Created At</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
@@ -1205,6 +1206,13 @@ const ProductManagement = () => {
                                 <i class="fa fa-file"></i>
                               </a>
                             ) : '--'}
+                          </td>
+                          <td style={{ width: "100px" }}>
+                            {new Date(item.created_at).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
                           </td>
                           <td>
                             <div className="d-flex">
