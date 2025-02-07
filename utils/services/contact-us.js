@@ -11,4 +11,5 @@ export const getContactUsPage = (page = 1, limit = 10) => {
       reject({ error });
     }
   });
+  
 }
