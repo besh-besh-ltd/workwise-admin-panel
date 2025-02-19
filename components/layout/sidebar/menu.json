@@ -152,7 +152,13 @@
         "class": "",
         "icon": "",
         "active": false
-      }
+      },{
+        "title":"Location-Management",
+        "link":"/location-management",
+        "class":"",
+        "icon":"",
+         "active":false
+       }
     ]
   },
   {
@@ -260,13 +266,5 @@
    "icon":"",
     "active":false,
     "children":[]
-  },
-  {
-    "title":"Location-Management",
-    "link":"/location-management",
-    "class":"",
-    "icon":"",
-     "active":false,
-     "children":[]
-   }
+  }
 ]

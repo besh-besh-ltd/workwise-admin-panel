@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import ReactPaginate from "react-paginate";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChevronLeft,
+  faChevronRight,
+} from "@fortawesome/free-solid-svg-icons";
 import {
   getLocationData,
   searchLocation,
@@ -8,6 +12,7 @@ import {
   updateLocation,
   deleteLocation,
   searchCity, // Import the searchCity function
+  getStates,
 } from "@/utils/services/location-management";
 
 const AddLocation = () => {
@@ -24,45 +29,24 @@ const AddLocation = () => {
   const [searchTerm, setSearchTerm] = useState(""); // New state for the search input
   const [isAdding, setIsAdding] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [statesList, setStatesList] = useState([]); // State for dynamically loaded states
 
   const itemsPerPage = 10;
 
-  // Predefined list of states
-  const statesList = [
-    "Punjab",
-    "Chandigarh",
-    "Jharkhand",
-    "Tripura",
-    "Tamil Nadu",
-    "Mizoram",
-    "Nagaland",
-    "Madhya Pradesh",
-    "Andhra Pradesh",
-    "Haryana",
-    "Himachal Pradesh",
-    "Rajasthan",
-    "Assam",
-    "Odisha",
-    "Chhattisgarh",
-    "Karnataka",
-    "Jammu and Kashmir",
-    "Manipur",
-    "Kerala",
-    "Dadra and Nagar Haveli",
-    "Delhi",
-    "Puducherry",
-    "Uttarakhand",
-    "Bihar",
-    "Telangana",
-    "Gujarat",
-    "Meghalaya",
-    "Arunachal Pradesh",
-    "Goa",
-    "Maharashtra",
-    "West Bengal",
-    "Uttar Pradesh",
-    "Andman Nicobar",
-  ];
+  // Fetch dynamically loaded states
+  const fetchStates = async () => {
+    try {
+      const response = await getStates();
+      if (response?.data) {
+        setStatesList(response.data); // Update states list with response data
+      } else {
+        setStatesList([]); // Default to an empty list if no data
+      }
+    } catch (err) {
+      console.error("Error fetching states:", err);
+      setStatesList([]);
+    }
+  };
 
   // Fetch locations
   const fetchLocations = async (page) => {
@@ -89,6 +73,7 @@ const AddLocation = () => {
   };
 
   useEffect(() => {
+    fetchStates();
     fetchLocations(currentPage);
   }, [currentPage, stateFilter]);
 
@@ -142,7 +127,6 @@ const AddLocation = () => {
       setIsAdding(false); // Reset loading state
     }
   };
-  
 
   // Function to handle edit button click
   const handleEditClick = (location) => {
@@ -179,7 +163,6 @@ const AddLocation = () => {
       setIsUpdating(false); // Reset loading state
     }
   };
-  
 
   return (
     <div className="container-fluid p-4">
@@ -204,9 +187,9 @@ const AddLocation = () => {
             onChange={handleStateFilterChange}
           >
             <option value="">All States...</option>
-            {statesList.map((state, index) => (
-              <option key={index} value={state}>
-                {state}
+            {statesList.map((state) => (
+              <option key={state.id} value={state.state_name}>
+                {state.state_name}
               </option>
             ))}
           </select>
@@ -272,13 +255,16 @@ const AddLocation = () => {
           {totalCount > itemsPerPage && (
             <div className="d-flex flex-column align-items-center gap-2 mt-4">
               <ReactPaginate
-                previousLabel={<ChevronLeft size={18} />}
-                nextLabel={<ChevronRight size={18} />}
+                previousLabel={
+                  <FontAwesomeIcon icon={faChevronLeft} size="sm" />
+                }
+                nextLabel={<FontAwesomeIcon icon={faChevronRight} size="sm" />}
                 breakLabel="..."
                 pageCount={Math.ceil(totalCount / itemsPerPage)}
                 marginPagesDisplayed={2}
                 pageRangeDisplayed={5}
                 onPageChange={handlePageClick}
+                forcePage={currentPage} // Add this line to force the active page
                 containerClassName="pagination mb-0"
                 pageClassName="page-item"
                 pageLinkClassName="page-link"
@@ -295,157 +281,155 @@ const AddLocation = () => {
 
       {/* Add New Location Modal */}
       <div
-  className={`modal fade ${modalVisible ? "show" : ""}`}
-  id="addLocationModal"
-  tabIndex="-1"
-  aria-labelledby="addLocationModalLabel"
-  aria-hidden={!modalVisible}
-  style={{ display: modalVisible ? "block" : "none" }} // Manually manage modal display
->
-  <div className="modal-dialog">
-    <div className="modal-content">
-      <div className="modal-header">
-        <h5 className="modal-title" id="addLocationModalLabel">
-          Add New Location
-        </h5>
-        <button
-          type="button"
-          className="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-          onClick={() => setModalVisible(false)} // Close the modal
-        ></button>
-      </div>
-      <div className="modal-body">
-        <div className="mb-3">
-          <label htmlFor="state" className="form-label">
-            State
-          </label>
-          <select
-            className="form-control"
-            id="state"
-            value={newState}
-            onChange={(e) => setNewState(e.target.value)}
-          >
-            <option value="">Select a state</option>
-            {statesList.map((state, index) => (
-              <option key={index} value={state}>
-                {state}
-              </option>
-            ))}
-          </select>
+        className={`modal fade ${modalVisible ? "show" : ""}`}
+        id="addLocationModal"
+        tabIndex="-1"
+        aria-labelledby="addLocationModalLabel"
+        aria-hidden={!modalVisible}
+        style={{ display: modalVisible ? "block" : "none" }} // Manually manage modal display
+      >
+        <div className="modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title" id="addLocationModalLabel">
+                Add New Location
+              </h5>
+              <button
+                type="button"
+                className="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+                onClick={() => setModalVisible(false)} // Close the modal
+              ></button>
+            </div>
+            <div className="modal-body">
+              <div className="mb-3">
+                <label htmlFor="state" className="form-label">
+                  State
+                </label>
+                <select
+                  className="form-control"
+                  id="state"
+                  value={newState}
+                  onChange={(e) => setNewState(e.target.value)}
+                >
+                  <option value="">Select a state</option>
+                  {statesList.map((state) => (
+                    <option key={state.id} value={state.state_name}>
+                      {state.state_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-3">
+                <label htmlFor="city" className="form-label">
+                  City
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="city"
+                  value={newCity}
+                  onChange={(e) => setNewCity(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                data-bs-dismiss="modal"
+                onClick={() => setModalVisible(false)} // Close the modal
+              >
+                Close
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleAddLocation}
+                disabled={isAdding} // Disable button if isAdding is true
+              >
+                {isAdding ? "Adding..." : "Add"}
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="mb-3">
-          <label htmlFor="city" className="form-label">
-            City
-          </label>
-          <input
-            type="text"
-            className="form-control"
-            id="city"
-            value={newCity}
-            onChange={(e) => setNewCity(e.target.value)}
-          />
-        </div>
       </div>
-      <div className="modal-footer">
-        <button
-          type="button"
-          className="btn btn-secondary"
-          data-bs-dismiss="modal"
-          onClick={() => setModalVisible(false)} // Close the modal
-        >
-          Close
-        </button>
-        <button
-  className="btn btn-primary"
-  onClick={handleAddLocation}
-  disabled={isAdding} // Disable button if isAdding is true
->
-  {isAdding ? "Adding..." : "Add"}
-</button>
-
-      </div>
-    </div>
-  </div>
-</div>
 
       {/* Edit Location Modal */}
       <div
-  className={`modal fade ${editModalVisible ? "show" : ""}`}
-  id="editLocationModal"
-  tabIndex="-1"
-  aria-labelledby="editLocationModalLabel"
-  aria-hidden={!editModalVisible}
-  style={{ display: editModalVisible ? "block" : "none" }} // Manually manage modal display
->
-  <div className="modal-dialog">
-    <div className="modal-content">
-      <div className="modal-header">
-        <h5 className="modal-title" id="editLocationModalLabel">
-          Edit Location
-        </h5>
-        <button
-          type="button"
-          className="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-          onClick={() => setEditModalVisible(false)} // Close the modal
-        ></button>
-      </div>
-      <div className="modal-body">
-        <div className="mb-3">
-          <label htmlFor="editState" className="form-label">
-            State
-          </label>
-          <select
-            className="form-control"
-            id="editState"
-            value={newState}
-            onChange={(e) => setNewState(e.target.value)}
-          >
-            <option value="">Select a state</option>
-            {statesList.map((state, index) => (
-              <option key={index} value={state}>
-                {state}
-              </option>
-            ))}
-          </select>
+        className={`modal fade ${editModalVisible ? "show" : ""}`}
+        id="editLocationModal"
+        tabIndex="-1"
+        aria-labelledby="editLocationModalLabel"
+        aria-hidden={!editModalVisible}
+        style={{ display: editModalVisible ? "block" : "none" }} // Manually manage modal display
+      >
+        <div className="modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title" id="editLocationModalLabel">
+                Edit Location
+              </h5>
+              <button
+                type="button"
+                className="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+                onClick={() => setEditModalVisible(false)} // Close the modal
+              ></button>
+            </div>
+            <div className="modal-body">
+              <div className="mb-3">
+                <label htmlFor="editState" className="form-label">
+                  State
+                </label>
+                <select
+                  className="form-control"
+                  id="state"
+                  value={newState}
+                  onChange={(e) => setNewState(e.target.value)}
+                >
+                  <option value="">Select a state</option>
+                  {statesList.map((state) => (
+                    <option key={state.id} value={state.state_name}>
+                      {state.state_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-3">
+                <label htmlFor="editCity" className="form-label">
+                  City
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="editCity"
+                  value={newCity}
+                  onChange={(e) => setNewCity(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                data-bs-dismiss="modal"
+                onClick={() => setEditModalVisible(false)} // Close the modal
+              >
+                Close
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleUpdateLocation}
+                disabled={isUpdating} // Disable button if isUpdating is true
+              >
+                {isUpdating ? "Updating..." : "Update"}
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="mb-3">
-          <label htmlFor="editCity" className="form-label">
-            City
-          </label>
-          <input
-            type="text"
-            className="form-control"
-            id="editCity"
-            value={newCity}
-            onChange={(e) => setNewCity(e.target.value)}
-          />
-        </div>
       </div>
-      <div className="modal-footer">
-        <button
-          type="button"
-          className="btn btn-secondary"
-          data-bs-dismiss="modal"
-          onClick={() => setEditModalVisible(false)} // Close the modal
-        >
-          Close
-        </button>
-        <button
-  className="btn btn-primary"
-  onClick={handleUpdateLocation}
-  disabled={isUpdating} // Disable button if isUpdating is true
->
-  {isUpdating ? "Updating..." : "Update"}
-</button>
-
-      </div>
-    </div>
-  </div>
-</div>
     </div>
   );
 };

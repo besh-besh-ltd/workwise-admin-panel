@@ -97,3 +97,14 @@ try {
 })
 } */}
 
+export const getStates = () => {  
+	return new Promise(async (resolve, reject) => {
+		try {
+			let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/general/states`);
+			resolve(response);
+		} catch (error) {
+			reject({ message: error });
+		}
+	});
+};
+
