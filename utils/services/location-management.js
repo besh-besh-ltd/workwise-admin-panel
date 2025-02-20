@@ -29,13 +29,13 @@ export const searchLocation = (offset, limit, state) => {
   });
 };
 
-export const addLocation = (state_name, city_name) => {
+export const addCityName = (state_id, city_name) => {
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.post(
         `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/add-location`,
         {
-          state_name,
+          state_id,
           city_name
         }
       );
@@ -80,6 +80,44 @@ export const searchCity = (searchCity) => {
   })
 }
 
+export const addCountryName = (country_name)=>{
+  return new Promise(async (resolve, reject) => {
+    try {
+       let response = await axiosInstance.post(`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/add-location`,
+        {
+          country_name
+        }
+       )
+     
+      resolve(response.data);
+      
+    } 
+      catch (error) {
+        reject({ error });
+      
+    }
+  })
+}
+
+
+export const addStateName = (state_name,country_id) =>{
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.post(`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/add-location`,
+        {
+          state_name,
+          country_id,
+        }
+      )
+      console.log(response.data); // Check if the response is correct
+      resolve(response.data);
+      
+    } catch (error) {
+      reject({ error });
+    }
+  })
+}
+
 {/*
   export const deleteLocation = (city_id) =>{
 return new Promise(async (resolve, reject) => {
@@ -108,3 +146,13 @@ export const getStates = () => {
 	});
 };
 
+export const getCountries = () =>{
+  return new Promise(async (resolve, reject) => {
+   try {
+    let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/general/countries`);
+    resolve(response);
+   } catch (error) {
+    reject({ message: error });
+   } 
+   })
+}
