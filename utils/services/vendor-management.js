@@ -39,11 +39,11 @@ function handleGetVendorEditDetails(id) {
     }
   });
 }
-function handleGetStates() {
+function handleGetStates(country_id) {
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/general/states`
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/general/states?country_id=${country_id}`
       );
       resolve(response);
     } catch (error) {

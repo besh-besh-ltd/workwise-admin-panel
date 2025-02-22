@@ -343,6 +343,7 @@ const handleAddState = () => {
                   >
                     S No.
                   </th>
+                  <th scope="col">Country</th>
                   <th scope="col">State</th>
                   <th scope="col">City</th>
                   <th scope="col">Actions</th>
@@ -356,6 +357,7 @@ const handleAddState = () => {
                       <td className="text-center">
                         {currentPage * itemsPerPage + index + 1}
                       </td>
+                      <td>{item.country_name}</td>
                       <td>{item.state_name}</td>
                       <td>{item.city_name}</td>
                       <td>
