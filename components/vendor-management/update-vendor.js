@@ -16,6 +16,7 @@ import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
 import SpocAddModal from "../modal/spoc-add-modal";
+import { getCountries } from "@/utils/services/location-management";
 
 const UpdateVendor = () => {
   const [dtaCount, setdtaCount] = useState(0);
@@ -35,6 +36,7 @@ const UpdateVendor = () => {
   });
   const [spocId, setSpocId] = useState(null);
   const [openAddSpoc,setOpenAddSpoc] = useState(false);
+  const [countryList,setCountryList] = useState([]);
 
 
   const router = useRouter();
@@ -75,26 +77,54 @@ const UpdateVendor = () => {
       });
   };
 
-  useEffect(() => {
-    handleGetStates()
-      .then(res => {
-        setStates(res.data.data)
-      })
-      .catch((err) => console.log("err", err));
-  }, [])
-
-  const handleCountryChange = (event) => {
-    setSelectedCountryOption(event.target.value)
-    if (event.target.value !== '') {
-      setIsStateDisabled(false);
+ useEffect(() => {
+    if (selectedCountryOption) {
+      handleGetStates(selectedCountryOption)
+        .then((res) => {
+          setStates(res.data.data); // Populate the states list
+        })
+        .catch((err) => console.log("Error fetching states:", err));
     } else {
-      setIsStateDisabled(true)
-      setIsCityDisabled(true)
-      setSelectedCountryOption('')
-      setSelectedStateOption('')
-      setSelectedCityOption('')
+      setStates([]); // Clear states if no country is selected
     }
-  };
+  }, [selectedCountryOption]);
+  
+
+useEffect(() => {
+  getCountries()
+    .then((res) => {
+      
+      setCountryList(res.data) // Set country list state
+    })
+    .catch((err) => console.error("Error fetching countries:", err));
+}, []);
+
+ const handleCountryChange = (event) => {
+   const selectedCountry = event.target.value;
+   setSelectedCountryOption(selectedCountry);
+ 
+   if (selectedCountry !== "") {
+     setIsStateDisabled(false); // Enable the state dropdown
+ 
+     // Fetch states for the selected country
+     handleGetStates(selectedCountry)
+       .then((res) => {
+         setStates(res.data.data); // Populate the states list
+         setIsCityDisabled(true);  // Disable city dropdown until a state is selected
+         setSelectedStateOption(""); // Clear any previously selected state
+         setSelectedCityOption(""); // Clear any previously selected city
+       })
+       .catch((err) => console.log("Error fetching states:", err));
+   } else {
+     // Reset all selections if no country is selected
+     setIsStateDisabled(true);
+     setIsCityDisabled(true);
+     setSelectedCountryOption("");
+     setSelectedStateOption("");
+     setSelectedCityOption("");
+     setStates([]); // Clear the state list
+   }
+ };
   const handleStateChange = (event) => {
     let id = event.target.value;
     setSelectedStateOption(id)
@@ -250,485 +280,533 @@ const UpdateVendor = () => {
                     .required("mobile is required"),
                 })}
                 onSubmit={(values, { resetForm }) => {
-                  values.country = selectedCountryOption || editDetails?.vendorDetails?.country;
-                  values.state = selectedStateOption || editDetails?.vendorDetails?.state;
-                  values.city = selectedCityOption || editDetails?.vendorDetails?.city;
+                  values.country =
+                    selectedCountryOption ||
+                    editDetails?.vendorDetails?.country;
+                  values.state =
+                    selectedStateOption || editDetails?.vendorDetails?.state;
+                  values.city =
+                    selectedCityOption || editDetails?.vendorDetails?.city;
                   submitHandler(values, resetForm);
                 }}
               >
                 {({ errors, touched, values, handleChange, setFieldValue }) => (
                   <Form>
+                    {editDetails && (
+                      <div className="row form-common-row mb-4">
+                        <div className="col-6">
+                          <label htmlFor="Organization-Address">Name</label>
+                          <Field
+                            type="text"
+                            name="name"
+                            className="form-control"
+                            placeholder="Name"
+                          />
+                          <ErrorMessage
+                            name="name"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div className="col-6">
+                          <label htmlFor="Organization-Address">Email</label>
+                          <Field
+                            type="email"
+                            name="email"
+                            className="form-control"
+                            placeholder="Email"
+                          />
+                          <ErrorMessage
+                            name="email"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="Organization-Address">Mobile</label>
+                          <Field
+                            type="number"
+                            name="mobile"
+                            class="form-control"
+                            placeholder="Mobile"
+                          />
+                          <ErrorMessage
+                            name="mobile"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="organization-name">
+                            Organization
+                          </label>
+                          <Field
+                            type="text"
+                            name="organization_name"
+                            class="form-control"
+                            placeholder="Organization"
+                          />
+                          <ErrorMessage
+                            name="organization_name"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="image">Image</label>
+                          <Field
+                            name="image"
+                            type="file"
+                            value={undefined}
+                            className="form-control"
+                            onChange={(event) => {
+                              let files = event.target.files[0];
+                              setFieldValue("image", files);
+                            }}
+                          />
+                          {editDetails?.vendorDetails?.new_profile_image !=
+                            null && (
+                            <div className="mt-3" style={{ display: "flex" }}>
+                              <label htmlFor="year">
+                                Prefilled Image -&nbsp;{" "}
+                              </label>
+                              <p htmlFor="year">
+                                <Image
+                                  width={30}
+                                  height={30}
+                                  src={
+                                    editDetails?.vendorDetails
+                                      ?.new_profile_image == null
+                                      ? img1
+                                      : editDetails?.vendorDetails
+                                          ?.new_profile_image
+                                  }
+                                  unoptimized
+                                  className="rounded prof-img"
+                                  alt="..."
+                                />
+                              </p>
+                            </div>
+                          )}
+                          <ErrorMessage
+                            name="image"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="logo">Logo</label>
+                          <Field
+                            name="logo"
+                            type="file"
+                            value={undefined}
+                            className="form-control"
+                            onChange={(event) => {
+                              let files = event.target.files[0];
+                              setFieldValue("logo", files);
+                            }}
+                          />
+                          {editDetails?.companyDetails?.logo != null && (
+                            <div className="mt-3" style={{ display: "flex" }}>
+                              <label htmlFor="year">
+                                Prefilled Image -&nbsp;{" "}
+                              </label>
+                              <p htmlFor="year">
+                                <Image
+                                  width={30}
+                                  height={30}
+                                  src={
+                                    editDetails?.companyDetails?.logo == null
+                                      ? img1
+                                      : editDetails?.companyDetails?.logo
+                                  }
+                                  unoptimized
+                                  className="rounded prof-img"
+                                  alt="..."
+                                />
+                              </p>
+                            </div>
+                          )}
+                          <ErrorMessage
+                            name="logo"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="about-vendro">Address</label>
+                          <Field
+                            type="text"
+                            name="address"
+                            class="form-control"
+                            placeholder="Address"
+                          />
+                          <ErrorMessage
+                            name="about_vendor"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="about-vendor">About Vendor</label>
+                          <Field
+                            name="about_vendor_company"
+                            as="textarea"
+                            className="form-control"
+                          />
+                          <ErrorMessage
+                            name="about_vendor_company"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="about-vendro">Postal Code</label>
+                          <Field
+                            type="number"
+                            name="postal_code"
+                            class="form-control"
+                            placeholder="Postal code"
+                          />
+                          <ErrorMessage
+                            name="postal_code"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-4">
+                          <label htmlFor="city">Country</label>
+                          <Field
+                            onChange={handleCountryChange}
+                            value={selectedCountryOption}
+                            as="select"
+                            className="form-control"
+                            name="country"
+                          >
+                            <option value="">Select</option>
+                            {countryList?.map((country) => (
+                              <option key={country.id} value={country.id}>
+                                {country.country_name}
+                              </option>
+                            ))}
+                          </Field>
+                        </div>
+                        <div class="col-4">
+                          <label htmlFor="state">State</label>
+                          <Field
+                            value={selectedStateOption}
+                            onChange={handleStateChange}
+                            disabled={isStateDisabled}
+                            as="select"
+                            className="form-control"
+                            name="state"
+                          >
+                            <option value="">Select</option>
+                            {states.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.state_name}
+                              </option>
+                            ))}
+                          </Field>
+                        </div>
+                        <div class="col-4">
+                          <label htmlFor="city">City</label>
+                          <Field
+                            value={selectedCityOption}
+                            onChange={handleCityChange}
+                            disabled={isCityDisabled}
+                            as="select"
+                            className="form-control"
+                            name="city"
+                          >
+                            <option value="">Select</option>
+                            {cities?.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.city_name}
+                              </option>
+                            ))}
+                          </Field>
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="website">Website</label>
+                          <Field
+                            type="text"
+                            name="website"
+                            class="form-control"
+                            placeholder="Website"
+                          />
+                          <ErrorMessage
+                            name="postal_code"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="nature_of_business">
+                            Nature of Business
+                          </label>
+                          <Field
+                            type="text"
+                            name="nature_business"
+                            class="form-control"
+                            placeholder="Ex. Manufacturer, Dealer, Trader"
+                          />
+                          <ErrorMessage
+                            name="nature_business"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="about-vendro">Estd year</label>
+                          <Field
+                            type="number"
+                            name="estd_year"
+                            class="form-control"
+                            placeholder="Estd year"
+                          />
+                          <ErrorMessage
+                            name="estd_year"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                          {/* this is the spoc details column where we have to change */}
+                        </div>
 
-                    {editDetails && <div className="row form-common-row mb-4">
-                      <div className="col-6">
-                        <label htmlFor="Organization-Address">Name</label>
-                        <Field
-                          type="text"
-                          name="name"
-                          className="form-control"
-                          placeholder="Name"
-                        />
-                        <ErrorMessage
-                          name="name"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
+                        <div class="col-6">
+                          <label htmlFor="gstin">Gstin</label>
+                          <Field
+                            type="text"
+                            name="gstin"
+                            class="form-control"
+                            placeholder="gstin"
+                          />
+                          <ErrorMessage
+                            name="gstin"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="import_export_code">
+                            Import Export Code
+                          </label>
+                          <Field
+                            type="number"
+                            name="import_export_code"
+                            class="form-control"
+                            placeholder="Import export code"
+                          />
+                          <ErrorMessage
+                            name="import_export_code"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="about-vendro">CIN</label>
+                          <Field
+                            type="text"
+                            name="cin"
+                            class="form-control"
+                            placeholder="cin"
+                          />
+                          <ErrorMessage
+                            name="cin"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="turn_over">Turn Over</label>
+                          <Field
+                            type="text"
+                            name="turn_over"
+                            class="form-control"
+                            placeholder="Ex. 50 cr"
+                          />
+                          <ErrorMessage
+                            name="turn_over"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="total_employes">
+                            Total Employees
+                          </label>
+                          <Field
+                            type="number"
+                            name="total_employees"
+                            class="form-control"
+                            placeholder="Total employes"
+                          />
+                          <ErrorMessage
+                            name="total_employees"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="ptr">PTR</label>
+                          <Field
+                            name="ptr_track"
+                            type="file"
+                            value={undefined}
+                            className="form-control"
+                            onChange={(event) => {
+                              let files = event.target.files[0];
+                              setFieldValue("ptr_track", files);
+                            }}
+                          />
+                          {editDetails?.files &&
+                            editDetails?.files.length != 0 &&
+                            editDetails?.files.map(
+                              (data) =>
+                                data.doc_type == "ptr" && (
+                                  <span>
+                                    <a href={data.file_path} target="_blank">
+                                      <i class="fa fa-file"></i>{" "}
+                                      {data.file_name}
+                                    </a>
+                                  </span>
+                                )
+                            )}
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="total_employes">
+                            Ptr Project Name
+                          </label>
+                          <Field
+                            type="text"
+                            name="ptr_project_name"
+                            class="form-control"
+                            placeholder="Ptr project name"
+                          />
+                          <ErrorMessage
+                            name="ptr_project_name"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="about-vendro">
+                            PTR Project Description
+                          </label>
+                          <Field
+                            name="ptr_project_description"
+                            as="textarea"
+                            className="form-control"
+                          />
+                          <ErrorMessage
+                            name="ptr_project_description"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="gstin">Ptr Project Start Date</label>
+                          <Field
+                            type="date"
+                            name="ptr_project_start_date"
+                            class="form-control"
+                            placeholder="ptr_project_start_date"
+                          />
+                          <ErrorMessage
+                            name="ptr_project_start_date"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="gstin">Ptr Project End Date</label>
+                          <Field
+                            type="date"
+                            name="ptr_project_end_date"
+                            class="form-control"
+                            placeholder="ptr_project_end_date"
+                          />
+                          <ErrorMessage
+                            name="ptr_project_end_date"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="certifications">Certification</label>
+                          <Field
+                            name="certifications"
+                            type="file"
+                            value={undefined}
+                            className="form-control"
+                            onChange={(event) => {
+                              let files = event.target.files[0];
+                              setFieldValue("certifications", files);
+                            }}
+                          />
+                          {editDetails?.files &&
+                            editDetails?.files.length != 0 &&
+                            editDetails?.files.map(
+                              (data) =>
+                                data.doc_type == "crt" && (
+                                  <span>
+                                    <a href={data.file_path} target="_blank">
+                                      <i class="fa fa-file"></i>{" "}
+                                      {data.file_name}
+                                    </a>
+                                  </span>
+                                )
+                            )}
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="brochure">Brochure</label>
+                          <Field
+                            name="brochure"
+                            type="file"
+                            value={undefined}
+                            className="form-control"
+                            onChange={(event) => {
+                              let files = event.target.files[0];
+                              setFieldValue("brochure", files);
+                            }}
+                          />
+                          {editDetails?.files &&
+                            editDetails?.files.length != 0 &&
+                            editDetails?.files.map(
+                              (data) =>
+                                data.doc_type == "brochure" && (
+                                  <span>
+                                    <a href={data.file_path} target="_blank">
+                                      <i class="fa fa-file"></i>{" "}
+                                      {data.file_name}
+                                    </a>
+                                  </span>
+                                )
+                            )}
+                        </div>
                       </div>
-                      <div className="col-6">
-                        <label htmlFor="Organization-Address">Email</label>
-                        <Field
-                          type="email"
-                          name="email"
-                          className="form-control"
-                          placeholder="Email"
-                        />
-                        <ErrorMessage
-                          name="email"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="Organization-Address">Mobile</label>
-                        <Field
-                          type="number"
-                          name="mobile"
-                          class="form-control"
-                          placeholder="Mobile"
-                        />
-                        <ErrorMessage
-                          name="mobile"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="organization-name">
-                          Organization
-                        </label>
-                        <Field
-                          type="text"
-                          name="organization_name"
-                          class="form-control"
-                          placeholder="Organization"
-                        />
-                        <ErrorMessage
-                          name="organization_name"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="image">Image</label>
-                        <Field
-                          name="image"
-                          type="file"
-                          value={undefined}
-                          className="form-control"
-                          onChange={(event) => {
-                            let files = event.target.files[0];
-                            setFieldValue("image", files);
-                          }}
-                        />
-                        {editDetails?.vendorDetails?.new_profile_image != null && (
-                          <div className="mt-3" style={{ display: "flex" }}>
-                            <label htmlFor="year">
-                              Prefilled Image -&nbsp;{" "}
-                            </label>
-                            <p htmlFor="year">
-                              <Image
-                                width={30}
-                                height={30}
-                                src={
-                                  editDetails?.vendorDetails?.new_profile_image == null
-                                    ? img1
-                                    : editDetails?.vendorDetails?.new_profile_image
-                                }
-                                unoptimized
-                                className="rounded prof-img"
-                                alt="..."
-                              />
-                            </p>
-                          </div>
-                        )}
-                        <ErrorMessage
-                          name="image"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="logo">Logo</label>
-                        <Field
-                          name="logo"
-                          type="file"
-                          value={undefined}
-                          className="form-control"
-                          onChange={(event) => {
-                            let files = event.target.files[0];
-                            setFieldValue("logo", files);
-                          }}
-                        />
-                        {editDetails?.companyDetails?.logo != null && (
-                          <div className="mt-3" style={{ display: "flex" }}>
-                            <label htmlFor="year">
-                              Prefilled Image -&nbsp;{" "}
-                            </label>
-                            <p htmlFor="year">
-                              <Image
-                                width={30}
-                                height={30}
-                                src={
-                                  editDetails?.companyDetails?.logo == null
-                                    ? img1
-                                    : editDetails?.companyDetails?.logo
-                                }
-                                unoptimized
-                                className="rounded prof-img"
-                                alt="..."
-                              />
-                            </p>
-                          </div>
-                        )}
-                        <ErrorMessage
-                          name="logo"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">Address</label>
-                        <Field
-                          type="text"
-                          name="address"
-                          class="form-control"
-                          placeholder="Address"
-                        />
-                        <ErrorMessage
-                          name="about_vendor"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendor">About Vendor</label>
-                        <Field
-                          name="about_vendor_company"
-                          as="textarea"
-                          className="form-control"
-                        />
-                        <ErrorMessage
-                          name="about_vendor_company"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">Postal Code</label>
-                        <Field
-                          type="number"
-                          name="postal_code"
-                          class="form-control"
-                          placeholder="Postal code"
-                        />
-                        <ErrorMessage
-                          name="postal_code"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-4">
-                        <label htmlFor="city">Country</label>
-                        <Field
-                          onChange={handleCountryChange}
-                          value={selectedCountryOption}
-                          as="select" className="form-control" name="country">
-                          <option value="">Select</option>
-                          <option value="1">India</option>
-                        </Field>
-                      </div>
-                      <div class="col-4">
-                        <label htmlFor="state">State</label>
-                        <Field
-                          value={selectedStateOption}
-                          onChange={handleStateChange}
-                          disabled={isStateDisabled}
-                          as="select" className="form-control" name="state">
-                          <option value="">Select</option>
-                          {states.map(option => (
-                            <option key={option.id} value={option.id}>
-                              {option.state_name}
-                            </option>
-                          ))}
-                        </Field>
-                      </div>
-                      <div class="col-4">
-                        <label htmlFor="city">City</label>
-                        <Field
-                          value={selectedCityOption}
-                          onChange={handleCityChange}
-                          disabled={isCityDisabled}
-                          as="select" className="form-control" name="city">
-                          <option value="">Select</option>
-                          {cities?.map(option => (
-                            <option key={option.id} value={option.id}>
-                              {option.city_name}
-                            </option>
-                          ))}
-                        </Field>
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="website">Website</label>
-                        <Field
-                          type="text"
-                          name="website"
-                          class="form-control"
-                          placeholder="Website"
-                        />
-                        <ErrorMessage
-                          name="postal_code"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="nature_of_business">Nature of Business</label>
-                        <Field
-                          type="text"
-                          name="nature_business"
-                          class="form-control"
-                          placeholder="Ex. Manufacturer, Dealer, Trader"
-                        />
-                        <ErrorMessage
-                          name="nature_business"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">Estd year</label>
-                        <Field
-                          type="number"
-                          name="estd_year"
-                          class="form-control"
-                          placeholder="Estd year"
-                        />
-                        <ErrorMessage
-                          name="estd_year"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                        {/* this is the spoc details column where we have to change */}
-
-                      </div>
-
-                      <div class="col-6">
-                        <label htmlFor="gstin">Gstin</label>
-                        <Field
-                          type="text"
-                          name="gstin"
-                          class="form-control"
-                          placeholder="gstin"
-                        />
-                        <ErrorMessage
-                          name="gstin"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="import_export_code">Import Export Code</label>
-                        <Field
-                          type="number"
-                          name="import_export_code"
-                          class="form-control"
-                          placeholder="Import export code"
-                        />
-                        <ErrorMessage
-                          name="import_export_code"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">CIN</label>
-                        <Field
-                          type="text"
-                          name="cin"
-                          class="form-control"
-                          placeholder="cin"
-                        />
-                        <ErrorMessage
-                          name="cin"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="turn_over">Turn Over</label>
-                        <Field
-                          type="text"
-                          name="turn_over"
-                          class="form-control"
-                          placeholder="Ex. 50 cr"
-                        />
-                        <ErrorMessage
-                          name="turn_over"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="total_employes">Total Employees</label>
-                        <Field
-                          type="number"
-                          name="total_employees"
-                          class="form-control"
-                          placeholder="Total employes"
-                        />
-                        <ErrorMessage
-                          name="total_employees"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="ptr">PTR</label>
-                        <Field
-                          name="ptr_track"
-                          type="file"
-                          value={undefined}
-                          className="form-control"
-                          onChange={(event) => {
-                            let files = event.target.files[0];
-                            setFieldValue("ptr_track", files);
-                          }}
-                        />
-                        {editDetails?.files && editDetails?.files.length != 0
-                          && editDetails?.files.map((data) => (
-                            (data.doc_type == 'ptr' && <span><a href={data.file_path} target="_blank">
-                              <i class="fa fa-file"></i> {data.file_name}
-                            </a></span>)
-                          ))
-                        }
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="total_employes">Ptr Project Name</label>
-                        <Field
-                          type="text"
-                          name="ptr_project_name"
-                          class="form-control"
-                          placeholder="Ptr project name"
-                        />
-                        <ErrorMessage
-                          name="ptr_project_name"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">PTR Project Description</label>
-                        <Field
-                          name="ptr_project_description"
-                          as="textarea"
-                          className="form-control"
-                        />
-                        <ErrorMessage
-                          name="ptr_project_description"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="gstin">Ptr Project Start Date</label>
-                        <Field
-                          type="date"
-                          name="ptr_project_start_date"
-                          class="form-control"
-                          placeholder="ptr_project_start_date"
-                        />
-                        <ErrorMessage
-                          name="ptr_project_start_date"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="gstin">Ptr Project End Date</label>
-                        <Field
-                          type="date"
-                          name="ptr_project_end_date"
-                          class="form-control"
-                          placeholder="ptr_project_end_date"
-                        />
-                        <ErrorMessage
-                          name="ptr_project_end_date"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="certifications">Certification</label>
-                        <Field
-                          name="certifications"
-                          type="file"
-                          value={undefined}
-                          className="form-control"
-                          onChange={(event) => {
-                            let files = event.target.files[0];
-                            setFieldValue("certifications", files);
-                          }}
-                        />
-                        {editDetails?.files && editDetails?.files.length != 0
-                          && editDetails?.files.map((data) => (
-                            (data.doc_type == 'crt' && <span><a href={data.file_path} target="_blank">
-                              <i class="fa fa-file"></i> {data.file_name}
-                            </a></span>)
-                          ))
-                        }
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="brochure">Brochure</label>
-                        <Field
-                          name="brochure"
-                          type="file"
-                          value={undefined}
-                          className="form-control"
-                          onChange={(event) => {
-                            let files = event.target.files[0];
-                            setFieldValue("brochure", files);
-                          }}
-                        />
-                        {editDetails?.files && editDetails?.files.length != 0
-                          && editDetails?.files.map((data) => (
-                            (data.doc_type == 'brochure' && <span><a href={data.file_path} target="_blank">
-                              <i class="fa fa-file"></i> {data.file_name}
-                            </a></span>)
-                          ))
-                        }
-                      </div>
-                    </div>}
+                    )}
                     <div className="d-flex justify-content-end">
                       <button type="submit" class="btn btn-secondary">
                         Save
@@ -742,31 +820,33 @@ const UpdateVendor = () => {
 
           {/* adding div for spoc details */}
           <div class="card col-12">
-          <div className="d-flex justify-content-end">
-                      <button type="submit" class="btn btn-secondary"
-                      onClick={()=>setOpenAddSpoc(true)}
-                      >
-                        Create New Spoc
-                      </button>
-                    </div>
+            <div className="d-flex justify-content-end">
+              <button
+                type="submit"
+                class="btn btn-secondary"
+                onClick={() => setOpenAddSpoc(true)}
+              >
+                Create New Spoc
+              </button>
+            </div>
             <div class="card-body mt-3">
               <Formik
                 initialValues={{
-                  spoc_name: selectedSpocOption.spoc_name || '',
-                  spoc_email: selectedSpocOption.spoc_email || '',
-                  spoc_role: selectedSpocOption.spoc_role || '',
-                  spoc_mobile: selectedSpocOption.spoc_mobile || ''
+                  spoc_name: selectedSpocOption.spoc_name || "",
+                  spoc_email: selectedSpocOption.spoc_email || "",
+                  spoc_role: selectedSpocOption.spoc_role || "",
+                  spoc_mobile: selectedSpocOption.spoc_mobile || "",
                 }}
                 enableReinitialize={true} // This allows the form to update if selectedSpocOption changes
                 onSubmit={(values, { resetForm }) => {
-                  handleSpocSubmit(values,resetForm); // Call your custom submission logic
+                  handleSpocSubmit(values, resetForm); // Call your custom submission logic
                   // setSubmitting(false); // Stop submission after it's handled
-
                 }}
               >
                 {({ values, handleChange, handleSubmit }) => (
                   <Form onSubmit={handleSubmit}>
-                    {(editDetails.spocDetails && editDetails.spocDetails?.length > 0) ? (
+                    {editDetails.spocDetails &&
+                    editDetails.spocDetails?.length > 0 ? (
                       <div className="row form-common-row mb-4">
                         <div className="form-group">
                           <label htmlFor="select-input" className="form-label">
@@ -779,22 +859,26 @@ const UpdateVendor = () => {
                             onChange={(e) => {
                               const selectedOption = JSON.parse(e.target.value);
                               setSelectedSpocOption({
-                                spoc_name:selectedOption.name,
-                                spoc_email:selectedOption.email,
-                                spoc_mobile:selectedOption.mobile,
-                                spoc_role:selectedOption.role,
+                                spoc_name: selectedOption.name,
+                                spoc_email: selectedOption.email,
+                                spoc_mobile: selectedOption.mobile,
+                                spoc_role: selectedOption.role,
                               }); // Set selected SPOC when chosen
                               setSpocId(selectedOption.id);
-
                             }}
                           >
                             <option value="">Select an option</option>
                             {editDetails.spocDetails.length > 0
                               ? editDetails.spocDetails.map((option) => (
-                                <option key={option.id} value={JSON.stringify(option)}>
-                                  {`${option.name} ${option.role ? (' ,' + option.role) : ''}`}
-                                </option>
-                              ))
+                                  <option
+                                    key={option.id}
+                                    value={JSON.stringify(option)}
+                                  >
+                                    {`${option.name} ${
+                                      option.role ? " ," + option.role : ""
+                                    }`}
+                                  </option>
+                                ))
                               : "No Spoc Found"}
                           </select>
                         </div>
@@ -811,7 +895,9 @@ const UpdateVendor = () => {
                           />
                           <ErrorMessage
                             name="name"
-                            render={(msg) => <div className="form-error">{msg}</div>}
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
                           />
                         </div>
 
@@ -827,7 +913,9 @@ const UpdateVendor = () => {
                           />
                           <ErrorMessage
                             name="email"
-                            render={(msg) => <div className="form-error">{msg}</div>}
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
                           />
                         </div>
 
@@ -843,7 +931,9 @@ const UpdateVendor = () => {
                           />
                           <ErrorMessage
                             name="role"
-                            render={(msg) => <div className="form-error">{msg}</div>}
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
                           />
                         </div>
 
@@ -859,7 +949,9 @@ const UpdateVendor = () => {
                           />
                           <ErrorMessage
                             name="mobile"
-                            render={(msg) => <div className="form-error">{msg}</div>}
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
                           />
                         </div>
 
@@ -869,7 +961,9 @@ const UpdateVendor = () => {
                           </button>
                         </div>
                       </div>
-                    ) : "No Spoc Found"}
+                    ) : (
+                      "No Spoc Found"
+                    )}
                   </Form>
                 )}
               </Formik>
@@ -879,16 +973,15 @@ const UpdateVendor = () => {
 
         <ToastContainer />
       </section>
-      {openAddSpoc &&
+      {openAddSpoc && (
         <SpocAddModal
           openModal={openAddSpoc}
-          closeModal={()=> setOpenAddSpoc(false)}
+          closeModal={() => setOpenAddSpoc(false)}
           vendorId={id}
           getVendorDetails={getVendorDetails}
           handleAddSpoc={handleAddSpoc}
         />
-      }
-
+      )}
     </>
   );
 };
