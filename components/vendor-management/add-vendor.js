@@ -8,6 +8,7 @@ import {
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
+import { getCountries } from "@/utils/services/location-management";
 
 const AddVendor = () => {
   const [states, setStates] = useState([]);
@@ -18,6 +19,8 @@ const AddVendor = () => {
   const [selectedCityOption, setSelectedCityOption] = useState("");
   const [isStateDisabled, setIsStateDisabled] = useState(true);
   const [isCityDisabled, setIsCityDisabled] = useState(true);
+  const [countryList,setCountryList] = useState([]);
+  
   const router = useRouter();
 
   const submitHandler = (values, resetForm) => {
@@ -43,26 +46,56 @@ const AddVendor = () => {
 
       });
   };
+ 
   useEffect(() => {
-    handleGetStates()
-      .then((res) => {
-        setStates(res.data.data);
-      })
-      .catch((err) => console.log("err", err));
-  }, []);
-
-  const handleCountryChange = (event) => {
-    setSelectedCountryOption(event.target.value);
-    if (event.target.value !== "") {
-      setIsStateDisabled(false);
+    if (selectedCountryOption) {
+      handleGetStates(selectedCountryOption)
+        .then((res) => {
+          setStates(res.data.data); // Populate the states list
+        })
+        .catch((err) => console.log("Error fetching states:", err));
     } else {
-      setIsStateDisabled(true);
-      setIsCityDisabled(true);
-      setSelectedCountryOption("");
-      setSelectedStateOption("");
-      setSelectedCityOption("");
+      setStates([]); // Clear states if no country is selected
     }
-  };
+  }, [selectedCountryOption]);
+  
+
+useEffect(() => {
+  getCountries()
+    .then((res) => {
+      
+      setCountryList(res.data) // Set country list state
+    })
+    .catch((err) => console.error("Error fetching countries:", err));
+}, []);
+
+const handleCountryChange = (event) => {
+  const selectedCountry = event.target.value;
+  setSelectedCountryOption(selectedCountry);
+
+  if (selectedCountry !== "") {
+    setIsStateDisabled(false); // Enable the state dropdown
+
+    // Fetch states for the selected country
+    handleGetStates(selectedCountry)
+      .then((res) => {
+        setStates(res.data.data); // Populate the states list
+        setIsCityDisabled(true);  // Disable city dropdown until a state is selected
+        setSelectedStateOption(""); // Clear any previously selected state
+        setSelectedCityOption(""); // Clear any previously selected city
+      })
+      .catch((err) => console.log("Error fetching states:", err));
+  } else {
+    // Reset all selections if no country is selected
+    setIsStateDisabled(true);
+    setIsCityDisabled(true);
+    setSelectedCountryOption("");
+    setSelectedStateOption("");
+    setSelectedCityOption("");
+    setStates([]); // Clear the state list
+  }
+};
+
   const handleStateChange = (event) => {
     let id = event.target.value;
     setSelectedStateOption(id);
@@ -315,7 +348,11 @@ const AddVendor = () => {
                           name="country"
                         >
                           <option value="">Select</option>
-                          <option value="1">India</option>
+                          {countryList?.map((country) => (
+                            <option key={country.id} value={country.id}>
+                              {country.country_name}
+                            </option>
+                          ))}
                         </Field>
                       </div>
                       <div class="col-4">
@@ -600,88 +637,88 @@ const AddVendor = () => {
 
                       {/* SPOC Section */}
                       <div className="mt-4">
-                      <h5>Vendor SPOCs</h5>
-                      <FieldArray
-                        name="spocs"
-                        render={(arrayHelpers) => (
-                          <>
-                            {values.spocs.map((spoc, index) => (
-                              <div key={index} className="row mb-3">
-                                <div className="col-3">
-                                  <label>Name</label>
-                                  <Field
-                                    type="text"
-                                    name={`spocs[${index}].spoc_name`}
-                                    className="form-control"
-                                    placeholder="Name"
-                                  />
-                                  <ErrorMessage
-                                    name={`spocs[${index}].spoc_name`}
-                                    component="div"
-                                    className="form-error"
-                                  />
+                        <h5>Vendor SPOCs</h5>
+                        <FieldArray
+                          name="spocs"
+                          render={(arrayHelpers) => (
+                            <>
+                              {values.spocs.map((spoc, index) => (
+                                <div key={index} className="row mb-3">
+                                  <div className="col-3">
+                                    <label>Name</label>
+                                    <Field
+                                      type="text"
+                                      name={`spocs[${index}].spoc_name`}
+                                      className="form-control"
+                                      placeholder="Name"
+                                    />
+                                    <ErrorMessage
+                                      name={`spocs[${index}].spoc_name`}
+                                      component="div"
+                                      className="form-error"
+                                    />
+                                  </div>
+                                  <div className="col-3">
+                                    <label>Email</label>
+                                    <Field
+                                      type="email"
+                                      name={`spocs[${index}].spoc_email`}
+                                      className="form-control"
+                                      placeholder="Email"
+                                    />
+                                    <ErrorMessage
+                                      name={`spocs[${index}].spoc_email`}
+                                      component="div"
+                                      className="form-error"
+                                    />
+                                  </div>
+                                  <div className="col-3">
+                                    <label>Mobile</label>
+                                    <Field
+                                      type="text"
+                                      name={`spocs[${index}].spoc_mobile`}
+                                      className="form-control"
+                                      placeholder="Mobile"
+                                    />
+                                  </div>
+                                  <div className="col-2">
+                                    <label>Position</label>
+                                    <Field
+                                      type="text"
+                                      name={`spocs[${index}].spoc_role`}
+                                      className="form-control"
+                                      placeholder="Position"
+                                    />
+                                  </div>
+                                  <div className="col-1 mt-4">
+                                    <button
+                                      type="button"
+                                      className="btn btn-danger btn-sm"
+                                      onClick={() => arrayHelpers.remove(index)}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
                                 </div>
-                                <div className="col-3">
-                                  <label>Email</label>
-                                  <Field
-                                    type="email"
-                                    name={`spocs[${index}].spoc_email`}
-                                    className="form-control"
-                                    placeholder="Email"
-                                  />
-                                  <ErrorMessage
-                                    name={`spocs[${index}].spoc_email`}
-                                    component="div"
-                                    className="form-error"
-                                  />
-                                </div>
-                                <div className="col-3">
-                                  <label>Mobile</label>
-                                  <Field
-                                    type="text"
-                                    name={`spocs[${index}].spoc_mobile`}
-                                    className="form-control"
-                                    placeholder="Mobile"
-                                  />
-                                </div>
-                                <div className="col-2">
-                                  <label>Position</label>
-                                  <Field
-                                    type="text"
-                                    name={`spocs[${index}].spoc_role`}
-                                    className="form-control"
-                                    placeholder="Position"
-                                  />
-                                </div>
-                                <div className="col-1 mt-4">
-                                  <button
-                                    type="button"
-                                    className="btn btn-danger btn-sm"
-                                    onClick={() => arrayHelpers.remove(index)}
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              onClick={() =>
-                                arrayHelpers.push({
-                                  spoc_name: "",
-                                  spoc_role: "",
-                                  spoc_email: "",
-                                  spoc_mobile: "",
-                                })
-                              }
-                            >
-                              Add SPOC
-                            </button>
-                          </>
-                        )}
-                      />
-                    </div>
+                              ))}
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                onClick={() =>
+                                  arrayHelpers.push({
+                                    spoc_name: "",
+                                    spoc_role: "",
+                                    spoc_email: "",
+                                    spoc_mobile: "",
+                                  })
+                                }
+                              >
+                                Add SPOC
+                              </button>
+                            </>
+                          )}
+                        />
+                      </div>
                     </div>
 
                     <div className="d-flex justify-content-end mt-4">
