@@ -6,11 +6,15 @@ import * as yup from "yup";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import { updateSubAdmin, getSubAdminDetails } from '@/utils/services/subadmin-management';
+import { getCountryCodes } from '@/utils/services/location-management';
 
 const EditSubadmin = () => {
   const router = useRouter();
 
   const [subAdminData, setSubAdminData] = useState(null);
+  const [countryCode , setcountryCode] = useState([]);
+  const [onecountrycode , setonecountryCode]=useState("");
+  
   const initialValues = {
     name: subAdminData ? subAdminData[0]?.name : "",
     mobile: subAdminData ? subAdminData[0]?.mobile : "",
@@ -26,7 +30,7 @@ const EditSubadmin = () => {
         "please enter valid mobile number"
       )
       .min(10)
-      .max(11)
+      .max(15)
       .required("mobile is required"),
     image: yup.mixed().nullable().required("Please select a file"),
   });
@@ -40,7 +44,16 @@ const EditSubadmin = () => {
   }
 
   const submitHandler = (values, resetForm) => {
-    updateSubAdmin(values, router?.query?.id)
+    const fullMobile = `${onecountrycode}${values.mobile}`;
+    
+    const updatedData = {
+      ...values,
+      mobile: fullMobile,
+    }
+
+
+
+    updateSubAdmin(updatedData, router?.query?.id)
       .then((res) => {
         resetForm();
         toast(res.message);
@@ -56,6 +69,15 @@ const EditSubadmin = () => {
         toast.error(txt);
       });
   }
+  
+  useEffect(()=>{
+    getCountryCodes().then((res)=>{
+      setcountryCode(res.data);
+    }).catch(()=>{
+      console.log("error");
+    })
+  },[])
+
 
   useEffect(() => {
     if(router?.query?.id){
@@ -93,7 +115,13 @@ const EditSubadmin = () => {
                       submitHandler(values, resetForm);
                     }}
                   >
-                    {({ errors, touched, values, handleChange, setFieldValue }) => (
+                    {({
+                      errors,
+                      touched,
+                      values,
+                      handleChange,
+                      setFieldValue,
+                    }) => (
                       <Form>
                         <div className="add-product">
                           <div className="row mb-4">
@@ -111,6 +139,24 @@ const EditSubadmin = () => {
 
                             <div className="col-sm-4">
                               <div className="form-group">
+                                <select
+                                  className="form-control"
+                                  style={{ width: "25%", height: "38px" }} // Adjusted height for consistency
+                                  onChange={(e) =>
+                                    setonecountryCode(e.target.value)
+                                  }
+                                >
+                                  <option value={onecountrycode}>Code</option>
+                                  {countryCode.map((country) => (
+                                    <option
+                                      key={country.id}
+                                      value={country.phone_code}
+                                    >
+                                      {country.country_code} (
+                                      {country.phone_code})
+                                    </option>
+                                  ))}
+                                </select>
                                 <FormikField
                                   label="Mobile"
                                   type="number"
@@ -146,7 +192,10 @@ const EditSubadmin = () => {
                           </div>
 
                           <div className="d-flex float-left">
-                            <button type="submit" class="btn btn-primary justify">
+                            <button
+                              type="submit"
+                              class="btn btn-primary justify"
+                            >
                               Save
                             </button>
                           </div>
@@ -161,7 +210,7 @@ const EditSubadmin = () => {
         </div>
       </section>
     </>
-  )
+  );
 }
 
 export default EditSubadmin

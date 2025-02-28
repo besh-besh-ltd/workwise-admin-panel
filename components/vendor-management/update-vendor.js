@@ -16,7 +16,7 @@ import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
 import SpocAddModal from "../modal/spoc-add-modal";
-import { getCountries } from "@/utils/services/location-management";
+import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
 
 const UpdateVendor = () => {
   const [dtaCount, setdtaCount] = useState(0);
@@ -37,6 +37,7 @@ const UpdateVendor = () => {
   const [spocId, setSpocId] = useState(null);
   const [openAddSpoc,setOpenAddSpoc] = useState(false);
   const [countryList,setCountryList] = useState([]);
+  const [countryCode , setCountryCode] = useState([]);
 
 
   const router = useRouter();
@@ -61,7 +62,12 @@ const UpdateVendor = () => {
       });
   }
   const submitHandler = (values, resetForm) => {
-    handleUpdateVendor(values, id)
+    const fullMobile = `${values.countryCode}${values.mobile.trim()}`;
+    const { countryCode, ...updatedValues } = { 
+      ...values, 
+      mobile: fullMobile,
+       };
+    handleUpdateVendor(updatedValues, id)
       .then((res) => {
         resetForm();
         toast(res.message);
@@ -91,13 +97,28 @@ const UpdateVendor = () => {
   
 
 useEffect(() => {
+  fetchCountryCodes()
   getCountries()
-    .then((res) => {
-      
-      setCountryList(res.data) // Set country list state
+  .then((res) => {
+       setCountryList(res.data) // Set country list state
     })
     .catch((err) => console.error("Error fetching countries:", err));
 }, []);
+
+ const fetchCountryCodes = () => {
+    getCountryCodes()
+      .then((response) => {
+        if (response?.data) {
+          setCountryCode(response.data);
+        } else {
+          setCountryCode([]);
+        }
+      })
+      .catch((error) => {
+        console.log("Error fetching countries:", error);
+        setCountryCode([]);
+      });
+  };
 
  const handleCountryChange = (event) => {
    const selectedCountry = event.target.value;
@@ -269,15 +290,14 @@ useEffect(() => {
                       "please enter valid email address"
                     )
                     .required("email is required"),
-                  mobile: yup
+                    mobile: yup
                     .string()
                     .matches(
-                      /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im,
-                      "please enter valid mobile number"
+                      /^\+?[1-9]\d{1,14}$/,
+                      "Please enter a valid mobile number"
                     )
-                    .min(10)
-                    .max(15)
-                    .required("mobile is required"),
+                    .required("Mobile is required"),
+                  
                 })}
                 onSubmit={(values, { resetForm }) => {
                   values.country =
@@ -324,19 +344,38 @@ useEffect(() => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
-                          <label htmlFor="Organization-Address">Mobile</label>
-                          <Field
-                            type="number"
-                            name="mobile"
-                            class="form-control"
-                            placeholder="Mobile"
-                          />
+                        <div className="mb-3">
+                          <label className="form-label">Mobile *</label>
+                          <div
+                            className="d-flex"
+                            style={{ width: "30%", maxWidth: "800px" }}
+                          >
+                            {/* Country Code Dropdown */}
+                            <Field
+                              as="select"
+                              name="countryCode"
+                              className="form-select me-2"
+                              style={{ width: "30%", maxWidth: "160px" }}
+                            >
+                              {countryCode.map((item) => (
+                                <option key={item.id} value={item.phone_code}>
+                                  {item.country_code} ({item.phone_code})
+                                </option>
+                              ))}
+                            </Field>
+
+                            {/* Mobile Number Input */}
+                            <Field
+                              type="text"
+                              name="mobile"
+                              className="form-control"
+                              style={{ flex: "1" }}
+                            />
+                          </div>
                           <ErrorMessage
                             name="mobile"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
+                            component="div"
+                            className="text-danger"
                           />
                         </div>
                         <div class="col-6">

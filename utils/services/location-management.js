@@ -155,4 +155,17 @@ export const getCountries = () =>{
     reject({ message: error });
    } 
    })
+};
+
+
+// to fetch Country Codes from General Route
+export const getCountryCodes = () =>{
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/general/country-codes`)
+      resolve(response);
+    } catch (error) {
+      reject({message : error})
+    }
+  })
 }
