@@ -125,7 +125,7 @@ function RolesPermission() {
     };
 
     const getSelectedUserRolesDetails = () => {
-        const selectedId = userType === "subadmin" ? selectedSubAdmin.value : selectedDataMember.value;
+        const selectedId = userType === "subadmin" ? selectedSubAdmin.value : selectedDataMember?.value;
         if (!selectedId) return;
 
         getRolesDetails(selectedId)

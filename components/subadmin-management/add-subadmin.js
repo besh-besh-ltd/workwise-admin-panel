@@ -66,7 +66,8 @@ const AddSubadmin = () => {
 
     const submitHandler = (values, resetForm) => {
 
-        const  fullMobile = `${onecountrycode}${values.mobile}`
+      const fullMobile = `${onecountrycode}-${String(values.mobile).trim()
+        .replace(/^0+/, "")}`;
         createSubAdmin({ ...values, userType: userTypeRef.current, mobile:fullMobile })
             .then((res) => {
                 resetForm();
@@ -83,6 +84,10 @@ const AddSubadmin = () => {
                 toast.error(txt);
             });
     }
+
+
+
+    
     return (
       <>
         <ToastContainer />
@@ -151,16 +156,25 @@ const AddSubadmin = () => {
                             </div>
 
                             <div className="row mb-4">
-                              <div className="col-sm-4">
-                                <div className="form-group">
+                              <div className="col-sm-6">
+                                <label className="form-label">
+                                  Mobile <span className="text-danger">*</span>
+                                </label>
+                                <div className="d-flex">
+                                  {/* Country Code Dropdown */}
                                   <select
-                                    className="form-control"
-                                    style={{ width: "25%", height: "38px" }} // Adjusted height for consistency
+                                    className="form-select me-2"
+                                    style={{
+                                      maxWidth: "120px",
+                                      height: "44px",
+                                      marginTop: "32px",
+                                    }}
                                     onChange={(e) =>
                                       setoneountrycode(e.target.value)
                                     }
+                                    value={onecountrycode}
                                   >
-                                    <option value={onecountrycode}>Code</option>
+                                    <option value="countryCode">+91 (IN)</option>
                                     {countryCode.map((country) => (
                                       <option
                                         key={country.id}
@@ -171,13 +185,16 @@ const AddSubadmin = () => {
                                       </option>
                                     ))}
                                   </select>
+
+                                  {/* Mobile Number Input */}
                                   <FormikField
-                                    label="Mobile"
+                                    lable=""
                                     type="number"
                                     isRequired={true}
                                     name="mobile"
                                     touched={touched}
                                     errors={errors}
+                                    className="form-control"
                                   />
                                 </div>
                               </div>

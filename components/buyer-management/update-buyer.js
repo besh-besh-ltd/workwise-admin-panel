@@ -13,7 +13,7 @@ import { getCountryCodes } from "@/utils/services/location-management";
 const UpdateVendor = () => {
   const [editDetails, setEditDetails] = useState(null);
   const [dtaCount, setdtaCount] = useState(0);
-  
+  const [onecountrycode,setonecountrycode] =useState("");
   const [countryCode, setCountryCode] = useState([]);
   const router = useRouter();
   const { id } = router.query;
@@ -39,20 +39,28 @@ const UpdateVendor = () => {
   const initialValues = {
     name: editDetails?.name || "",
     email: editDetails?.email || "",
-    mobile: editDetails?.mobile || "",
+    mobile: editDetails?.mobile ? editDetails.mobile.replace(/^\+?\d+-/, "") : "",
     organization_name: editDetails?.organization_name || "",
     image: editDetails?.profile_image || null,
   };
 
+  console.log("edit details", editDetails);
+
   const submitHandler = (values, { resetForm }) => {
-    const fullMobile = `${values.countryCode}${values.mobile.trim()}`;
-   
+    let fullMobile;
+    if(values.countryCode)
+      {
+        fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
+    
+      }    else{
+        fullMobile = `${selectedCountry.phone_code}-${values.mobile.trim().replace(/^0+/, "")}`;
+      }
     const { countryCode, ...updatedValues } = { 
       ...values, 
       mobile: fullMobile 
     };
     
-    console.log("this is me checkng this ",updatedValues);
+   
     handleUpdateBuyer(updatedValues, editDetails)
       .then((res) => {
         resetForm();
@@ -68,7 +76,14 @@ const UpdateVendor = () => {
         toast(txt);  
           });
   };
+  const extractedCountryCode = editDetails?.mobile.match(/^\+?\d+/)?.[0] || "+91";
+ 
+  
+  const selectedCountry = countryCode.find(
+    (item) => item.phone_code === extractedCountryCode
+  );
 
+ 
   return (
     <div className="container mt-4">
       <h5 className="mb-3">Update Buyer</h5>
@@ -116,6 +131,7 @@ const UpdateVendor = () => {
                     <label className="form-label">Mobile</label>
                     <div className="d-flex">
                       <Field as="select" name="countryCode" className="form-select me-2 w-auto">
+                      <option value="countryCode">{selectedCountry?.country_code} ({selectedCountry?.phone_code})</option> {/* Default selected */}
                         {countryCode.map((item) => (
                           <option key={item.id} value={item.phone_code}>
                             {item.country_code} ({item.phone_code})

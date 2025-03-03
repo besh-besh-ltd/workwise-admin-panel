@@ -26,12 +26,24 @@ const AddVendor = () => {
 
   const submitHandler = (values, resetForm) => {
     const orgName = values.organization_name;
-    const fullMobile = `${values.countryCode}${values.mobile.trim()}`;
+    const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
+
+
+    values.spocs.forEach(spoc => {
+      spoc.spoc_mobile = `${spoc.country_code}-${spoc.spoc_mobile}`; // Concatenating country_code and spoc_mobile
+      delete spoc.country_code; // Removing country_code
+    });
+   
+    
+
     const { countryCode, ...updatedValues } = { 
       ...values, 
       mobile: fullMobile,
       name:orgName
     };
+
+   
+   
     handleAddVendor(updatedValues )
       .then((res) => {
         resetForm();
@@ -139,6 +151,7 @@ const handleCountryChange = (event) => {
     setSelectedCityOption(id);
   };
   const initialValues = {
+    countryCode: "+91",
     name: "",
     organization_name: "",
     email: "",
@@ -265,15 +278,18 @@ const handleCountryChange = (event) => {
                       </div>
                       <div className="mb-3">
                         <label className="form-label">Mobile *</label>
-                        <div className="d-flex"
-                         style={{ width: "30%", maxWidth: "800px" }}>
+                        <div
+                          className="d-flex"
+                          style={{ width: "30%", maxWidth: "800px" }}
+                        >
                           {/* Country Code Dropdown */}
                           <Field
                             as="select"
                             name="countryCode"
                             className="form-select me-2"
-                            style={{ width: "30%", maxWidth: "160px" }}
-                          >
+                            style={{ width: "40%", maxWidth: "160px" }}
+                          > <option value="+91">IN (+91)</option> {/* Default selected */}
+                             
                             {countryCode.map((item) => (
                               <option key={item.id} value={item.phone_code}>
                                 {item.country_code} ({item.phone_code})
@@ -287,6 +303,7 @@ const handleCountryChange = (event) => {
                             name="mobile"
                             className="form-control"
                             style={{ flex: "1" }}
+                             placeholder="Mobile"
                           />
                         </div>
                         <ErrorMessage
@@ -713,13 +730,44 @@ const handleCountryChange = (event) => {
                                   </div>
                                   <div className="col-3">
                                     <label>Mobile</label>
-                                    <Field
-                                      type="text"
+                                    <div className="input-group">
+                                      {/* Country Code Dropdown - Fixed with proper field name */}
+                                      <Field
+                                        as="select"
+                                        name={`spocs[${index}].country_code`}
+                                        className="form-select"
+                                        style={{ maxWidth: "120px" }}
+                                        defaultValue="+91"
+                                      >
+                                        <option value="" disabled>
+                                          Select
+                                        </option>
+                                        {countryCode.map((item) => (
+                                          <option
+                                            key={item.id}
+                                            value={item.phone_code}
+                                          >
+                                            {item.country_code} (
+                                            {item.phone_code})
+                                          </option>
+                                        ))}
+                                      </Field>
+
+                                      {/* Mobile Number Input */}
+                                      <Field
+                                        type="text"
+                                        name={`spocs[${index}].spoc_mobile`}
+                                        className="form-control"
+                                        placeholder="Mobile"
+                                      />
+                                    </div>
+                                    <ErrorMessage
                                       name={`spocs[${index}].spoc_mobile`}
-                                      className="form-control"
-                                      placeholder="Mobile"
+                                      component="div"
+                                      className="form-error"
                                     />
                                   </div>
+
                                   <div className="col-2">
                                     <label>Position</label>
                                     <Field
@@ -729,7 +777,7 @@ const handleCountryChange = (event) => {
                                       placeholder="Position"
                                     />
                                   </div>
-                                  <div className="col-1 mt-4">
+                                  <div className="col-1 d-flex align-items-end mb-2">
                                     <button
                                       type="button"
                                       className="btn btn-danger btn-sm"
@@ -749,6 +797,7 @@ const handleCountryChange = (event) => {
                                     spoc_role: "",
                                     spoc_email: "",
                                     spoc_mobile: "",
+                                    country_code: "+91", // Default value set here
                                   })
                                 }
                               >

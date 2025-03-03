@@ -17,9 +17,12 @@ const EditSubadmin = () => {
   
   const initialValues = {
     name: subAdminData ? subAdminData[0]?.name : "",
-    mobile: subAdminData ? subAdminData[0]?.mobile : "",
-    image: ""
+    mobile: subAdminData ? subAdminData[0]?.mobile.trim().replace(/^[^-]*-/, "") : "",
+    image: "",
+    // country_code:"+91"
   }
+
+  console.log("subAdminData",initialValues);
 
   const validationSchema = yup.object().shape({
     name: yup.string().required("Name is required"),
@@ -29,7 +32,7 @@ const EditSubadmin = () => {
         /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im,
         "please enter valid mobile number"
       )
-      .min(10)
+      .min(7)
       .max(15)
       .required("mobile is required"),
     image: yup.mixed().nullable().required("Please select a file"),
@@ -44,9 +47,17 @@ const EditSubadmin = () => {
   }
 
   const submitHandler = (values, resetForm) => {
-    const fullMobile = `${onecountrycode}${values.mobile}`;
-    
-    const updatedData = {
+    let fullMobile;
+    if(onecountrycode ==""){
+      fullMobile =`${selectedCountryCode.phone_code}-${String(values.mobile).trim()
+        .replace(/^0+/, "")}`;
+        console.log("fullMobile without selection",fullMobile);
+    }
+    else{ fullMobile = `${onecountrycode}-${String(values.mobile).trim()
+        .replace(/^0+/, "")}`;
+        console.log("fullMobile with selection this is executed",fullMobile);
+    }
+    const {country_code, ...updatedData} = {
       ...values,
       mobile: fullMobile,
     }
@@ -84,6 +95,12 @@ const EditSubadmin = () => {
       handleSubadminData();
     }
   }, [router])
+  const extractCountryCode = subAdminData?subAdminData[0].mobile.match(/^\+\d{1,4}/)?.[0] || "" : "";
+  const selectedCountryCode = countryCode.find(
+    (item) => item.phone_code === extractCountryCode
+  );
+
+  console.log("selectedCountryCode",selectedCountryCode);
   return (
     <>
       <ToastContainer />
@@ -125,8 +142,9 @@ const EditSubadmin = () => {
                       <Form>
                         <div className="add-product">
                           <div className="row mb-4">
-                            <div className="col-sm-4">
-                              <div className="form-group">
+                            <div className="row mb-4 align-items-center">
+                              {/* Name Field */}
+                              <div className="col-sm-4">
                                 <FormikField
                                   label="Name"
                                   isRequired={true}
@@ -135,36 +153,48 @@ const EditSubadmin = () => {
                                   errors={errors}
                                 />
                               </div>
-                            </div>
 
-                            <div className="col-sm-4">
-                              <div className="form-group">
-                                <select
-                                  className="form-control"
-                                  style={{ width: "25%", height: "38px" }} // Adjusted height for consistency
-                                  onChange={(e) =>
-                                    setonecountryCode(e.target.value)
-                                  }
-                                >
-                                  <option value={onecountrycode}>Code</option>
-                                  {countryCode.map((country) => (
-                                    <option
-                                      key={country.id}
-                                      value={country.phone_code}
-                                    >
-                                      {country.country_code} (
-                                      {country.phone_code})
-                                    </option>
-                                  ))}
-                                </select>
-                                <FormikField
-                                  label="Mobile"
-                                  type="number"
-                                  isRequired={true}
-                                  name="mobile"
-                                  touched={touched}
-                                  errors={errors}
-                                />
+                              {/* Country Code + Mobile Input (Aligned Properly) */}
+                              <div className="col-sm-4">
+                                <label className="control-label">Mobile</label>
+                                <div className="d-flex align-items-center gap-2">
+                                  {/* Country Code Dropdown using Formik Field */}
+                                  <Field
+                                    as="select"
+                                    name="country_code" // This will bind the selected value to Formik
+                                    className="form-select me-2"
+                                    style={{ width: "110px", height: "48px" }}
+                                    onChange={(e) => {
+                                      setonecountryCode(e.target.value); // Update state with selected country code
+                                      setFieldValue(
+                                        "country_code",
+                                        e.target.value
+                                      ); // Set the value in Formik
+                                    }}
+                                  >
+                                    <option value="country_code">{selectedCountryCode?.country_code} ({selectedCountryCode?.phone_code})</option>
+                                    {countryCode.map((country) => (
+                                      <option
+                                        key={country.id}
+                                        value={country.phone_code}
+                                      >
+                                        {country.country_code} (
+                                        {country.phone_code})
+                                      </option>
+                                    ))}
+                                  </Field>
+
+                                  {/* Mobile Number Input */}
+                                  <FormikField
+                                    type="text"
+                                    isRequired={true}
+                                    name="mobile"
+                                    touched={touched}
+                                    errors={errors}
+                                    containerClassName="flex-grow-1"
+                                    hideLabel={true}
+                                  />
+                                </div>
                               </div>
                             </div>
                           </div>

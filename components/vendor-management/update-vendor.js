@@ -33,19 +33,31 @@ const UpdateVendor = () => {
     spoc_email: '',
     spoc_mobile: '',
     spoc_role: '',
+    
   });
   const [spocId, setSpocId] = useState(null);
   const [openAddSpoc,setOpenAddSpoc] = useState(false);
   const [countryList,setCountryList] = useState([]);
   const [countryCode , setCountryCode] = useState([]);
+  const [spocCountryCode, setSpocCountryCode] = useState("+91");
 
 
   const router = useRouter();
   let id = router.query.id;
 
-  const handleSpocSubmit = (object,resetForm) => {
 
-    handleUpdateVendorSpoc(object,id,spocId)
+  const handleSpocSubmit = (object,resetForm) => {
+   
+
+    const mobile = `${spocCountryCode}-${object.spoc_mobile.toString().trim().replace(/^0+/, "")}`;
+    
+    const { countryCode, ...updatedData } = {
+      ...object,
+      spoc_mobile: mobile, // Updating spoc_mobile field
+    };
+    
+
+    handleUpdateVendorSpoc(updatedData,id,spocId)
       .then((res) => {
         resetForm();
         toast(res.message);
@@ -62,11 +74,23 @@ const UpdateVendor = () => {
       });
   }
   const submitHandler = (values, resetForm) => {
-    const fullMobile = `${values.countryCode}${values.mobile.trim()}`;
+    let fullMobile;
+    if (values.countryCode) {
+      fullMobile = `${values.countryCode}-${values.mobile
+        .trim()
+        .replace(/^0+/, "")}`;
+    } else {
+      fullMobile = `${selectedCountry.phone_code}-${values.mobile
+        .trim()
+        .replace(/^0+/, "")}`;
+    }
+    
     const { countryCode, ...updatedValues } = { 
       ...values, 
       mobile: fullMobile,
        };
+
+       console.log("checking update",updatedValues)
     handleUpdateVendor(updatedValues, id)
       .then((res) => {
         resetForm();
@@ -170,7 +194,7 @@ useEffect(() => {
   const initialValues = {
     name: editDetails?.vendorDetails?.name || "",
     email: editDetails?.vendorDetails?.email || "",
-    mobile: editDetails?.vendorDetails?.mobile || "",
+    mobile: editDetails?.vendorDetails?.mobile ? editDetails?.vendorDetails?.mobile.replace(/^\+?\d+-/, "") : "",
     organization_name: editDetails?.vendorDetails?.organization_name || "",
     image: editDetails?.vendorDetails?.new_profile_image || "",
     logo: editDetails?.logo,
@@ -243,6 +267,14 @@ useEffect(() => {
   }, [id, editDetails?.vendorDetails?.country, editDetails?.vendorDetails?.state, editDetails?.vendorDetails?.city])
 
 
+  const extractedCountryCode = editDetails?.vendorDetails?.mobile.match(/^\+?\d+/)?.[0] || "+91";
+  
+  
+  const selectedCountry = countryCode.find(
+    (item) => item.phone_code === extractedCountryCode
+  );
+
+
   const handleAddSpoc =  (spocDetails) => {
     addNewSpoc(spocDetails, id)
             .then((res) => {
@@ -290,14 +322,14 @@ useEffect(() => {
                       "please enter valid email address"
                     )
                     .required("email is required"),
-                    mobile: yup
+                  mobile: yup
                     .string()
                     .matches(
                       /^\+?[1-9]\d{1,14}$/,
                       "Please enter a valid mobile number"
                     )
                     .required("Mobile is required"),
-                  
+                    
                 })}
                 onSubmit={(values, { resetForm }) => {
                   values.country =
@@ -357,6 +389,7 @@ useEffect(() => {
                               className="form-select me-2"
                               style={{ width: "30%", maxWidth: "160px" }}
                             >
+                              <option value="countryCode">{selectedCountry?.country_code} ({selectedCountry?.phone_code})</option> {/* Default selected */}
                               {countryCode.map((item) => (
                                 <option key={item.id} value={item.phone_code}>
                                   {item.country_code} ({item.phone_code})
@@ -875,6 +908,7 @@ useEffect(() => {
                   spoc_email: selectedSpocOption.spoc_email || "",
                   spoc_role: selectedSpocOption.spoc_role || "",
                   spoc_mobile: selectedSpocOption.spoc_mobile || "",
+                 
                 }}
                 enableReinitialize={true} // This allows the form to update if selectedSpocOption changes
                 onSubmit={(values, { resetForm }) => {
@@ -897,10 +931,13 @@ useEffect(() => {
                             value={selectedSpocOption.name}
                             onChange={(e) => {
                               const selectedOption = JSON.parse(e.target.value);
+                              setSpocCountryCode(
+                                selectedOption.mobile.match(/^\+?\d+/)?.[0] || "+91"
+                              )
                               setSelectedSpocOption({
                                 spoc_name: selectedOption.name,
                                 spoc_email: selectedOption.email,
-                                spoc_mobile: selectedOption.mobile,
+                                spoc_mobile: selectedOption.mobile.toString().trim().replace(/^\+?\d{1,4}-?/, ""),
                                 spoc_role: selectedOption.role,
                               }); // Set selected SPOC when chosen
                               setSpocId(selectedOption.id);
@@ -978,20 +1015,45 @@ useEffect(() => {
 
                         <div className="col-6">
                           <label htmlFor="spoc-mobile">Mobile</label>
-                          <Field
-                            type="number"
-                            name="spoc_mobile"
-                            className="form-control"
-                            placeholder="Mobile"
-                            value={values.spoc_mobile}
-                            onChange={handleChange}
-                          />
-                          <ErrorMessage
-                            name="mobile"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
+                          <div
+                            className="d-flex align-items-center gap-2"
+                            style={{ maxWidth: "500px" }}
+                          >
+                            {/* Country Code Dropdown */}
+                            <Field
+                              as="select"
+                              name="countryCode"
+                              className="form-select"
+                              value={spocCountryCode?.toString()}
+                              style={{ flex: "0 0 120px" }} // Fixed width for country code
+                              onChange={(e) => {
+                                const newCountryCode = e.target.value;
+                                setSpocCountryCode(newCountryCode); // Update local state
+                              }}
+                            >
+                              {countryCode.map((item) => (
+                                <option key={item.id} value={item.phone_code}>
+                                  {item.country_code} ({item.phone_code})
+                                </option>
+                              ))}
+                            </Field>
+
+                            {/* Mobile Number Input */}
+                            <Field
+                              type="text"
+                              name="spoc_mobile"
+                              className="form-control"
+                              placeholder="Mobile"
+                              value={values.spoc_mobile }
+                              onChange={handleChange}
+                              style={{ flex: "1" }} // Takes remaining space
+                            />
+                            <ErrorMessage
+                              name="spoc_mobile"
+                              component="div"
+                              className="form-error"
+                            />
+                          </div>
                         </div>
 
                         <div className="d-flex justify-content-end">
@@ -1019,6 +1081,7 @@ useEffect(() => {
           vendorId={id}
           getVendorDetails={getVendorDetails}
           handleAddSpoc={handleAddSpoc}
+          countryCode={countryCode}
         />
       )}
     </>

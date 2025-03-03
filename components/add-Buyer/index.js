@@ -54,6 +54,7 @@ export default function AddBuyerPage() {
 
   // Initial form values
   const initialValues = {
+    countryCode:"+91",
     name: "",
     email: "",
     countryCode: "+91", // Default to +91 or any appropriate value
@@ -78,7 +79,7 @@ export default function AddBuyerPage() {
     setLoading(true);
 
     // Concatenate country code and mobile number
-    const fullMobile = `${values.countryCode}${values.mobile.trim()}`;
+    const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
 
     // Trim all input fields
     const trimmedValues = {

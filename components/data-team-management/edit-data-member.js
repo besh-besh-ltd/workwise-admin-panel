@@ -6,15 +6,41 @@ import * as yup from "yup";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import { updateSubAdmin, getSubAdminDetails } from '@/utils/services/subadmin-management';
+import { getCountryCodes } from '@/utils/services/location-management';
 
 const EditDataMemberPage = () => {
   const router = useRouter();
 
   const [dataMemberData, setdataMemberData] = useState(null);
+  const [countryCode, setCountryCode] = useState([]);
+
+
+   useEffect(() => {
+          fetchCountryCodes();
+        }, []);
+      
+        const fetchCountryCodes = () => {
+          getCountryCodes()
+            .then((response) => {
+              if (response?.data) {
+                setCountryCode(response.data);
+              } else {
+                setCountryCode([]);
+              }
+            })
+            .catch((error) => {
+              console.log("Error fetching countries:", error);
+              setCountryCode([]);
+            });
+        };
+  
+
   const initialValues = {
     name: dataMemberData ? dataMemberData[0]?.name : "",
-    mobile: dataMemberData ? dataMemberData[0]?.mobile : "",
-    image: ""
+    mobile: dataMemberData ? dataMemberData[0]?.mobile.replace(/^\+\d{1,4}-/, '') : "",
+    image: "",
+    countryCode:""
+    
   }
 
   const validationSchema = yup.object().shape({
@@ -22,12 +48,11 @@ const EditDataMemberPage = () => {
     mobile: yup
       .string()
       .matches(
-        /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im,
-        "please enter valid mobile number"
+        /^\+?[0-9]{1,4}[-.\s]?[0-9]{7,15}$/,
+        "Please enter a valid mobile number"
       )
-      .min(10)
-      .max(11)
-      .required("mobile is required"),
+      .required("Mobile is required"),
+    
     image: yup.mixed().nullable().required("Please select a file"),
   });
 
@@ -40,7 +65,23 @@ const EditDataMemberPage = () => {
   }
 
   const submitHandler = (values, resetForm) => {
-    updateSubAdmin(values, router?.query?.id)
+    console.log("values", values);
+    let fullMobile;
+    if(values.countryCode ==""){
+       fullMobile = `${selectedCountryCode?.phone_code}-${values.mobile.trim().replace(/^0+/, "")}`;
+       console.log("fullMobile without ion =? ",selectedCountryCode.phone_code);
+    }else{
+       fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
+       console.log("fullMobile with selection else ",fullMobile);
+    }
+     
+    const {countryCode, ...updatedValues} ={
+        ...values,
+        mobile: fullMobile
+    }
+    
+    
+    updateSubAdmin(updatedValues, router?.query?.id)
       .then((res) => {
         resetForm();
         toast(res.message);
@@ -62,6 +103,17 @@ const EditDataMemberPage = () => {
       handledataMemberData();
     }
   }, [router])
+
+
+  const extractedCountryCode = dataMemberData ? dataMemberData[0]?.mobile.match(/^\+\d{1,4}/)?.[0] :"" ;
+  console.log("extractedCountryCode", extractedCountryCode);
+  
+  const selectedCountryCode = countryCode.find(
+    (item) => item.phone_code === extractedCountryCode
+  );
+  console.log("selectedCountryCode", selectedCountryCode);
+  
+
   return (
     <>
       <ToastContainer />
@@ -93,7 +145,13 @@ const EditDataMemberPage = () => {
                       submitHandler(values, resetForm);
                     }}
                   >
-                    {({ errors, touched, values, handleChange, setFieldValue }) => (
+                    {({
+                      errors,
+                      touched,
+                      values,
+                      handleChange,
+                      setFieldValue,
+                    }) => (
                       <Form>
                         <div className="add-product">
                           <div className="row mb-4">
@@ -109,16 +167,69 @@ const EditDataMemberPage = () => {
                               </div>
                             </div>
 
-                            <div className="col-sm-4">
-                              <div className="form-group">
-                                <FormikField
-                                  label="Mobile"
-                                  type="number"
-                                  isRequired={true}
-                                  name="mobile"
-                                  touched={touched}
-                                  errors={errors}
-                                />
+                            <div className="row mb-4">
+                              <div className="col-sm-8">
+                                <div className="form-group">
+                                  <label htmlFor="mobile">
+                                    Mobile{" "}
+                                    <span className="text-danger">*</span>
+                                  </label>
+                                  <div className="d-flex">
+                                    <Field
+                                      as="select"
+                                      name="countryCode"
+                                      className="form-control"
+                                      style={{
+                                        height: "44px",
+                                        width: "30%",
+                                        borderTopRightRadius: 0,
+                                        borderBottomRightRadius: 0,
+                                      }}
+                                    >
+                                      <option value="countryCode">
+                                     
+                                        {selectedCountryCode?.country_code} ({selectedCountryCode?.phone_code})
+                                        
+                                      </option>
+                                      {countryCode.map((item) => (
+                                        <option
+                                          key={item.country_code}
+                                          value={item.phone_code}
+                                        >
+                                          {item.country_code} ({item.phone_code}
+                                          )
+                                        </option>
+                                      ))}
+                                    </Field>
+                                    <div
+                                      style={{
+                                        marginLeft: "6px",
+                                        width: "70%",
+                                      }}
+                                    >
+                                      <Field
+                                        type="text"
+                                        name="mobile"
+                                        placeholder="Mobile"
+                                        className={`form-control ${
+                                          touched.mobile && errors.mobile
+                                            ? "is-invalid"
+                                            : ""
+                                        }`}
+                                        style={{
+                                          height: "44px",
+                                          borderTopLeftRadius: 0,
+                                          borderBottomLeftRadius: 0,
+                                        }}
+                                      />
+                                      {touched.mobile && errors.mobile && (
+                                        <div className="invalid-feedback">
+                                          {errors.mobile}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -146,7 +257,10 @@ const EditDataMemberPage = () => {
                           </div>
 
                           <div className="d-flex float-left">
-                            <button type="submit" class="btn btn-primary justify">
+                            <button
+                              type="submit"
+                              class="btn btn-primary justify"
+                            >
                               Save
                             </button>
                           </div>
@@ -161,7 +275,7 @@ const EditDataMemberPage = () => {
         </div>
       </section>
     </>
-  )
+  );
 }
 
 export default EditDataMemberPage
