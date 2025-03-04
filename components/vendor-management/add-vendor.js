@@ -177,11 +177,9 @@ const handleCountryChange = (event) => {
                   mobile: yup
                     .string()
                     .matches(
-                      /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im,
-                      "please enter valid mobile number"
+                      /^[\+]?[0-9]{7,15}$/,
+                      "Please enter a valid mobile number (7-15 digits)"
                     )
-                    .min(10)
-                    .max(11)
                     .required("mobile is required"),
                 })}
                 onSubmit={(values, { resetForm }) => {
