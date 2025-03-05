@@ -387,7 +387,7 @@ useEffect(() => {
                               as="select"
                               name="countryCode"
                               className="form-select me-2"
-                              style={{ width: "30%", maxWidth: "160px" }}
+                              style={{  width: "120px" }}
                             >
                               <option value="countryCode">{selectedCountry?.country_code} ({selectedCountry?.phone_code})</option> {/* Default selected */}
                               {countryCode.map((item) => (

@@ -736,7 +736,7 @@ const handleCountryChange = (event) => {
                                         as="select"
                                         name={`spocs[${index}].country_code`}
                                         className="form-select"
-                                        style={{ maxWidth: "120px" }}
+                                        style={{ maxWidth: "120px" , marginRight: "10px" }}
                                         defaultValue="+91"
                                       >
                                         <option value="" disabled>

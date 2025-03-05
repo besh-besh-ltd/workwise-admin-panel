@@ -13,16 +13,21 @@ const EditSubadmin = () => {
 
   const [subAdminData, setSubAdminData] = useState(null);
   const [countryCode , setcountryCode] = useState([]);
-  const [onecountrycode , setonecountryCode]=useState("");
+  const [onecountrycode , setonecountrycode]=useState("");
   
-  const initialValues = {
+
+
+ 
+
+const initialValues = {
     name: subAdminData ? subAdminData[0]?.name : "",
     mobile: subAdminData ? subAdminData[0]?.mobile.trim().replace(/^[^-]*-/, "") : "",
     image: "",
+    country_code:""
     // country_code:"+91"
   }
 
-  console.log("subAdminData",initialValues);
+  
 
   const validationSchema = yup.object().shape({
     name: yup.string().required("Name is required"),
@@ -100,7 +105,7 @@ const EditSubadmin = () => {
     (item) => item.phone_code === extractCountryCode
   );
 
-  console.log("selectedCountryCode",selectedCountryCode);
+ 
   return (
     <>
       <ToastContainer />
@@ -155,44 +160,65 @@ const EditSubadmin = () => {
                               </div>
 
                               {/* Country Code + Mobile Input (Aligned Properly) */}
-                              <div className="col-sm-4">
-                                <label className="control-label">Mobile</label>
-                                <div className="d-flex align-items-center gap-2">
-                                  {/* Country Code Dropdown using Formik Field */}
-                                  <Field
-                                    as="select"
-                                    name="country_code" // This will bind the selected value to Formik
-                                    className="form-select me-2"
-                                    style={{ width: "110px", height: "48px" }}
-                                    onChange={(e) => {
-                                      setonecountryCode(e.target.value); // Update state with selected country code
-                                      setFieldValue(
-                                        "country_code",
-                                        e.target.value
-                                      ); // Set the value in Formik
-                                    }}
-                                  >
-                                    <option value="country_code">{selectedCountryCode?.country_code} ({selectedCountryCode?.phone_code})</option>
-                                    {countryCode.map((country) => (
-                                      <option
-                                        key={country.id}
-                                        value={country.phone_code}
-                                      >
-                                        {country.country_code} (
-                                        {country.phone_code})
-                                      </option>
-                                    ))}
-                                  </Field>
+                              <div className="row mb-4">
+                                <div className="col-sm-6">
+                                  <label className="form-label">
+                                    Mobile{" "}
+                                    <span className="text-danger">*</span>
+                                  </label>
+                                  <div className="input-group">
+                                    {/* Country Code Dropdown */}
+                                    <Field
+                                      as="select"
+                                      name="country_code"
+                                      className="form-select"
+                                      style={{
+                                        maxWidth: "120px",
+                                        marginRight: "10px",
+                                      }}
+                                      onChange={(e) => {
+                                        setFieldValue(
+                                          "country_code",
+                                          e.target.value
+                                        ); // Update Formik state
+                                        setonecountrycode(e.target.value); // Update local state
+                                      }}
+                                    ><option value={selectedCountryCode ? selectedCountryCode.phone_code : "+91"}>
+                                    {selectedCountryCode
+                                      ? `${selectedCountryCode.country_code} (${selectedCountryCode.phone_code})`
+                                      : "+91"}
+                                  </option>
+                                  
+                                      {countryCode.map((country) => (
+                                        <option
+                                          key={country.id}
+                                          value={country.phone_code}
+                                        >
+                                          {country.country_code} (
+                                          {country.phone_code})
+                                        </option>
+                                      ))}
+                                    </Field>
 
-                                  {/* Mobile Number Input */}
-                                  <FormikField
-                                    type="text"
-                                    isRequired={true}
+                                    {/* Mobile Number Input */}
+                                    <Field
+                                      name="mobile"
+                                      type="number"
+                                      className="form-control"
+                                      placeholder="Enter mobile number"
+                                      style={{
+                                        height: "44px",
+                                        marginleft: "10px",
+                                        maxWidth: "230px",
+                                      }}
+                                    />
+                                  </div>
+
+                                  {/* Display validation errors */}
+                                  <ErrorMessage
                                     name="mobile"
-                                    touched={touched}
-                                    errors={errors}
-                                    containerClassName="flex-grow-1"
-                                    hideLabel={true}
+                                    component="div"
+                                    className="text-danger"
                                   />
                                 </div>
                               </div>

@@ -12,7 +12,7 @@ const AddSubadmin = () => {
     const router = useRouter();
     const userTypeRef = useRef(5);
     const[countryCode , setCountryCode] = useState([]);
-    const[onecountrycode, setoneountrycode] =useState("");
+    const[onecountrycode, setonecountrycode] =useState("");
 
 
 
@@ -33,7 +33,8 @@ const AddSubadmin = () => {
         mobile: "",
         password: "",
         confirm_password: "",
-        image: ""
+        image: "",
+        country_code:"+91"
     }
 
     const validationSchema = yup.object().shape({
@@ -66,9 +67,11 @@ const AddSubadmin = () => {
 
     const submitHandler = (values, resetForm) => {
 
-      const fullMobile = `${onecountrycode}-${String(values.mobile).trim()
+      const fullMobile = `${values.country_code}-${String(values.mobile).trim()
         .replace(/^0+/, "")}`;
-        createSubAdmin({ ...values, userType: userTypeRef.current, mobile:fullMobile })
+
+        const { country_code, ...updatedData } = values; 
+        createSubAdmin({ ...updatedData, userType: userTypeRef.current, mobile:fullMobile })
             .then((res) => {
                 resetForm();
                 toast(res.message);
@@ -160,21 +163,22 @@ const AddSubadmin = () => {
                                 <label className="form-label">
                                   Mobile <span className="text-danger">*</span>
                                 </label>
-                                <div className="d-flex">
+                                <div className="input-group">
                                   {/* Country Code Dropdown */}
-                                  <select
-                                    className="form-select me-2"
-                                    style={{
-                                      maxWidth: "120px",
-                                      height: "44px",
-                                      marginTop: "32px",
+                                  <Field
+                                    as="select"
+                                    name="country_code"
+                                    className="form-select"
+                                    style={{ maxWidth: "120px" ,marginRight : "10px" }}
+                                    onChange={(e) => {
+                                      setFieldValue(
+                                        "country_code",
+                                        e.target.value
+                                      ); // Update Formik state
+                                      setonecountrycode(e.target.value); // Update local state
                                     }}
-                                    onChange={(e) =>
-                                      setoneountrycode(e.target.value)
-                                    }
-                                    value={onecountrycode}
                                   >
-                                    <option value="countryCode">+91 (IN)</option>
+                                    <option value="+91">+91 (IN)</option>
                                     {countryCode.map((country) => (
                                       <option
                                         key={country.id}
@@ -184,19 +188,24 @@ const AddSubadmin = () => {
                                         {country.phone_code})
                                       </option>
                                     ))}
-                                  </select>
+                                  </Field>
 
                                   {/* Mobile Number Input */}
-                                  <FormikField
-                                    lable=""
-                                    type="number"
-                                    isRequired={true}
+                                  <Field
                                     name="mobile"
-                                    touched={touched}
-                                    errors={errors}
+                                    type="number"
                                     className="form-control"
+                                    placeholder="Enter mobile number"
+                                    style={{ height : "44px" , marginleft : "10px"}}
                                   />
                                 </div>
+
+                                {/* Display validation errors */}
+                                <ErrorMessage
+                                  name="mobile"
+                                  component="div"
+                                  className="text-danger"
+                                />
                               </div>
                             </div>
 

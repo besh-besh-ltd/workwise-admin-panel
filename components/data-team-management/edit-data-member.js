@@ -106,12 +106,12 @@ const EditDataMemberPage = () => {
 
 
   const extractedCountryCode = dataMemberData ? dataMemberData[0]?.mobile.match(/^\+\d{1,4}/)?.[0] :"" ;
-  console.log("extractedCountryCode", extractedCountryCode);
+ 
   
   const selectedCountryCode = countryCode.find(
     (item) => item.phone_code === extractedCountryCode
   );
-  console.log("selectedCountryCode", selectedCountryCode);
+ 
   
 
   return (
