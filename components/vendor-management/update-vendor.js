@@ -10,7 +10,8 @@ import {
   handleGetCities,
   handleGetVendorEditDetails,
   handleUpdateVendorSpoc,
-  addNewSpoc
+  addNewSpoc,
+  handleDeleteSpoc
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
@@ -45,8 +46,26 @@ const UpdateVendor = () => {
   const router = useRouter();
   let id = router.query.id;
 
-
-  const handleSpocSubmit = (object,resetForm) => {
+  const handleDeleteSpocdata =  () => {
+    handleDeleteSpoc(id,spocId)
+      .then((res) => {
+        toast(res.message);
+        getVendorDetails(id);
+        setOpenAddSpoc(false);
+      })
+      .catch((error) => {
+        console.log("err", error);
+        let txt = "";
+        for (let x in error?.error?.response?.data?.errors) {
+          txt = error?.error?.response?.data?.errors[x];
+        }
+        toast(txt);
+      });
+    } 
+    
+    
+    
+    const handleSpocSubmit = (object,resetForm) => {
    
 
     const mobile = `${spocCountryCode}-${object.spoc_mobile.toString().trim().replace(/^0+/, "")}`;
@@ -56,7 +75,7 @@ const UpdateVendor = () => {
       spoc_mobile: mobile, // Updating spoc_mobile field
     };
     
-
+    
     handleUpdateVendorSpoc(updatedData,id,spocId)
       .then((res) => {
         resetForm();
@@ -386,9 +405,13 @@ useEffect(() => {
                               as="select"
                               name="countryCode"
                               className="form-select me-2"
-                              style={{  width: "120px" }}
+                              style={{ width: "120px" }}
                             >
-                              <option value="countryCode">{selectedCountry?.country_code} ({selectedCountry?.phone_code})</option> {/* Default selected */}
+                              <option value="countryCode">
+                                {selectedCountry?.country_code} (
+                                {selectedCountry?.phone_code})
+                              </option>{" "}
+                              {/* Default selected */}
                               {countryCode.map((item) => (
                                 <option key={item.id} value={item.phone_code}>
                                   {item.country_code} ({item.phone_code})
@@ -907,7 +930,6 @@ useEffect(() => {
                   spoc_email: selectedSpocOption.spoc_email || "",
                   spoc_role: selectedSpocOption.spoc_role || "",
                   spoc_mobile: selectedSpocOption.spoc_mobile || "",
-                 
                 }}
                 enableReinitialize={true} // This allows the form to update if selectedSpocOption changes
                 onSubmit={(values, { resetForm }) => {
@@ -928,15 +950,28 @@ useEffect(() => {
                             id="select-input"
                             className="form-control"
                             value={selectedSpocOption.name}
+                            
                             onChange={(e) => {
-                              const selectedOption = JSON.parse(e.target.value);
+                              const selectedValue = e.target.value;
+                              if (!selectedValue) {
+                                // If no value is selected, reset the selected SPOC details
+                                setSelectedSpocOption({});
+                                setSpocId(null);
+                                return;
+                              } 
+
+                              const selectedOption = JSON.parse(selectedValue);
                               setSpocCountryCode(
-                                selectedOption.mobile.match(/^\+?\d+/)?.[0] || "+91"
-                              )
+                                selectedOption.mobile.match(/^\+?\d+/)?.[0] ||
+                                  "+91"
+                              );
                               setSelectedSpocOption({
                                 spoc_name: selectedOption.name,
                                 spoc_email: selectedOption.email,
-                                spoc_mobile: selectedOption.mobile.toString().trim().replace(/^\+?\d{1,4}-?/, ""),
+                                spoc_mobile: selectedOption.mobile
+                                  .toString()
+                                  .trim()
+                                  .replace(/^\+?\d{1,4}-?/, ""),
                                 spoc_role: selectedOption.role,
                               }); // Set selected SPOC when chosen
                               setSpocId(selectedOption.id);
@@ -1056,6 +1091,18 @@ useEffect(() => {
                         </div>
 
                         <div className="d-flex justify-content-end">
+                          {/* Delete button (Visible only if a SPOC is selected) */}
+                          {selectedSpocOption.spoc_name && (
+                            <button
+                              type="button"
+                              className="btn btn-danger"
+                              style={{marginRight: "10px"}}
+                              onClick={() => handleDeleteSpocdata()}
+                            >
+                              Delete
+                            </button>
+                          )}
+
                           <button type="submit" className="btn btn-secondary">
                             Save
                           </button>
