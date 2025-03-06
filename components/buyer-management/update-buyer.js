@@ -1,39 +1,70 @@
 import React, { useEffect, useState } from "react";
-import { Form, Formik, Field, ErrorMessage, FieldArray } from "formik";
+import { Form, Formik, Field, ErrorMessage } from "formik";
 import * as yup from "yup";
 import Image from "next/image";
 import {
-  handleAddVendor,
-  handleGetVendorDetails,
-  handleUpdateVendor,
-  handleGetBuyerDetails,
   handleUpdateBuyer,
 } from "@/utils/services/buyer-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
+import { getCountryCodes } from "@/utils/services/location-management";
 
 const UpdateVendor = () => {
+  const [editDetails, setEditDetails] = useState(null);
   const [dtaCount, setdtaCount] = useState(0);
-  const [editDetails, seteditDetails] = useState("");
+  const [onecountrycode,setonecountrycode] =useState("");
+  const [countryCode, setCountryCode] = useState([]);
   const router = useRouter();
-  let id = router.query.id;
-  if (id != undefined && dtaCount == 0) {
-    seteditDetails(JSON.parse(localStorage.getItem("buyerUpdate")));
+  const { id } = router.query;
+
+  useEffect(() => {
+    if (id) {
+      setEditDetails(JSON.parse(localStorage.getItem("buyerUpdate")));
+    }
     setdtaCount(1);
-  }
-  const initialValues = {
-    name: editDetails?.name,
-    email: editDetails?.email,
-    mobile: editDetails?.mobile,
-    organization_name: editDetails?.organization_name,
-    image: editDetails?.profile_image,
+    fetchCountryCodes();
+  }, [id]);
+
+  const fetchCountryCodes = async () => {
+    try {
+      const response = await getCountryCodes();
+      setCountryCode(response?.data || []);
+    } catch (error) {
+      console.error("Error fetching countries:", error);
+      setCountryCode([]);
+    }
   };
-  const submitHandler = (values, resetForm) => {
-    handleUpdateBuyer(values, editDetails)
+
+  const initialValues = {
+    name: editDetails?.name || "",
+    email: editDetails?.email || "",
+    mobile: editDetails?.mobile ? editDetails.mobile.replace(/^\+?\d+-/, "") : "",
+    organization_name: editDetails?.organization_name || "",
+    image: editDetails?.profile_image || null,
+  };
+
+  console.log("edit details", editDetails);
+
+  const submitHandler = (values, { resetForm }) => {
+    let fullMobile;
+    if(values.countryCode)
+      {
+        fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
+    
+      }    else{
+        fullMobile = `${selectedCountry.phone_code}-${values.mobile.trim().replace(/^0+/, "")}`;
+      }
+    const { countryCode, ...updatedValues } = { 
+      ...values, 
+      mobile: fullMobile 
+    };
+    
+   
+    handleUpdateBuyer(updatedValues, editDetails)
       .then((res) => {
         resetForm();
-        toast(res.message);
+        toast.success(res.message);
         router.push("/buyer-management");
       })
       .catch((error) => {
@@ -42,199 +73,110 @@ const UpdateVendor = () => {
         for (let x in error?.error?.response?.data?.errors) {
           txt = error?.error?.response?.data?.errors[x];
         }
-        toast(txt);
-      });
+        toast(txt);  
+          });
   };
-  console.log("editDetails update", editDetails);
-  return (
-    <>
-      <div className="content-header">
-        <div className="container-fluid">
-          <div className="row mb-2"></div>
-        </div>
-      </div>
+  const extractedCountryCode = editDetails?.mobile.match(/^\+?\d+/)?.[0] || "+91";
+ 
+  
+  const selectedCountry = countryCode.find(
+    (item) => item.phone_code === extractedCountryCode
+  );
 
-      <section className="content">
-        <div className="container-fluid">
-          <div className="col-12 mb-3">
-            <ol className="breadcrumb float-sm-left">
-              <h5 className="heading-container">Update Buyer</h5>
-            </ol>
-          </div>
-          <div class="card col-12">
-            <div class="card-body mt-3">
-              <Formik
-                initialValues={initialValues}
-                validationSchema={yup.object().shape({
-                  name: yup.string().required("Name is required"),
-                  organization_name: yup
-                    .string()
-                    .required("Organization is required"),
-                  email: yup
-                    .string()
+ 
+  return (
+    <div className="container mt-4">
+      <h5 className="mb-3">Update Buyer</h5>
+      <div className="card">
+        <div className="card-body">
+          <Formik
+            initialValues={initialValues}
+            enableReinitialize
+            validationSchema={yup.object({
+              name: yup.string().required("Name is required"),
+              organization_name: yup.string().required("Organization is required"),
+              email: yup
+                .string()
                     .email()
                     .matches(
                       /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
                       "please enter valid email address"
                     )
                     .required("email is required"),
-                  mobile: yup
-                    .string()
-                    .matches(
-                      /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im,
-                      "please enter valid mobile number"
-                    )
-                    .min(10)
+              mobile: yup
+                .string()
+                .matches(/^[0-9]{10,15}$/, "Enter a valid mobile number")
+                .min(10)
                     .max(11)
-                    .required("mobile is required"),
-                })}
-                onSubmit={(values, { resetForm }) => {
-                  submitHandler(values, resetForm);
-                }}
-              >
-                {({ errors, touched, values, handleChange, setFieldValue }) => (
-                  <Form>
-                    <div class="row mb-4">
-                      <div class="col">
-                        <label htmlFor="Organization-Address">Name</label>
-                        <Field
-                          type="text"
-                          name="name"
-                          class="form-control"
-                          placeholder="name"
-                        />
-                        <ErrorMessage
-                          name="name"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col">
-                        <label htmlFor="Organization-Address">Email</label>
-                        <Field
-                          type="email"
-                          name="email"
-                          class="form-control"
-                          placeholder="Email"
-                        />
-                        <ErrorMessage
-                          name="email"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
+                .required("Mobile is required"),
+            })}
+            onSubmit={submitHandler}
+          >
+            {({ setFieldValue }) => (
+              <Form>
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <label className="form-label">Name</label>
+                    <Field type="text" name="name" className="form-control" />
+                    <ErrorMessage name="name" component="div" className="text-danger" />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Email</label>
+                    <Field type="email" name="email" className="form-control" />
+                    <ErrorMessage name="email" component="div" className="text-danger" />
+                  </div>
+                </div>
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <label className="form-label">Mobile</label>
+                    <div className="d-flex">
+                      <Field as="select" name="countryCode" className="form-select me-2 w-auto">
+                      <option value="countryCode">{selectedCountry?.country_code} ({selectedCountry?.phone_code})</option> {/* Default selected */}
+                        {countryCode.map((item) => (
+                          <option key={item.id} value={item.phone_code}>
+                            {item.country_code} ({item.phone_code})
+                          </option>
+                        ))}
+                      </Field>
+                      <Field type="text" name="mobile" className="form-control" />
                     </div>
-                    <div class="row mb-4">
-                      <div class="col">
-                        <label htmlFor="Organization-Address">Mobile</label>
-                        <Field
-                          type="number"
-                          name="mobile"
-                          class="form-control"
-                          placeholder="Mobile"
-                        />
-                        <ErrorMessage
-                          name="mobile"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col">
-                        <label htmlFor="Organization-Address">
-                          Organization
-                        </label>
-                        <Field
-                          type="text"
-                          name="organization_name"
-                          class="form-control"
-                          placeholder="Organization"
-                        />
-                        <ErrorMessage
-                          name="organization_name"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
+                    <ErrorMessage name="mobile" component="div" className="text-danger" />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Organization</label>
+                    <Field type="text" name="organization_name" className="form-control" />
+                    <ErrorMessage name="organization_name" component="div" className="text-danger" />
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Image</label>
+                  <input
+                    type="file"
+                    className="form-control"
+                    onChange={(event) => setFieldValue("image", event.target.files[0])}
+                  />
+                  {editDetails?.profile_image && (
+                    <div className="mt-2">
+                      <Image
+                        src={editDetails.profile_image || img1}
+                        width={100}
+                        height={100}
+                        className="img-thumbnail"
+                        alt="Profile"
+                      />
                     </div>
-                    <div class="row mb-4">
-                      <div class="col">
-                        <label htmlFor="Organization-Address">Image</label>
-                        <Field
-                          //   id="file"
-                          name="image"
-                          type="file"
-                          value={undefined}
-                          className="form-control"
-                          onChange={(event) => {
-                            let files = event.target.files[0];
-                            setFieldValue("image", files);
-                          }}
-                        />
-                        {editDetails?.profile_image != null && (
-                          <div style={{ display: "flex" }}>
-                            <label htmlFor="year">
-                              Prefilled Image-&nbsp;{" "}
-                            </label>
-                            <p htmlFor="year">
-                              {" "}
-                              <Image
-                                fill
-                                src={
-                                  editDetails?.profile_image == null
-                                    ? img1
-                                    : editDetails?.profile_image
-                                }
-                                unoptimized
-                                className="rounded prof-img"
-                                alt="..."
-                              />
-                            </p>
-                          </div>
-                        )}
-                        <ErrorMessage
-                          name="image"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      {/*                       <div class="col">
-                        <label htmlFor="Status">Status</label>
-                        <Field
-                          as="select"
-                          name="status"
-                          class="form-control"
-                          placeholder="Status"
-                        >
-                          <option value="1">Active</option>
-                          <option value="0">Inactive</option>
-                        </Field>
-                        <ErrorMessage
-                          name="status"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div> */}
-                    </div>
-                    <div className="d-flex justify-content-end">
-                      <button type="submit" class="btn btn-secondary">
-                        Save
-                      </button>
-                    </div>
-                  </Form>
-                )}
-              </Formik>
-            </div>
-          </div>
+                  )}
+                </div>
+                <div className="text-end">
+                  <button type="submit" className="btn btn-primary">Save</button>
+                </div>
+              </Form>
+            )}
+          </Formik>
         </div>
-        <ToastContainer />
-      </section>
-    </>
+      </div>
+      <ToastContainer />
+    </div>
   );
 };
 
