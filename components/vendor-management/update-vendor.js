@@ -325,11 +325,10 @@ useEffect(() => {
                   mobile: yup
                     .string()
                     .matches(
-                      /^\+?[1-9]\d{1,14}$/,
-                      "Please enter a valid mobile number"
+                      /^[\+]?[0-9]{7,15}$/,
+                      "Please enter a valid mobile number (7-15 digits)"
                     )
-                    .required("Mobile is required"),
-                    
+                    .required("mobile is required"),
                 })}
                 onSubmit={(values, { resetForm }) => {
                   values.country =
