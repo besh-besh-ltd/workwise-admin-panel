@@ -8,7 +8,7 @@ import {
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
-import { getCountries } from "@/utils/services/location-management";
+import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
 
 const AddVendor = () => {
   const [states, setStates] = useState([]);
@@ -20,12 +20,31 @@ const AddVendor = () => {
   const [isStateDisabled, setIsStateDisabled] = useState(true);
   const [isCityDisabled, setIsCityDisabled] = useState(true);
   const [countryList,setCountryList] = useState([]);
+  const[countryCode , setCountryCode] = useState([]);
   
   const router = useRouter();
 
   const submitHandler = (values, resetForm) => {
     const orgName = values.organization_name;
-    handleAddVendor({ ...values, name: orgName })
+    const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
+
+
+    values.spocs.forEach(spoc => {
+      spoc.spoc_mobile = `${spoc.country_code}-${spoc.spoc_mobile}`; // Concatenating country_code and spoc_mobile
+      delete spoc.country_code; // Removing country_code
+    });
+   
+    
+
+    const { countryCode, ...updatedValues } = { 
+      ...values, 
+      mobile: fullMobile,
+      name:orgName
+    };
+
+   
+   
+    handleAddVendor(updatedValues )
       .then((res) => {
         resetForm();
         toast(res.message);
@@ -61,13 +80,28 @@ const AddVendor = () => {
   
 
 useEffect(() => {
+  fetchCountryCodes()
   getCountries()
-    .then((res) => {
-      
-      setCountryList(res.data) // Set country list state
+  .then((res) => {
+       setCountryList(res.data) // Set country list state
     })
     .catch((err) => console.error("Error fetching countries:", err));
 }, []);
+
+ const fetchCountryCodes = () => {
+    getCountryCodes()
+      .then((response) => {
+        if (response?.data) {
+          setCountryCode(response.data);
+        } else {
+          setCountryCode([]);
+        }
+      })
+      .catch((error) => {
+        console.log("Error fetching countries:", error);
+        setCountryCode([]);
+      });
+  };
 
 const handleCountryChange = (event) => {
   const selectedCountry = event.target.value;
@@ -117,6 +151,7 @@ const handleCountryChange = (event) => {
     setSelectedCityOption(id);
   };
   const initialValues = {
+    countryCode: "+91",
     name: "",
     organization_name: "",
     email: "",
@@ -239,19 +274,40 @@ const handleCountryChange = (event) => {
                           )}
                         />
                       </div>
-                      <div class="col-6">
-                        <label htmlFor="mobile">Mobile</label>
-                        <Field
-                          type="number"
-                          name="mobile"
-                          class="form-control"
-                          placeholder="Mobile"
-                        />
+                      <div className="mb-3">
+                        <label className="form-label">Mobile *</label>
+                        <div
+                          className="d-flex"
+                          style={{ width: "30%", maxWidth: "800px" }}
+                        >
+                          {/* Country Code Dropdown */}
+                          <Field
+                            as="select"
+                            name="countryCode"
+                            className="form-select me-2"
+                            style={{ width: "40%", maxWidth: "160px" }}
+                          > <option value="+91">IN (+91)</option> {/* Default selected */}
+                             
+                            {countryCode.map((item) => (
+                              <option key={item.id} value={item.phone_code}>
+                                {item.country_code} ({item.phone_code})
+                              </option>
+                            ))}
+                          </Field>
+
+                          {/* Mobile Number Input */}
+                          <Field
+                            type="text"
+                            name="mobile"
+                            className="form-control"
+                            style={{ flex: "1" }}
+                             placeholder="Mobile"
+                          />
+                        </div>
                         <ErrorMessage
-                          name="email"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
+                          name="mobile"
+                          component="div"
+                          className="text-danger"
                         />
                       </div>
                       <div class="col-6">
@@ -672,13 +728,44 @@ const handleCountryChange = (event) => {
                                   </div>
                                   <div className="col-3">
                                     <label>Mobile</label>
-                                    <Field
-                                      type="text"
+                                    <div className="input-group">
+                                      {/* Country Code Dropdown - Fixed with proper field name */}
+                                      <Field
+                                        as="select"
+                                        name={`spocs[${index}].country_code`}
+                                        className="form-select"
+                                        style={{ maxWidth: "120px" , marginRight: "10px" }}
+                                        defaultValue="+91"
+                                      >
+                                        <option value="" disabled>
+                                          Select
+                                        </option>
+                                        {countryCode.map((item) => (
+                                          <option
+                                            key={item.id}
+                                            value={item.phone_code}
+                                          >
+                                            {item.country_code} (
+                                            {item.phone_code})
+                                          </option>
+                                        ))}
+                                      </Field>
+
+                                      {/* Mobile Number Input */}
+                                      <Field
+                                        type="text"
+                                        name={`spocs[${index}].spoc_mobile`}
+                                        className="form-control"
+                                        placeholder="Mobile"
+                                      />
+                                    </div>
+                                    <ErrorMessage
                                       name={`spocs[${index}].spoc_mobile`}
-                                      className="form-control"
-                                      placeholder="Mobile"
+                                      component="div"
+                                      className="form-error"
                                     />
                                   </div>
+
                                   <div className="col-2">
                                     <label>Position</label>
                                     <Field
@@ -688,7 +775,7 @@ const handleCountryChange = (event) => {
                                       placeholder="Position"
                                     />
                                   </div>
-                                  <div className="col-1 mt-4">
+                                  <div className="col-1 d-flex align-items-end mb-2">
                                     <button
                                       type="button"
                                       className="btn btn-danger btn-sm"
@@ -708,6 +795,7 @@ const handleCountryChange = (event) => {
                                     spoc_role: "",
                                     spoc_email: "",
                                     spoc_mobile: "",
+                                    country_code: "+91", // Default value set here
                                   })
                                 }
                               >

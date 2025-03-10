@@ -135,6 +135,18 @@ function handleUpdateVendorSpoc(values, vendorId,spocId) {
     }
   })
 }
+function handleDeleteSpoc (vendorId,spocId) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosxdata.delete(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/update-vendor/${vendorId}/delete-spoc/${spocId}`
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  })
+}
 
 function handleDeleteVendorProfile(id) {
   return new Promise(async (resolve, reject) => {
@@ -215,5 +227,6 @@ export {
   rejectList,
   handleVendorRfqList,
   handleUpdateVendorSpoc,
-  addNewSpoc
+  addNewSpoc,
+  handleDeleteSpoc
 };

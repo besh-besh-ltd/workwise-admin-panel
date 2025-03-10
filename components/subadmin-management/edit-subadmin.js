@@ -6,16 +6,28 @@ import * as yup from "yup";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import { updateSubAdmin, getSubAdminDetails } from '@/utils/services/subadmin-management';
+import { getCountryCodes } from '@/utils/services/location-management';
 
 const EditSubadmin = () => {
   const router = useRouter();
 
   const [subAdminData, setSubAdminData] = useState(null);
-  const initialValues = {
+  const [countryCode , setcountryCode] = useState([]);
+  const [onecountrycode , setonecountrycode]=useState("");
+  
+
+
+ 
+
+const initialValues = {
     name: subAdminData ? subAdminData[0]?.name : "",
-    mobile: subAdminData ? subAdminData[0]?.mobile : "",
-    image: ""
+    mobile: subAdminData ? subAdminData[0]?.mobile.trim().replace(/^[^-]*-/, "") : "",
+    image: "",
+    country_code:""
+    // country_code:"+91"
   }
+
+  
 
   const validationSchema = yup.object().shape({
     name: yup.string().required("Name is required"),
@@ -25,8 +37,8 @@ const EditSubadmin = () => {
         /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im,
         "please enter valid mobile number"
       )
-      .min(10)
-      .max(11)
+      .min(7)
+      .max(15)
       .required("mobile is required"),
     image: yup.mixed().nullable().required("Please select a file"),
   });
@@ -40,7 +52,24 @@ const EditSubadmin = () => {
   }
 
   const submitHandler = (values, resetForm) => {
-    updateSubAdmin(values, router?.query?.id)
+    let fullMobile;
+    if(onecountrycode ==""){
+      fullMobile =`${selectedCountryCode.phone_code}-${String(values.mobile).trim()
+        .replace(/^0+/, "")}`;
+        console.log("fullMobile without selection",fullMobile);
+    }
+    else{ fullMobile = `${onecountrycode}-${String(values.mobile).trim()
+        .replace(/^0+/, "")}`;
+        console.log("fullMobile with selection this is executed",fullMobile);
+    }
+    const {country_code, ...updatedData} = {
+      ...values,
+      mobile: fullMobile,
+    }
+
+
+
+    updateSubAdmin(updatedData, router?.query?.id)
       .then((res) => {
         resetForm();
         toast(res.message);
@@ -56,12 +85,27 @@ const EditSubadmin = () => {
         toast.error(txt);
       });
   }
+  
+  useEffect(()=>{
+    getCountryCodes().then((res)=>{
+      setcountryCode(res.data);
+    }).catch(()=>{
+      console.log("error");
+    })
+  },[])
+
 
   useEffect(() => {
     if(router?.query?.id){
       handleSubadminData();
     }
   }, [router])
+  const extractCountryCode = subAdminData?subAdminData[0].mobile.match(/^\+\d{1,4}/)?.[0] || "" : "";
+  const selectedCountryCode = countryCode.find(
+    (item) => item.phone_code === extractCountryCode
+  );
+
+ 
   return (
     <>
       <ToastContainer />
@@ -93,12 +137,19 @@ const EditSubadmin = () => {
                       submitHandler(values, resetForm);
                     }}
                   >
-                    {({ errors, touched, values, handleChange, setFieldValue }) => (
+                    {({
+                      errors,
+                      touched,
+                      values,
+                      handleChange,
+                      setFieldValue,
+                    }) => (
                       <Form>
                         <div className="add-product">
                           <div className="row mb-4">
-                            <div className="col-sm-4">
-                              <div className="form-group">
+                            <div className="row mb-4 align-items-center">
+                              {/* Name Field */}
+                              <div className="col-sm-4">
                                 <FormikField
                                   label="Name"
                                   isRequired={true}
@@ -107,18 +158,69 @@ const EditSubadmin = () => {
                                   errors={errors}
                                 />
                               </div>
-                            </div>
 
-                            <div className="col-sm-4">
-                              <div className="form-group">
-                                <FormikField
-                                  label="Mobile"
-                                  type="number"
-                                  isRequired={true}
-                                  name="mobile"
-                                  touched={touched}
-                                  errors={errors}
-                                />
+                              {/* Country Code + Mobile Input (Aligned Properly) */}
+                              <div className="row mb-4">
+                                <div className="col-sm-6">
+                                  <label className="form-label">
+                                    Mobile{" "}
+                                    <span className="text-danger">*</span>
+                                  </label>
+                                  <div className="input-group">
+                                    {/* Country Code Dropdown */}
+                                    <Field
+                                      as="select"
+                                      name="country_code"
+                                      className="form-select"
+                                      style={{
+                                        maxWidth: "120px",
+                                        marginRight: "10px",
+                                      }}
+                                      onChange={(e) => {
+                                        setFieldValue(
+                                          "country_code",
+                                          e.target.value
+                                        ); // Update Formik state
+                                        setonecountrycode(e.target.value); // Update local state
+                                      }}
+                                    ><option value={selectedCountryCode ? selectedCountryCode.phone_code : "+91"}>
+                                    {selectedCountryCode
+                                      ? `${selectedCountryCode.country_code} (${selectedCountryCode.phone_code})`
+                                      : "+91"}
+                                  </option>
+                                  
+                                      {countryCode.map((country) => (
+                                        <option
+                                          key={country.id}
+                                          value={country.phone_code}
+                                        >
+                                          {country.country_code} (
+                                          {country.phone_code})
+                                        </option>
+                                      ))}
+                                    </Field>
+
+                                    {/* Mobile Number Input */}
+                                    <Field
+                                      name="mobile"
+                                      type="number"
+                                      className="form-control"
+                                      placeholder="Enter mobile number"
+                                      style={{
+                                        height: "44px",
+                                        marginleft: "10px",
+                                        maxWidth: "230px",
+                                      }}
+                                    />
+                                  </div>
+
+                                  {/* Display validation errors */}
+                                  <ErrorMessage
+                                    name="mobile"
+                                    component="div"
+                                    className="text-danger"
+                                  />
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -146,7 +248,10 @@ const EditSubadmin = () => {
                           </div>
 
                           <div className="d-flex float-left">
-                            <button type="submit" class="btn btn-primary justify">
+                            <button
+                              type="submit"
+                              class="btn btn-primary justify"
+                            >
                               Save
                             </button>
                           </div>
@@ -161,7 +266,7 @@ const EditSubadmin = () => {
         </div>
       </section>
     </>
-  )
+  );
 }
 
 export default EditSubadmin
