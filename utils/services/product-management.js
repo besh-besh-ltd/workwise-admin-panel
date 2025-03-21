@@ -198,3 +198,112 @@ export const mapVendorWithProduct = (values) => {
     }
   });
 };
+
+
+export const searchProductsV2 = (values, type = "products") => {
+  if (type == "products") {
+    let payload = {
+      category_id: values.cat_id,
+      search_key: values.search_key,
+      vendor_name: values.vendor_name,
+      // approved_by_id: values.approved_by,
+    };
+
+    return new Promise(async (resolve, reject) => {
+      try {
+        let response = await axiosInstance.post(`${process.env.NEXT_PUBLIC_API_WEB_URL}/rfq/search-product`, payload);
+        resolve(response);
+      } catch (error) {
+        reject({ message: error });
+      }
+    });
+  } else {
+    let payload = {
+      category_id: values.cat_id,
+      search_key: values.search_key,
+      approved_by_id: values.approved_by,
+      state: values.state == 0 ? "" : values.state,
+      city: values.city == 0 ? "" : values.city,
+      vendor_name: values.vendor_name,
+      is_private: values.is_private,
+      preferred_vendor: values.preferred_vendor,
+    };
+
+    return new Promise(async (resolve, reject) => {
+      try {
+        let response = await axiosInstance.post(`/rfq/search-vendor`, payload);
+        resolve(response);
+      } catch (error) {
+        reject({ message: error });
+      }
+    });
+  }
+};
+
+export const getProductDescription = () =>{
+  return new Promise (async (resolve , reject)=>{
+    try {
+      let response =await axiosInstance.get(
+      `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/product-description-get`
+      );
+      resolve(response.data);
+    } catch (error) {
+      reject(error);
+    }
+  })
+};
+
+export const deleteProductDescription = (id) =>{
+  return new Promise (async (resolve , reject) =>{
+    try {
+      let response = await axiosInstance.delete(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/product-description-delete/${id}`
+      );
+      resolve(response.data);
+    } catch (error) {
+      reject(error);
+    }
+  })
+};
+
+export const addProductDescription =  (produjctObj) => {
+  return new Promise (async (resolve , reject) => {
+    try {
+      let response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/product-description-add`,
+        produjctObj
+      )
+      resolve (response);
+    } catch (error) {
+      reject(error);
+    }
+  })
+};
+
+export const editProductsDescription = (productObj) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.put(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/product-description-edit`,
+        productObj
+      );
+   
+      resolve(response);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+export const getOneProductDescription = (id) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/product-description-get/${id}`
+      );
+      resolve(response);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};

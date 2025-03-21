@@ -158,6 +158,13 @@
         "class":"",
         "icon":"",
          "active":false
+       },{
+        "title" : "Product Desc Mang..",
+        "link"  : "/product-description-management",
+        "class" : "",
+        "icon"  : "",
+        "active":false
+
        }
     ]
   },
