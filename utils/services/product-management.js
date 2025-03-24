@@ -85,7 +85,7 @@ export const productExport = (values) => {
   });
 };
 
-export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove, vendorId, isFeatured) => {
+export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove, vendorId, isFeatured, onlyAddedByAdmin) => {
   return new Promise(async (resolve, reject) => {
     try {
       let response;
@@ -105,6 +105,11 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
       if(isFeatured){
         queryParams.push(`isFeatured=${isFeatured}`);
       }
+      
+      if(onlyAddedByAdmin){
+        queryParams.push(`onlyAddedByAdmin=${onlyAddedByAdmin}`);
+      }
+
       if (queryParams.length > 0) {
         url += `&${queryParams.join('&')}`;
       }

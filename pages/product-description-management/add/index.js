@@ -16,11 +16,12 @@ const Index = () => {
   const editorRef = useRef(null);
 
   useEffect(() => {
-    if (searchTerm.length > 2) {
+    if (searchTerm?.length > 2) {
       const fetchProducts = async () => {
         try {
             
-          const res = await searchProductsV2({ search_key: searchTerm });
+          // limit = 10, page = 1, searchString, vendorApprove, vendorId, isFeatured, onlyAddedByAdmin
+          const res = await getAllProducts('', '', searchTerm, "", "", "", true);
           setProductList(res.data);
           setShowDropdown(true);
         } catch (err) {
@@ -39,7 +40,7 @@ const Index = () => {
   
 
   const handleProductSelect = (product) => {
-    setSelectedProduct({ product_name: product.product_name, product_id: product.product_id });
+    setSelectedProduct({ product_name: product.name, product_id: product.id });
     setSearchTerm(product.product_name);
     setShowDropdown(false);
     
@@ -116,12 +117,12 @@ const Index = () => {
                             <ul className="dropdown-menu show w-100" style={{ position: "absolute", zIndex: 1000 }}>
                               {productList.map((product) => (
                                 <li
-                                  key={product.product_id}
+                                  key={product.id}
                                   className="dropdown-item"
                                   onClick={() => handleProductSelect(product)}
                                   style={{ cursor: "pointer" }}
                                 >
-                                  {product.product_name}
+                                  {product.name}
                                 </li>
                               ))}
                             </ul>
