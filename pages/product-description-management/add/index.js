@@ -7,17 +7,49 @@ import Link from "next/link";
 import { Editor } from "@tinymce/tinymce-react";
 import { addProductDescription, getAllProducts, searchProductsV2 } from "@/utils/services/product-management";
 
+const decriptionSectionInitialSection = `
+<div class="container p-4 border">
+<h3>Description edited</h3>
+<ul>
+<li><strong>PN rating and #ratings:</strong> Engineered for industrial-grade applications, this ball valve is rated for pressures up to <strong>5000 PSI</strong>, ensuring durability and performance in high-pressure systems like oil refineries, chemical plants, and gas pipelines. It guarantees consistent control in demanding environments.</li>
+<li><strong>Media Compatibility:</strong> These valves are suitable for various media, including <strong>gas, water, and acids</strong> (for which a plastic variant is required). It provides reliable performance across a range of industrial applications.</li>
+</ul>
+
+<h3 class="mt-4">Ideal For These Industries</h3>
+<div class="d-flex gap-4">
+<div class="text-center"><img src="https://img.icons8.com/ios/50/000000/oil-industry.png" alt="Oil and Gas" width="40" height="40">
+<p>Oil and Gas</p>
+</div>
+<div class="text-center"><img src="https://img.icons8.com/ios/50/000000/test-tube.png" alt="Chemical" width="40" height="40">
+<p>Chemical</p>
+</div>
+
+<div class="text-center"><img src="https://img.icons8.com/ios/50/000000/water.png" alt="Water Treatment" width="40" height="40">
+<p>Water Treatment</p>
+</div>
+</div>
+<h3 class="mt-4">Expert Tips</h3>
+<div class="border p-3 rounded d-flex align-items-center"><img class="rounded-circle me-3" src="https://picsum.photos/80/80" alt="Expert" width="80" height="80">
+<div>
+<p><strong>Dr. Mark D.</strong></p>
+<p class="text-muted">Senior Mechanical Engineer</p>
+<a class="text-decoration-none" href="#">www.expertadvice.com</a></div>
+</div>
+</div>`
 
 const Index = () => {
   const [productList, setProductList] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState({ name: "", id: "" });
+  const [selectedProduct, setSelectedProduct] = useState({ product_name: "", product_id: "" });
   const editorRef = useRef(null);
   const router = useRouter();
 
   useEffect(() => {
-    if (searchTerm?.length > 2) {
+
+    console.log(selectedProduct.product_name, searchTerm)
+
+    if (searchTerm?.length > 2 && searchTerm != selectedProduct.product_name) {
       const fetchProducts = async () => {
         try {
             
@@ -41,8 +73,9 @@ const Index = () => {
   
 
   const handleProductSelect = (product) => {
+
     setSelectedProduct({ product_name: product.name, product_id: product.id });
-    setSearchTerm(product.product_name);
+    setSearchTerm(product.name);
     setShowDropdown(false);
     
   };
@@ -145,7 +178,7 @@ const Index = () => {
                               name="content"
                               apiKey="wl0nyw8toagm8q8ngybdkcmq8xvyh1o9ncw1ptw9liaofo4w"
                               onInit={(evt, editor) => (editorRef.current = editor)}
-                              initialValue=""
+                              initialValue={decriptionSectionInitialSection}
                               onKeyUp={() => setFieldValue("content", editorRef.current.getContent())}
                               init={{
                                 height: 250,
