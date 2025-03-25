@@ -1,10 +1,15 @@
-import { getOneProductDescription, editProductsDescription } from "@/utils/services/product-management";
+import {
+  getOneProductDescription,
+  editProductsDescription,
+  addProductTechSpec,
+} from "@/utils/services/product-management";
 import { Editor } from "@tinymce/tinymce-react";
 import { useRouter } from "next/router";
 import React, { useEffect, useState, useRef } from "react";
 
 const Index = () => {
   const [oneProductDescription, setOneProductDescription] = useState({});
+  const [specs, setSpecs] = useState([{ key: "", value: "" }]);
   const editorRef = useRef(null);
   const router = useRouter();
   const { id } = router.query;
@@ -24,7 +29,7 @@ const Index = () => {
       const { created_at, ...filteredProduct } = oneProductDescription;
       const productObj = {
         ...filteredProduct,
-        description: updatedDescription
+        description: updatedDescription,
       };
       try {
         await editProductsDescription(productObj);
@@ -35,6 +40,44 @@ const Index = () => {
     }
   };
 
+  // add remove and sumit spec functions
+  const handleAddSpec = () => {
+    setSpecs([...specs, { key: "", value: "" }]);
+  };
+
+  const handleRemoveSpec = (index) => {
+    const updated = [...specs];
+    updated.splice(index, 1);
+    setSpecs(updated);
+  };
+
+  const handleSpecChange = (index, field, value) => {
+    const updated = [...specs];
+    updated[index][field] = value;
+    setSpecs(updated);
+  };
+
+  const handleFinalSubmit = async () => {
+    const updatedDescription = editorRef.current?.getContent() || "";
+    const cleanedSpecs = specs.filter(
+      (item) => item.key.trim() && item.value.trim()
+    );
+
+    if (!oneProductDescription?.product_id) {
+      alert("Invalid product ID.");
+      return;
+    }
+  
+    try {
+      const response = await addProductTechSpec(oneProductDescription?.product_id, cleanedSpecs);
+      alert("Technical specifications saved successfully!");
+    } catch (error) {
+      console.error("Error saving product tech specs:", error);
+      alert("Failed to save technical specifications.");
+    }
+
+    setSpecs([{ key: "", value: "" }])
+  };
   return (
     <div className="container mt-4">
       <h3 className="mb-3">Edit Product Description</h3>
@@ -62,12 +105,55 @@ const Index = () => {
       <button
         onClick={handleSubmit}
         className="btn btn-primary btn-md fw-bold shadow-sm px-4 py-2 "
-        style = {{marginTop:"20px"}}
+        style={{ marginTop: "20px" }}
       >
         Save Description
       </button>
-    </div>
-  );
+
+      {/*  add spec values */}
+      <hr className="my-4" />
+      <h5>Add Product Specs</h5>
+
+      {specs.map((spec, index) => (
+        <div className="d-flex mb-2" key={index}>
+          <input
+            type="text"
+            className="form-control me-2"
+            placeholder="Key"
+            value={spec.key}
+            onChange={(e) => handleSpecChange(index, "key", e.target.value)}
+          />
+          <input
+            type="text"
+            className="form-control me-2"
+            placeholder="Value"
+            value={spec.value}
+            onChange={(e) => handleSpecChange(index, "value", e.target.value)}
+          />
+          <button
+            className="btn btn-danger"
+            onClick={() => handleRemoveSpec(index)}
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+
+      <div className="d-flex justify-content-between align-items-center mt-3">
+      <button className="btn btn-success" onClick={handleFinalSubmit}>
+        Save Specification
+      </button>
+
+      {specs[specs.length - 1].key.trim() &&
+        specs[specs.length - 1].value.trim() && (
+          <button className="btn btn-secondary " disable onClick={handleAddSpec}>
+            + Add Spec
+          </button>
+        )}
+
+      </div>
+      </div>
+    );
 };
 
 export default Index;

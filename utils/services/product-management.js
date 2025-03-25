@@ -312,3 +312,18 @@ export const getOneProductDescription = (id) => {
     }
   });
 };
+
+
+export const addProductTechSpec =  (productId, techSpec ) => {
+  return new Promise (async (resolve , reject) => {
+    try {
+      let response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/product-tech-specs-add`,
+        {productId, techSpec}
+      )
+      resolve (response);
+    } catch (error) {
+      reject(error);
+    }
+  })
+};
