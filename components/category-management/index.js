@@ -24,6 +24,7 @@ const CategoryManagementPage = () => {
   const [addStatus, setAddStatus] = useState(false);
   const router = useRouter();
   const formRef = useRef(null);
+  
   useEffect(() => {
     getAllCategories();
   }, []);
@@ -59,7 +60,7 @@ const CategoryManagementPage = () => {
       setlistLoading(false);
       let transformedCategory = await buildTree(res?.data);
 
-      console.log(transformedCategory);
+      // console.log("list of categories ",transformedCategory);
 
       /* console.log(
         res?.data?.reduce(
