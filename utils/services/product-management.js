@@ -327,3 +327,28 @@ export const addProductTechSpec =  (productId, techSpec ) => {
     }
   })
 };
+
+export const uploadProductImages = (productId, files) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const formData = new FormData();
+      for (let file of files) {
+        formData.append('images', file); // make sure this matches field name used in multer
+      }
+      formData.append('productId', productId); // optionally send productId
+
+      const response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/upload-product-images`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      resolve(response);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};

@@ -2,6 +2,7 @@ import {
   getOneProductDescription,
   editProductsDescription,
   addProductTechSpec,
+  uploadProductImages,
 } from "@/utils/services/product-management";
 import { Editor } from "@tinymce/tinymce-react";
 import { useRouter } from "next/router";
@@ -10,7 +11,9 @@ import React, { useEffect, useState, useRef } from "react";
 const Index = () => {
   const [oneProductDescription, setOneProductDescription] = useState({});
   const [specs, setSpecs] = useState([{ key: "", value: "" }]);
+  const [selectedImages, setSelectedImages] = useState([]); // 👈 new state
   const editorRef = useRef(null);
+  const fileInputRef = useRef(null);
   const router = useRouter();
   const { id } = router.query;
 
@@ -78,6 +81,33 @@ const Index = () => {
 
     setSpecs([{ key: "", value: "" }])
   };
+
+// upload images function
+
+const handleImageChange = (e) => {
+  setSelectedImages([...e.target.files]);
+};
+
+const handleUploadImages = async () => {
+  if (!selectedImages.length) {
+    alert("Please select image(s) to upload.");
+    return;
+  }
+
+  try {
+    const res = await uploadProductImages(oneProductDescription?.product_id, selectedImages);
+    alert("Images uploaded successfully!");
+    setSelectedImages([]); // reset
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // 👈 clear file input
+    }
+  } catch (err) {
+    console.error("Image upload failed:", err);
+    alert("Failed to upload images.");
+  }
+
+};
+
   return (
     <div className="container mt-4">
       <h3 className="mb-3">Edit Product Description</h3>
@@ -152,6 +182,24 @@ const Index = () => {
         )}
 
       </div>
+
+
+      <hr className="my-4" />
+      <h5>Upload Product Images</h5>
+
+      <input
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={handleImageChange}
+        className="form-control mb-2"
+        ref={fileInputRef} // 👈 added ref
+
+      />
+      <button className="btn btn-primary" onClick={handleUploadImages}>
+        Upload Images
+      </button>
+
       </div>
     );
 };
