@@ -14,6 +14,7 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState({ name: "", id: "" });
   const editorRef = useRef(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (searchTerm?.length > 2) {
@@ -60,6 +61,12 @@ const Index = () => {
       const response = await addProductDescription(formData);
   
       window.alert(response.message)
+
+      console.log(response);
+
+      router.push(`/product-description-management/edit/${response?.data?.id}`);
+      
+
     } catch (error) {
       // Show error message
       window.alert(error?.response?.data?.message || "Failed to add product description.");
