@@ -23,23 +23,23 @@ const intializeVendorCount = {
 };
 
 const VendorManagement = () => {
+  const router = useRouter();
   const [vendorData, setVendorData] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [filter, setFilter] = useState({
-    verified: "",
-    organization: "",
-    name: "",
-  });
+  const [id, setId] = useState();
   const [limit, setlimit] = useState(10);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(parseInt(router.query.page) || 1);
   const [totalPages, settotalPages] = useState(null);
   const [vendorCount, setVendorCount] = useState(intializeVendorCount);
   const [rejectListData, setRejectListData] = useState([]);
   const [selectedVendorId, setSelectedVendorId] = useState("");
-  const [id, setId] = useState();
-  const router = useRouter();
   const [userType, setUserType] = useState(null);
+  const [filter, setFilter] = useState({
+    verified: router.query.verified || "",
+    organization: router.query.organization || "",
+    name: router.query.name || "",
+  });
 
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
@@ -152,18 +152,40 @@ const VendorManagement = () => {
     }
   }
 
-  const handlePageClick = (e) => {
-    setPage(e.selected + 1);
+  const updateUrlParams = (newParams) => {
+    const query = { ...router.query, ...newParams };
+    // Remove empty params
+    Object.keys(query).forEach(key => !query[key] && delete query[key]);
+    router.push({
+      pathname: router.pathname,
+      query
+    }, undefined, { shallow: true });
   };
+
+  const handleSearch = (e) => {
+    const newFilter = { ...filter, [e.target.name]: e.target.value };
+    setFilter(newFilter);
+    setPage(1);
+    updateUrlParams({ ...newFilter, page: 1 });
+  };
+
+  const handlePageClick = (e) => {
+    const newPage = e.selected + 1;
+    setPage(newPage);
+    updateUrlParams({ ...filter, page: newPage });
+  };
+
   const handleDeleteBudget = (id) => {
     setShowModal(true);
     setId(id);
   };
 
   const submitHandler = (values) => {
-    setVendorData([]);
     setFilter(values);
     setPage(1);
+    setVendorData([]);
+    updateUrlParams({ ...values, page: 1 });
+    
     handleGetVendorList(
       limit,
       1,
@@ -187,6 +209,19 @@ const VendorManagement = () => {
         setVendorCount(intializeVendorCount);
       });
   };
+
+  useEffect(() => {
+    // Sync state with URL params on initial load and URL changes
+    const { page, verified, organization, name } = router.query;
+    if (page) setPage(parseInt(page));
+    if (verified || organization || name) {
+      setFilter({
+        verified: verified || "",
+        organization: organization || "",
+        name: name || ""
+      });
+    }
+  }, [router.query]);
 
   useEffect(() => {
     getBuyerList();

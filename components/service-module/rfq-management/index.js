@@ -1,6 +1,7 @@
 import FullLoading from '@/components/loading/FullLoading';
 import { getRFQList } from '@/utils/services/rfq-management';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react'
 import ReactPaginate from 'react-paginate';
 import Select from 'react-select'
@@ -9,14 +10,19 @@ const initialFilterData = {
     rfq_status: null,
     admin_service_status: null,
     sort: "DESC"
-}
+};
 
 const RFQManagement = () => {
+    const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [rfqList, setRfqList] = useState(null);
-    const [filterData, setFilterData] = useState(initialFilterData);
+    const [filterData, setFilterData] = useState({
+        rfq_status: router.query.rfq_status || null,
+        admin_service_status: router.query.admin_service_status || null,
+        sort: router.query.sort || "DESC"
+    });
 
-    const [page, setPage] = useState(1);
+    const [page, setPage] = useState(parseInt(router.query.page) || 1);
     const [limit, setLimit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
 
@@ -33,41 +39,80 @@ const RFQManagement = () => {
 
     const textCapitalize = (str) => {
         if (!str) return str;
-
         return str
             .split('-')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))  // Capitalize each word
-            .join(' ');                               // Join them back with spaces
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
     }
+
+    const updateUrlParams = (newParams) => {
+        const query = { ...router.query, ...newParams };
+        // Remove empty/null params
+        Object.keys(query).forEach(key => !query[key] && delete query[key]);
+        router.push({
+            pathname: router.pathname,
+            query
+        }, undefined, { shallow: true });
+    };
 
     const handleFilterChange = (selectedOption, actionMeta) => {
         const name = actionMeta.name;
         const value = selectedOption ? selectedOption.value : null;
 
-        setFilterData((prevState) => ({
-            ...prevState,
+        const newFilterData = {
+            ...filterData,
             [name]: value
-        }))
+        };
+
+        setFilterData(newFilterData);
+        setPage(1);
+        updateUrlParams({ 
+            ...newFilterData, 
+            page: 1 
+        });
     }
 
     const getAllRFQs = () => {
         setLoading(true);
         getRFQList({ page, limit, ...filterData })
             .then((res) => {
-                setRfqList(res.data)
-                setTotalPages(res.total_items?.total || 1)
+                setRfqList(res.data);
+                setTotalPages(res.total_items?.total || 1);
             })
             .catch((error) => {
-                console.log(error)
+                console.log(error);
             })
             .finally(() => {
-                setLoading(false)
-            })
+                setLoading(false);
+            });
     }
 
+    // Sync with URL parameters
     useEffect(() => {
-        getAllRFQs()
-    }, [page, limit, filterData])
+        const { page, rfq_status, admin_service_status, sort } = router.query;
+        
+        const newFilterData = {
+            rfq_status: rfq_status || null,
+            admin_service_status: admin_service_status || null,
+            sort: sort || "DESC"
+        };
+
+        if (page) setPage(parseInt(page));
+        setFilterData(newFilterData);
+    }, [router.query]);
+
+    useEffect(() => {
+        getAllRFQs();
+    }, [page, limit, filterData]);
+
+    const handlePageChange = (e) => {
+        const newPage = e.selected + 1;
+        setPage(newPage);
+        updateUrlParams({
+            ...filterData,
+            page: newPage
+        });
+    };
 
     return (
         <>
@@ -99,6 +144,10 @@ const RFQManagement = () => {
                                     styles={customSelectStyles}
                                     isClearable={true}
                                     onChange={handleFilterChange}
+                                    value={filterData.rfq_status ? {
+                                        label: filterData.rfq_status === '1' ? "Open" : "Closed",
+                                        value: filterData.rfq_status
+                                    } : null}
                                 />
                             </div>
                             <div className="col-sm-3">
@@ -115,6 +164,10 @@ const RFQManagement = () => {
                                     styles={customSelectStyles}
                                     isClearable={true}
                                     onChange={handleFilterChange}
+                                    value={filterData.admin_service_status ? {
+                                        label: filterData.admin_service_status,
+                                        value: filterData.admin_service_status
+                                    } : null}
                                 />
                             </div>
                             <div className="col-sm-3"></div>
@@ -131,7 +184,10 @@ const RFQManagement = () => {
                                     styles={customSelectStyles}
                                     isClearable={false}                                    
                                     onChange={handleFilterChange}
-                                    defaultValue={{ label: "Latest to Oldest", value: "DESC" }}
+                                    value={{
+                                        label: filterData.sort === "DESC" ? "Latest to Oldest" : "Oldest to Latest",
+                                        value: filterData.sort
+                                    }}
                                 />
                             </div>
                         </div>
@@ -200,12 +256,13 @@ const RFQManagement = () => {
                             <ReactPaginate
                                 breakLabel="..."
                                 nextLabel={<i className="fa fa-angle-right"></i>}
-                                onPageChange={(e) => setPage(e.selected + 1)}
+                                onPageChange={handlePageChange}
                                 pageRangeDisplayed={2}
                                 pageCount={Math.ceil(totalPages / limit)}
                                 previousLabel={<i className="fa fa-angle-left"></i>}
                                 renderOnZeroPageCount={null}
                                 className="pagination"
+                                forcePage={page - 1}
                             />
                         )}
 

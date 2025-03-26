@@ -14,20 +14,30 @@ import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import { ToastContainer, toast } from "react-toastify";
 
 const BuyerManagement = () => {
+  const router = useRouter();
   const [BuyerData, setBuyerData] = useState([]);
   const [id, setId] = useState();
-  const router = useRouter();
-  // const [totalPages, setTotalPages] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [limit, setlimit] = useState(10);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(parseInt(router.query.page) || 1);
   const [totalPages, settotalPages] = useState(null);
-  const handleClose = () => setShowModal(false);
   const [filter, setFilter] = useState({
-    verified: "",
-    organization: "",
-    name: "",
+    verified: router.query.verified || "",
+    organization: router.query.organization || "",
+    name: router.query.name || "",
   });
+
+  const handleClose = () => setShowModal(false);
+
+  const updateUrlParams = (newParams) => {
+    const query = { ...router.query, ...newParams };
+    // Remove empty params
+    Object.keys(query).forEach(key => !query[key] && delete query[key]);
+    router.push({
+      pathname: router.pathname,
+      query
+    }, undefined, { shallow: true });
+  };
 
   const getBuyerList = () => {
     setBuyerData([]);
@@ -66,12 +76,12 @@ const BuyerManagement = () => {
     router.push(`/buyer-management/update-buyer/${item.id}`);
   };
 
-  useEffect(() => {
-    getBuyerList();
-  }, [page]);
   const handlePageClick = (e) => {
-    setPage(e.selected + 1);
+    const newPage = e.selected + 1;
+    setPage(newPage);
+    updateUrlParams({ ...filter, page: newPage });
   };
+
   const handleDeleteBudget = (id) => {
     setShowModal(true);
     setId(id);
@@ -81,6 +91,8 @@ const BuyerManagement = () => {
     setFilter(values);
     setPage(1);
     setBuyerData([]);
+    updateUrlParams({ ...values, page: 1 });
+
     handleGetBuyerList(
       limit,
       1,
@@ -95,22 +107,22 @@ const BuyerManagement = () => {
       .catch((err) => console.log("err", err));
   };
 
-  const submitApproveBuyer = (id, status) => {
-    handleApproveBuyer(id, status)
-      .then((res) => {
-        toast(res.message);
-        getBuyerList();
-      })
-      .catch((error) => {
-        console.log("error-->", error);
-        let txt = "";
-        for (let x in error.error.response.data.errors) {
-          txt = error.error.response.data.errors[x];
-        }
-        toast(txt);
+  // Add effect to sync with URL parameters
+  useEffect(() => {
+    const { page, verified, organization, name } = router.query;
+    if (page) setPage(parseInt(page));
+    if (verified || organization || name) {
+      setFilter({
+        verified: verified || "",
+        organization: organization || "",
+        name: name || ""
       });
-    // setTimeout(handleClose(), 10000);
-  };
+    }
+  }, [router.query]);
+
+  useEffect(() => {
+    getBuyerList();
+  }, [page]);
 
   return (
     <>

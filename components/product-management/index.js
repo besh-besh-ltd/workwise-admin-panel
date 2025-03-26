@@ -39,7 +39,7 @@ const CustomSelectOption = (props) => (
 
 
 const ProductManagement = () => {
-  const navigate = useRouter();
+  const router = useRouter();
   const id = Date.now().toString();
   const [enableBulkUpload, setEnableBulkUpload] = useState(false);
   const [enableBulkProdUpload, setEnableBulkProdUpload] = useState(false);
@@ -50,17 +50,16 @@ const ProductManagement = () => {
   const [updateProduct, setUpdateProduct] = useState("");
   const [uploadProgress, setuploadProgress] = useState(0);
   const [limit, setlimit] = useState(10);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(parseInt(router.query.page) || 1);
   const [totalPages, settotalPages] = useState(null);
   const [selectedProductId, setselectedProductsId] = useState('');
   const [reasonList, setReasonList] = useState([]);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [searchString, setSearchString] = useState('');
-  const [selectedApproveVendor, setSelectedApproveVendor] = useState("");
+  const [searchString, setSearchString] = useState(router.query.search || '');
+  const [selectedApproveVendor, setSelectedApproveVendor] = useState(router.query.approveVendor || "");
   const [vendorData, setVendorData] = useState([]);
-  const [selectedVendor, setSelectedVendor] = useState("");
-  const [selectedFeatured, setSelectedFeatured] = useState("");
-  const router = useRouter();
+  const [selectedVendor, setSelectedVendor] = useState(router.query.vendor || "");
+  const [selectedFeatured, setSelectedFeatured] = useState(router.query.featured || "");
   const [userType, setUserType] = useState(null);
 
 
@@ -138,9 +137,10 @@ const ProductManagement = () => {
   }
 
   const handleSearch = (e) => {
-    setPage(1)
-    setSearchString(e.target.value);
-
+    const newSearchString = e.target.value;
+    setPage(1);
+    setSearchString(newSearchString);
+    updateUrlParams({ search: newSearchString, page: 1 });
   }
 
   const handleCloseRejectModal = () => {
@@ -150,7 +150,15 @@ const ProductManagement = () => {
     setSelectValue("")
   }
   const handlePageClick = (e) => {
-    setPage(e.selected + 1);
+    const newPage = e.selected + 1;
+    setPage(newPage);
+    updateUrlParams({ 
+      page: newPage,
+      search: searchString,
+      approveVendor: selectedApproveVendor,
+      vendor: selectedVendor,
+      featured: selectedFeatured 
+    });
   };
 
   const getUserProfile = async () => {
@@ -536,8 +544,6 @@ const ProductManagement = () => {
   setIsAddingDataProcessing(false);
   }
 
-
-
   const handleAddProductForBulk = async () => {
 
     const { product, vendor, approved_by } = productMapObj;
@@ -552,7 +558,55 @@ const ProductManagement = () => {
     toast.success("Product added for bulk submission.");
   }
 
+  const handleRemoveProduct = (index) => {
+    setMapMultipleProductsWithVendor((prevState) => prevState.filter((_, i) => i !== index));
+    toast.success("Product removed successfully.");
+  };
 
+  const updateUrlParams = (newParams) => {
+    const query = { ...router.query, ...newParams };
+    // Remove empty params
+    Object.keys(query).forEach(key => !query[key] && delete query[key]);
+    router.push({
+      pathname: router.pathname,
+      query
+    }, undefined, { shallow: true });
+  };
+
+  // Handler for Select components
+  const handleFilterChange = (type, value) => {
+    let updateObj = {
+      search: searchString,
+      page: 1
+    };
+
+    switch(type) {
+      case 'approveVendor':
+        setSelectedApproveVendor(value || "");
+        updateObj.approveVendor = value;
+        break;
+      case 'vendor':
+        setSelectedVendor(value || "");
+        updateObj.vendor = value;
+        break;
+      case 'featured':
+        setSelectedFeatured(value || "");
+        updateObj.featured = value;
+        break;
+    }
+    setPage(1);
+    updateUrlParams(updateObj);
+  };
+
+  // Sync state with URL params
+  useEffect(() => {
+    const { page, search, approveVendor, vendor, featured } = router.query;
+    if (page) setPage(parseInt(page));
+    if (search !== undefined) setSearchString(search);
+    if (approveVendor !== undefined) setSelectedApproveVendor(approveVendor);
+    if (vendor !== undefined) setSelectedVendor(vendor);
+    if (featured !== undefined) setSelectedFeatured(featured);
+  }, [router.query]);
 
   useEffect(() => {
     getUserProfile();
@@ -564,14 +618,6 @@ const ProductManagement = () => {
   useEffect(() => {
     getProducts();
   }, [page, searchString, selectedApproveVendor, selectedVendor, selectedFeatured]);
-
-  
-  const handleRemoveProduct = (index) => {
-    setMapMultipleProductsWithVendor((prevState) => prevState.filter((_, i) => i !== index));
-    toast.success("Product removed successfully.");
-  };
-  
-  console.log(vendorData)
 
   return (
     <>
@@ -595,6 +641,7 @@ const ProductManagement = () => {
                     type="text"
                     className="form-control"
                     placeholder="Search Products"
+                    value={searchString}
                     onChange={handleSearch}
                   />
                 </div>
@@ -606,7 +653,8 @@ const ProductManagement = () => {
                     styles={customSelectStyles}
                     isClearable={true}
                     instanceId="long-value-select"
-                    onChange={(e) => setSelectedApproveVendor(e ? e.value : "")}
+                    value={vendorApprovedList.find(opt => opt.value === selectedApproveVendor) || null}
+                    onChange={(e) => handleFilterChange('approveVendor', e?.value)}
                   />
                 </div>
                 <div className="col-sm-3">
@@ -617,7 +665,8 @@ const ProductManagement = () => {
                     styles={customSelectStyles}
                     isClearable={true}
                     instanceId="long-value-select"
-                    onChange={(e) => setSelectedVendor(e ? e.value : "")}
+                    value={vendorData.find(opt => opt.value === selectedVendor) || null}
+                    onChange={(e) => handleFilterChange('vendor', e?.value)}
                   />
                 </div>
                 <div className="col-sm-3">
@@ -628,14 +677,15 @@ const ProductManagement = () => {
                     styles={customSelectStyles}
                     isClearable={true}
                     instanceId="long-value-select"
-                    onChange={(e) => setSelectedFeatured(e ? e.value : "")}
+                    value={isFeaturesArray.find(opt => opt.value === selectedFeatured) || null}
+                    onChange={(e) => handleFilterChange('featured', e?.value)}
                   />
                 </div>
                 <div className="d-flex flex-wrap mt-3">
                   <button
                     type="button"
                     onClick={() =>
-                      navigate.push("/product-management/add-product")
+                      router.push("/product-management/add-product")
                     }
                     className="btn btn-primary mr-2"
                   >
