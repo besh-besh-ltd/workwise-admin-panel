@@ -107,22 +107,34 @@ const BuyerManagement = () => {
       .catch((err) => console.log("err", err));
   };
 
-  // Add effect to sync with URL parameters
+  // Modified useEffect to handle initial load and URL parameter changes
   useEffect(() => {
-    const { page, verified, organization, name } = router.query;
-    if (page) setPage(parseInt(page));
-    if (verified || organization || name) {
-      setFilter({
-        verified: verified || "",
-        organization: organization || "",
-        name: name || ""
-      });
-    }
-  }, [router.query]);
+    if (!router.isReady) return;
 
-  useEffect(() => {
-    getBuyerList();
-  }, [page]);
+    const { page: urlPage, verified, organization, name } = router.query;
+    const newPage = urlPage ? parseInt(urlPage) : 1;
+    const newFilter = {
+      verified: verified || "",
+      organization: organization || "",
+      name: name || ""
+    };
+
+    setPage(newPage);
+    setFilter(newFilter);
+    
+    handleGetBuyerList(
+      limit,
+      newPage,
+      newFilter.verified,
+      newFilter.organization,
+      newFilter.name
+    )
+      .then((res) => {
+        setBuyerData(res.data);
+        settotalPages(Math.ceil(res.total_count / limit));
+      })
+      .catch((err) => console.log("err", err));
+  }, [router.isReady, router.query]);
 
   return (
     <>

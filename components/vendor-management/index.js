@@ -211,21 +211,41 @@ const VendorManagement = () => {
   };
 
   useEffect(() => {
-    // Sync state with URL params on initial load and URL changes
-    const { page, verified, organization, name } = router.query;
-    if (page) setPage(parseInt(page));
-    if (verified || organization || name) {
-      setFilter({
-        verified: verified || "",
-        organization: organization || "",
-        name: name || ""
-      });
-    }
-  }, [router.query]);
+    if (!router.isReady) return;
 
-  useEffect(() => {
-    getBuyerList();
-  }, [page]);
+    const { page: urlPage, verified, organization, name } = router.query;
+    const newPage = urlPage ? parseInt(urlPage) : 1;
+    const newFilter = {
+      verified: verified || "",
+      organization: organization || "",
+      name: name || ""
+    };
+
+    setPage(newPage);
+    setFilter(newFilter);
+    
+    handleGetVendorList(
+      limit,
+      newPage,
+      newFilter.verified,
+      newFilter.organization,
+      newFilter.name
+    )
+      .then((res) => {
+        settotalPages(res.total_count);
+        setVendorCount({
+          total: res.total_count,
+          approved: res.active_vendors,
+          disapproved: res.deactivated_vendors,
+          deleted: res.deleted_vendors,
+        });
+        setVendorData(res.data);
+      })
+      .catch((err) => {
+        console.log("err", err);
+        setVendorCount(intializeVendorCount);
+      });
+  }, [router.isReady, router.query]);
 
   useEffect(() => {
     getUserProfile();
