@@ -20,12 +20,12 @@ const BuyerManagement = () => {
   const [id, setId] = useState();
   const [showModal, setShowModal] = useState(false);
   const [limit] = useState(10);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(parseInt(router.query.page) || 1);
   const [totalPages, setTotalPages] = useState(0);
   const [filter, setFilter] = useState({
     verified: "",
-    organization: "",
-    name: ""
+    organization: router.query.organization || "",
+    name: router.query.name || ""
   });
 
   const handleClose = () => setShowModal(false);
@@ -142,9 +142,9 @@ const BuyerManagement = () => {
             <Formik
               enableReinitialize={true}
               initialValues={{
-                verified: "",
-                organization: "",
-                name: "",
+                verified: filter.verified,
+                organization: filter.organization,
+                name: filter.name,
               }}
               validationSchema={yup.object().shape({
                 verified: yup.string(),
@@ -165,27 +165,13 @@ const BuyerManagement = () => {
               }) => (
                 <Form>
                   <div className="row">
-                    {/* <div class="col-2">
-                      <Field
-                        as="select"
-                        name="verified"
-                        class="form-control"
-                        placeholder="Verified"
-                      >
-                        <option value="" disabled>
-                          Select Verified
-                        </option>
-                        <option value="t">True</option>
-                        <option value="f">False</option>
-                      </Field>
-                    </div> */}
-
                     <div class="col-3">
                       <Field
                         type="text"
                         name="organization"
                         class="form-control"
                         placeholder="Search organization"
+                        value={values.organization}
                       />
                     </div>
 
@@ -195,6 +181,7 @@ const BuyerManagement = () => {
                         name="name"
                         class="form-control"
                         placeholder="Search name"
+                        value={values.name}
                       />
                     </div>
                     <div className="col-2 d-flex flex-column">

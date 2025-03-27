@@ -28,21 +28,25 @@ const VendorManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [id, setId] = useState();
-  const [limit, setlimit] = useState(10);
+  const [limit] = useState(10);
   const [page, setPage] = useState(parseInt(router.query.page) || 1);
   const [totalPages, settotalPages] = useState(null);
-  const [vendorCount, setVendorCount] = useState(intializeVendorCount);
+  const [vendorCount, setVendorCount] = useState({
+    total: 0,
+    approved: 0,
+    disapproved: 0,
+    deleted: 0,
+  });
   const [rejectListData, setRejectListData] = useState([]);
   const [selectedVendorId, setSelectedVendorId] = useState("");
-  const [userType, setUserType] = useState(null);
-  const [filter, setFilter] = useState({
-    verified: router.query.verified || "",
-    organization: router.query.organization || "",
-    name: router.query.name || "",
-  });
-
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
+  const [userType, setUserType] = useState(null);
+  const [filter, setFilter] = useState({
+    verified: "",
+    organization: router.query.organization || "",
+    name: router.query.name || ""
+  });
 
   const handleInputDisapprove = (e) => {
     setInputValue(e.target.value);
@@ -213,39 +217,21 @@ const VendorManagement = () => {
   useEffect(() => {
     if (!router.isReady) return;
 
-    const { page: urlPage, verified, organization, name } = router.query;
+    const { page: urlPage, organization, name } = router.query;
     const newPage = urlPage ? parseInt(urlPage) : 1;
     const newFilter = {
-      verified: verified || "",
+      verified: "",
       organization: organization || "",
       name: name || ""
     };
 
     setPage(newPage);
     setFilter(newFilter);
-    
-    handleGetVendorList(
-      limit,
-      newPage,
-      newFilter.verified,
-      newFilter.organization,
-      newFilter.name
-    )
-      .then((res) => {
-        settotalPages(res.total_count);
-        setVendorCount({
-          total: res.total_count,
-          approved: res.active_vendors,
-          disapproved: res.deactivated_vendors,
-          deleted: res.deleted_vendors,
-        });
-        setVendorData(res.data);
-      })
-      .catch((err) => {
-        console.log("err", err);
-        setVendorCount(intializeVendorCount);
-      });
-  }, [router.isReady, router.query]);
+  }, [router.isReady]);
+
+  useEffect(() => {
+    getBuyerList();
+  }, [page, filter]);
 
   useEffect(() => {
     getUserProfile();
@@ -268,9 +254,9 @@ const VendorManagement = () => {
             <Formik
               enableReinitialize={true}
               initialValues={{
-                verified: "",
-                organization: "",
-                name: "",
+                verified: filter.verified,
+                organization: filter.organization,
+                name: filter.name,
               }}
               validationSchema={yup.object().shape({
                 verified: yup.string(),
@@ -297,6 +283,7 @@ const VendorManagement = () => {
                         name="organization"
                         class="form-control"
                         placeholder="Search organization"
+                        value={values.organization}
                       />
                     </div>
 
@@ -310,12 +297,12 @@ const VendorManagement = () => {
                         type="button"
                         class="btn btn-secondary"
                         onClick={() => {
-                          resetForm(),
-                            submitHandler({
-                              verified: "",
-                              organization: "",
-                              name: "",
-                            });
+                          resetForm();
+                          submitHandler({
+                            verified: "",
+                            organization: "",
+                            name: "",
+                          });
                         }}
                       >
                         Reset
