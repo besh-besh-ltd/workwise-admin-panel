@@ -217,21 +217,23 @@ const VendorManagement = () => {
   useEffect(() => {
     if (!router.isReady) return;
 
-    const { page: urlPage, organization, name } = router.query;
+    const { page: urlPage, organization, name, verified } = router.query;
     const newPage = urlPage ? parseInt(urlPage) : 1;
     const newFilter = {
-      verified: "",
+      verified: verified || "",
       organization: organization || "",
       name: name || ""
     };
 
     setPage(newPage);
     setFilter(newFilter);
+    getBuyerList();
   }, [router.isReady]);
 
   useEffect(() => {
+    if (!router.isReady) return;
     getBuyerList();
-  }, [page, filter]);
+  }, [page, filter, router.isReady]);
 
   useEffect(() => {
     getUserProfile();
