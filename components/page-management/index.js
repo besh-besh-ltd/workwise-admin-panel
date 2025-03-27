@@ -199,16 +199,26 @@ const PageManagement = () => {
               </tbody>
             </table>
             {Math.ceil(totalPages / 5) > 1 && (
-              <ReactPaginate
-                breakLabel="..."
-                nextLabel={<i className="fa fa-angle-right"></i>}
-                onPageChange={handlePageClick}
-                pageRangeDisplayed={2}
-                pageCount={Math.ceil(totalPages / 5)}
-                previousLabel={<i className="fa fa-angle-left"></i>}
-                renderOnZeroPageCount={null}
-                className="pagination"
-              />
+              <div className="d-flex flex-column align-items-center gap-2">
+                <ReactPaginate
+                  previousLabel={<i className="fa fa-angle-left"></i>}
+                  nextLabel={<i className="fa fa-angle-right"></i>}
+                  breakLabel="..."
+                  pageCount={Math.ceil(totalPages / 5)}
+                  marginPagesDisplayed={2}
+                  pageRangeDisplayed={5}
+                  onPageChange={handlePageClick}
+                  forcePage={page - 1}
+                  containerClassName="pagination mb-0"
+                  pageClassName="page-item"
+                  pageLinkClassName="page-link"
+                  previousClassName="page-item"
+                  previousLinkClassName="page-link"
+                  nextClassName="page-item" 
+                  nextLinkClassName="page-link"
+                  activeClassName="active"
+                />
+              </div>
             )}
             <DeleteModal
               show={showModal}

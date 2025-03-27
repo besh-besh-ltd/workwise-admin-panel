@@ -1294,23 +1294,32 @@ const ProductManagement = () => {
             )}
 
             <div className="d-flex justify-content-between align-items-center">
-            <div>
-            <p><b>Total Products: </b>{totalCount.total_count}</p>
-            <p><b>Total Approved Products: </b>{totalCount.approve_count}</p>
-            <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p>
-
-            </div>
+              <div>
+                <p><b>Total Products: </b>{totalCount.total_count}</p>
+                <p><b>Total Approved Products: </b>{totalCount.approve_count}</p>
+                <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p>
+              </div>
               {Math.ceil(totalPages / 10) > 1 && (
-                <ReactPaginate
-                  breakLabel="..."
-                  nextLabel={<i className="fa fa-angle-right"></i>}
-                  onPageChange={handlePageClick}
-                  pageRangeDisplayed={2}
-                  pageCount={Math.ceil(totalPages / 10)}
-                  previousLabel={<i className="fa fa-angle-left"></i>}
-                  renderOnZeroPageCount={null}
-                  className="pagination"
-                />
+                <div className="d-flex flex-column align-items-center gap-2">
+                  <ReactPaginate
+                    previousLabel={<i className="fa fa-angle-left"></i>}
+                    nextLabel={<i className="fa fa-angle-right"></i>}
+                    breakLabel="..."
+                    pageCount={Math.ceil(totalPages / 10)}
+                    marginPagesDisplayed={2}
+                    pageRangeDisplayed={5}
+                    onPageChange={handlePageClick}
+                    forcePage={page - 1}
+                    containerClassName="pagination mb-0"
+                    pageClassName="page-item"
+                    pageLinkClassName="page-link"
+                    previousClassName="page-item"
+                    previousLinkClassName="page-link"
+                    nextClassName="page-item" 
+                    nextLinkClassName="page-link"
+                    activeClassName="active"
+                  />
+                </div>
               )}
             </div>
           </div>

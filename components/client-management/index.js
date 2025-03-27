@@ -164,54 +164,27 @@ const ClientManagement = () => {
                 })}
             </tbody>
           </table>
-          {/* <nav aria-label="Page navigation example">
-            <ul className="pagination">
-              {Array.from(Array(totalPages), (e, i) => {
-                if (i + 1 === page) {
-                  return (
-                    <li className="active page-item" key={i + 1}>
-                      <a
-                        className="page-link"
-                        href=""
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setpage(i + 1);
-                        }}
-                      >
-                        {i + 1}
-                      </a>
-                    </li>
-                  );
-                } else {
-                  return (
-                    <li className="page-item" key={i + 1}>
-                      <a
-                        className="page-link"
-                        href=""
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setpage(i + 1);
-                        }}
-                      >
-                        {i + 1}
-                      </a>
-                    </li>
-                  );
-                }
-              })}
-            </ul>
-          </nav> */}
           {Math.ceil(totalPages / 10) > 1 && (
-            <ReactPaginate
-              breakLabel="..."
-              nextLabel={<i className="fa fa-angle-right"></i>}
-              onPageChange={handlePageClick}
-              pageRangeDisplayed={2}
-              pageCount={Math.ceil(totalPages / 10)}
-              previousLabel={<i className="fa fa-angle-left"></i>}
-              renderOnZeroPageCount={null}
-              className="pagination"
-            />
+            <div className="d-flex flex-column align-items-center gap-2">
+              <ReactPaginate
+                previousLabel={<i className="fa fa-angle-left"></i>}
+                nextLabel={<i className="fa fa-angle-right"></i>}
+                breakLabel="..."
+                pageCount={Math.ceil(totalPages / 10)}
+                marginPagesDisplayed={2}
+                pageRangeDisplayed={5}
+                onPageChange={handlePageClick}
+                forcePage={page - 1}
+                containerClassName="pagination mb-0"
+                pageClassName="page-item"
+                pageLinkClassName="page-link"
+                previousClassName="page-item"
+                previousLinkClassName="page-link"
+                nextClassName="page-item" 
+                nextLinkClassName="page-link"
+                activeClassName="active"
+              />
+            </div>
           )}
         </div>
       </section>

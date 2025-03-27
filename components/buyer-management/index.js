@@ -53,7 +53,7 @@ const BuyerManagement = () => {
       );
       if (res?.data) {
         setBuyerData(res.data);
-        setTotalPages(Math.ceil(parseInt(res.total_count) / limit));
+        setTotalPages(parseInt(res.total_count));
       }
     } catch (err) {
       console.error("Error fetching buyer data:", err);
@@ -311,28 +311,36 @@ const BuyerManagement = () => {
                     </tbody>
                   </table>
 
-                  {totalPages > 1 && (
-                    <ReactPaginate
-                      breakLabel="..."
-                      nextLabel={<i className="fa fa-angle-right"></i>}
-                      onPageChange={handlePageClick}
-                      pageRangeDisplayed={2}
-                      pageCount={totalPages}
-                      previousLabel={<i className="fa fa-angle-left"></i>}
-                      renderOnZeroPageCount={null}
-                      className="pagination"
-                      forcePage={page - 1}
-                      marginPagesDisplayed={1}
-                    />
+                  {Math.ceil(totalPages / 10) > 1 && (
+                    <div className="d-flex flex-column align-items-center gap-2">
+                      <ReactPaginate
+                        previousLabel={<i className="fa fa-angle-left"></i>}
+                        nextLabel={<i className="fa fa-angle-right"></i>}
+                        breakLabel="..."
+                        pageCount={Math.ceil(totalPages / 10)}
+                        marginPagesDisplayed={2}
+                        pageRangeDisplayed={5}
+                        onPageChange={handlePageClick}
+                        forcePage={page - 1}
+                        containerClassName="pagination mb-0"
+                        pageClassName="page-item"
+                        pageLinkClassName="page-link"
+                        previousClassName="page-item"
+                        previousLinkClassName="page-link"
+                        nextClassName="page-item" 
+                        nextLinkClassName="page-link"
+                        activeClassName="active"
+                      />
+                    </div>
                   )}
+
+                  <DeleteModal
+                    show={showModal}
+                    onHide={handleClose}
+                    data={submitDeleteBlog}
+                  />
                 </>
               )}
-
-              <DeleteModal
-                show={showModal}
-                onHide={handleClose}
-                data={submitDeleteBlog}
-              />
             </div>
           </div>
         </div>

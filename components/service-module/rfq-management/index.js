@@ -256,18 +256,27 @@ const RFQManagement = () => {
                             </table>
                         )}
 
-                        {Math.ceil(totalPages / 10) > 1 && (
-                            <ReactPaginate
-                                breakLabel="..."
-                                nextLabel={<i className="fa fa-angle-right"></i>}
-                                onPageChange={handlePageChange}
-                                pageRangeDisplayed={2}
-                                pageCount={Math.ceil(totalPages / limit)}
-                                previousLabel={<i className="fa fa-angle-left"></i>}
-                                renderOnZeroPageCount={null}
-                                className="pagination"
-                                forcePage={page - 1}
-                            />
+                        {Math.ceil(totalPages / limit) > 1 && (
+                            <div className="d-flex flex-column align-items-center gap-2">
+                                <ReactPaginate
+                                    previousLabel={<i className="fa fa-angle-left"></i>}
+                                    nextLabel={<i className="fa fa-angle-right"></i>}
+                                    breakLabel="..."
+                                    pageCount={Math.ceil(totalPages / limit)}
+                                    marginPagesDisplayed={2}
+                                    pageRangeDisplayed={5}
+                                    onPageChange={handlePageChange}
+                                    forcePage={page - 1}
+                                    containerClassName="pagination mb-0"
+                                    pageClassName="page-item"
+                                    pageLinkClassName="page-link"
+                                    previousClassName="page-item"
+                                    previousLinkClassName="page-link"
+                                    nextClassName="page-item" 
+                                    nextLinkClassName="page-link"
+                                    activeClassName="active"
+                                />
+                            </div>
                         )}
 
                     </div>
