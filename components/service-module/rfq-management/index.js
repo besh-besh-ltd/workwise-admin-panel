@@ -89,7 +89,9 @@ const RFQManagement = () => {
 
     // Sync with URL parameters
     useEffect(() => {
-        const { page, rfq_status, admin_service_status, sort } = router.query;
+        if (!router.isReady) return;
+
+        const { page: urlPage, rfq_status, admin_service_status, sort } = router.query;
         
         const newFilterData = {
             rfq_status: rfq_status || null,
@@ -97,13 +99,15 @@ const RFQManagement = () => {
             sort: sort || "DESC"
         };
 
-        if (page) setPage(parseInt(page));
+        if (urlPage) setPage(parseInt(urlPage));
         setFilterData(newFilterData);
-    }, [router.query]);
+    }, [router.isReady]);
 
+    // Separate effect for data fetching
     useEffect(() => {
+        if (!router.isReady) return;
         getAllRFQs();
-    }, [page, limit, filterData]);
+    }, [page, filterData, router.isReady]);
 
     const handlePageChange = (e) => {
         const newPage = e.selected + 1;
