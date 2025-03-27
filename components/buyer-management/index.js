@@ -19,13 +19,13 @@ const BuyerManagement = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [id, setId] = useState();
   const [showModal, setShowModal] = useState(false);
-  const [limit, setlimit] = useState(10);
-  const [page, setPage] = useState(parseInt(router.query.page) || 1);
-  const [totalPages, settotalPages] = useState(null);
+  const [limit] = useState(10);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [filter, setFilter] = useState({
-    verified: router.query.verified || "",
-    organization: router.query.organization || "",
-    name: router.query.name || "",
+    verified: "",
+    organization: "",
+    name: ""
   });
 
   const handleClose = () => setShowModal(false);
@@ -51,10 +51,12 @@ const BuyerManagement = () => {
         currentFilter.organization,
         currentFilter.name
       );
-      setBuyerData(res.data);
-      settotalPages(Math.ceil(res.total_count / limit));
+      if (res?.data) {
+        setBuyerData(res.data);
+        setTotalPages(Math.ceil(parseInt(res.total_count) / limit));
+      }
     } catch (err) {
-      console.log("err", err);
+      console.error("Error fetching buyer data:", err);
       toast.error("Failed to fetch buyer data");
     } finally {
       setIsLoading(false);
@@ -82,11 +84,11 @@ const BuyerManagement = () => {
     router.push(`/buyer-management/update-buyer/${item.id}`);
   };
 
-  const handlePageClick = (e) => {
+  const handlePageClick = async (e) => {
     const newPage = e.selected + 1;
+    await getBuyerList(newPage, filter);
     setPage(newPage);
     updateUrlParams({ ...filter, page: newPage });
-    getBuyerList(newPage, filter);
   };
 
   const handleDeleteBudget = (id) => {
@@ -94,16 +96,16 @@ const BuyerManagement = () => {
     setId(id);
   };
 
-  const submitHandler = (values) => {
+  const submitHandler = async (values) => {
     const newFilter = {
       verified: values.verified || "",
       organization: values.organization || "",
       name: values.name || "",
     };
     setFilter(newFilter);
+    await getBuyerList(1, newFilter);
     setPage(1);
     updateUrlParams({ ...newFilter, page: 1 });
-    getBuyerList(1, newFilter);
   };
 
   // Effect to handle initial load and URL parameter changes
@@ -231,147 +233,112 @@ const BuyerManagement = () => {
                   </div>
                 </div>
               ) : (
-                <table class="table table-striped table-hover mb-4">
-                  <thead>
-                    <tr>
-                      <th scope="col">Buyer Name</th>
-                      <th scope="col">Spoc</th>
-                      <th scope="col">Email</th>
-                      <th scope="col">Contacts</th>
-                      <th scope="col">Created At</th>
-                      {/* <th scope="col">Region</th> */}
-                      {/* <th scope="col">Approval Status</th> */}
-                      <th scope="col">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {BuyerData.map((item) => {
-                      return (
-                        <tr key={item.name} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
-                          <td>{item.name}</td>
-                          <td>{item.organization_name}</td>
-                          <td>{item.email}</td>
-                          <td>{item.mobile}</td>
-                          <td style={{ width: "100px" }}>
-                           {new Date(item.created_at).toLocaleDateString("en-GB", {
-                             day: "numeric",
-                             month: "short",
-                             year: "numeric",
-                           })}
-                         </td>
-                          {/* <td>{item.country}</td> */}
-                          {/* <td>
-                            {item.status == 0 ? (
-                              <OverlayTrigger
-                                placement="top"
-                                overlay={
-                                  <Tooltip id="tooltip1">
-                                    Click to approve
-                                  </Tooltip>
-                                }
-                              >
-                                <button
-                                  className="btn btn-secondary bg-success"
-                                  onClick={() => submitApproveBuyer(item.id, 1)}
-                                >
-                                  Approve
-                                </button>
-                              </OverlayTrigger>
-                            ) : (
-                              <OverlayTrigger
-                                placement="top"
-                                overlay={
-                                  <Tooltip id="tooltip1">
-                                    Click to Disapprove
-                                  </Tooltip>
-                                }
-                              >
-                                <button
-                                  className="btn btn-secondary bg-danger"
-                                  onClick={() => submitApproveBuyer(item.id, 0)}
-                                >
-                                  Disapprove
-                                </button>
-                              </OverlayTrigger>
-                            )}
-                          </td> */}
-                          <td>
-                            <span>
-                              <span
-                                className="fa fa-eye mr-3"
-                                onClick={() =>
-                                  router.push(
-                                    `/buyer-management/buyer-details/${item.id}`
-                                  )
-                                }
-                              ></span>
-                            </span>
-                            <span
-                              className="fa fa-edit mr-3"
-                              onClick={() => handleUpdateVendor(item)}
-                            ></span>
-                            {/* <span
-                              className="fa fa-trash"
-                              onClick={() => handleDeleteBudget(item.id)}
-                            ></span> */}
+                <>
+                  <table className="table table-striped table-hover mb-4">
+                    <thead>
+                      <tr>
+                        <th scope="col">Buyer Name</th>
+                        <th scope="col">Spoc</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Contacts</th>
+                        <th scope="col">Created At</th>
+                        {/* <th scope="col">Region</th> */}
+                        {/* <th scope="col">Approval Status</th> */}
+                        <th scope="col">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {BuyerData.map((item) => {
+                        return (
+                          <tr key={item.name} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
+                            <td>{item.name}</td>
+                            <td>{item.organization_name}</td>
+                            <td>{item.email}</td>
+                            <td>{item.mobile}</td>
+                            <td style={{ width: "100px" }}>
+                            {new Date(item.created_at).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
                           </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
+                            {/* <td>{item.country}</td> */}
+                            {/* <td>
+                              {item.status == 0 ? (
+                                <OverlayTrigger
+                                  placement="top"
+                                  overlay={
+                                    <Tooltip id="tooltip1">
+                                      Click to approve
+                                    </Tooltip>
+                                  }
+                                >
+                                  <button
+                                    className="btn btn-secondary bg-success"
+                                    onClick={() => submitApproveBuyer(item.id, 1)}
+                                  >
+                                    Approve
+                                  </button>
+                                </OverlayTrigger>
+                              ) : (
+                                <OverlayTrigger
+                                  placement="top"
+                                  overlay={
+                                    <Tooltip id="tooltip1">
+                                      Click to Disapprove
+                                    </Tooltip>
+                                  }
+                                >
+                                  <button
+                                    className="btn btn-secondary bg-danger"
+                                    onClick={() => submitApproveBuyer(item.id, 0)}
+                                  >
+                                    Disapprove
+                                  </button>
+                                </OverlayTrigger>
+                              )}
+                            </td> */}
+                            <td>
+                              <span>
+                                <span
+                                  className="fa fa-eye mr-3"
+                                  onClick={() =>
+                                    router.push(
+                                      `/buyer-management/buyer-details/${item.id}`
+                                    )
+                                  }
+                                ></span>
+                              </span>
+                              <span
+                                className="fa fa-edit mr-3"
+                                onClick={() => handleUpdateVendor(item)}
+                              ></span>
+                              {/* <span
+                                className="fa fa-trash"
+                                onClick={() => handleDeleteBudget(item.id)}
+                              ></span> */}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
 
-              {/* <nav aria-label="Page navigation example">
-                <ul className="pagination">
-                  {Array.from(Array(totalPages), (e, i) => {
-                    if (i + 1 === page) {
-                      return (
-                        <li className="active page-item" key={i + 1}>
-                          <a
-                            className="page-link"
-                            href=""
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setpage(i + 1);
-                            }}
-                          >
-                            {i + 1}
-                          </a>
-                        </li>
-                      );
-                    } else {
-                      return (
-                        <li className="page-item" key={i + 1}>
-                          <a
-                            className="page-link"
-                            href=""
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setpage(i + 1);
-                            }}
-                          >
-                            {i + 1}
-                          </a>
-                        </li>
-                      );
-                    }
-                  })}
-                </ul>
-              </nav> */}
-
-                {totalPages > 1 && (
-                <ReactPaginate
-                  breakLabel="..."
-                  nextLabel={<i className="fa fa-angle-right"></i>}
-                  onPageChange={handlePageClick}
-                  pageRangeDisplayed={2}
-                  pageCount={totalPages}
-                  previousLabel={<i className="fa fa-angle-left"></i>}
-                  renderOnZeroPageCount={null}
-                  className="pagination"
-                  forcePage={page - 1}
-                />
+                  {totalPages > 1 && (
+                    <ReactPaginate
+                      breakLabel="..."
+                      nextLabel={<i className="fa fa-angle-right"></i>}
+                      onPageChange={handlePageClick}
+                      pageRangeDisplayed={2}
+                      pageCount={totalPages}
+                      previousLabel={<i className="fa fa-angle-left"></i>}
+                      renderOnZeroPageCount={null}
+                      className="pagination"
+                      forcePage={page - 1}
+                      marginPagesDisplayed={1}
+                    />
+                  )}
+                </>
               )}
 
               <DeleteModal
