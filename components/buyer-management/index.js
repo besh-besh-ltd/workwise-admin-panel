@@ -16,6 +16,7 @@ import { ToastContainer, toast } from "react-toastify";
 const BuyerManagement = () => {
   const router = useRouter();
   const [BuyerData, setBuyerData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [id, setId] = useState();
   const [showModal, setShowModal] = useState(false);
   const [limit, setlimit] = useState(10);
@@ -39,20 +40,25 @@ const BuyerManagement = () => {
     }, undefined, { shallow: true });
   };
 
-  const getBuyerList = () => {
+  const getBuyerList = async (currentPage = page, currentFilter = filter) => {
+    setIsLoading(true);
     setBuyerData([]);
-    handleGetBuyerList(
-      limit,
-      page,
-      filter.verified,
-      filter.organization,
-      filter.name
-    )
-      .then((res) => {
-        settotalPages(res.total_count);
-        setBuyerData(res.data);
-      })
-      .catch((err) => console.log("err", err));
+    try {
+      const res = await handleGetBuyerList(
+        limit,
+        currentPage,
+        currentFilter.verified,
+        currentFilter.organization,
+        currentFilter.name
+      );
+      setBuyerData(res.data);
+      settotalPages(Math.ceil(res.total_count / limit));
+    } catch (err) {
+      console.log("err", err);
+      toast.error("Failed to fetch buyer data");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const submitDeleteBlog = () => {
@@ -80,6 +86,7 @@ const BuyerManagement = () => {
     const newPage = e.selected + 1;
     setPage(newPage);
     updateUrlParams({ ...filter, page: newPage });
+    getBuyerList(newPage, filter);
   };
 
   const handleDeleteBudget = (id) => {
@@ -88,26 +95,18 @@ const BuyerManagement = () => {
   };
 
   const submitHandler = (values) => {
-    setFilter(values);
+    const newFilter = {
+      verified: values.verified || "",
+      organization: values.organization || "",
+      name: values.name || "",
+    };
+    setFilter(newFilter);
     setPage(1);
-    setBuyerData([]);
-    updateUrlParams({ ...values, page: 1 });
-
-    handleGetBuyerList(
-      limit,
-      1,
-      values.verified,
-      values.organization,
-      values.name
-    )
-      .then((res) => {
-        setBuyerData(res.data);
-        settotalPages(Math.ceil(res.total_count / limit));
-      })
-      .catch((err) => console.log("err", err));
+    updateUrlParams({ ...newFilter, page: 1 });
+    getBuyerList(1, newFilter);
   };
 
-  // Modified useEffect to handle initial load and URL parameter changes
+  // Effect to handle initial load and URL parameter changes
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -121,20 +120,8 @@ const BuyerManagement = () => {
 
     setPage(newPage);
     setFilter(newFilter);
-    
-    handleGetBuyerList(
-      limit,
-      newPage,
-      newFilter.verified,
-      newFilter.organization,
-      newFilter.name
-    )
-      .then((res) => {
-        setBuyerData(res.data);
-        settotalPages(Math.ceil(res.total_count / limit));
-      })
-      .catch((err) => console.log("err", err));
-  }, [router.isReady, router.query]);
+    getBuyerList(newPage, newFilter);
+  }, [router.isReady]);
 
   return (
     <>
@@ -237,95 +224,103 @@ const BuyerManagement = () => {
 
           <div className="card product-table">
             <div className="card-body">
-              <table class="table table-striped table-hover mb-4">
-                <thead>
-                  <tr>
-                    <th scope="col">Buyer Name</th>
-                    <th scope="col">Spoc</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Contacts</th>
-                    <th scope="col">Created At</th>
-                    {/* <th scope="col">Region</th> */}
-                    {/* <th scope="col">Approval Status</th> */}
-                    <th scope="col">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {BuyerData.map((item) => {
-                    return (
-                      <tr key={item.name} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
-                        <td>{item.name}</td>
-                        <td>{item.organization_name}</td>
-                        <td>{item.email}</td>
-                        <td>{item.mobile}</td>
-                        <td style={{ width: "100px" }}>
-                         {new Date(item.created_at).toLocaleDateString("en-GB", {
-                           day: "numeric",
-                           month: "short",
-                           year: "numeric",
-                         })}
-                       </td>
-                        {/* <td>{item.country}</td> */}
-                        {/* <td>
-                          {item.status == 0 ? (
-                            <OverlayTrigger
-                              placement="top"
-                              overlay={
-                                <Tooltip id="tooltip1">
-                                  Click to approve
-                                </Tooltip>
-                              }
-                            >
-                              <button
-                                className="btn btn-secondary bg-success"
-                                onClick={() => submitApproveBuyer(item.id, 1)}
+              {isLoading ? (
+                <div className="text-center p-4">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="sr-only">Loading...</span>
+                  </div>
+                </div>
+              ) : (
+                <table class="table table-striped table-hover mb-4">
+                  <thead>
+                    <tr>
+                      <th scope="col">Buyer Name</th>
+                      <th scope="col">Spoc</th>
+                      <th scope="col">Email</th>
+                      <th scope="col">Contacts</th>
+                      <th scope="col">Created At</th>
+                      {/* <th scope="col">Region</th> */}
+                      {/* <th scope="col">Approval Status</th> */}
+                      <th scope="col">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {BuyerData.map((item) => {
+                      return (
+                        <tr key={item.name} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
+                          <td>{item.name}</td>
+                          <td>{item.organization_name}</td>
+                          <td>{item.email}</td>
+                          <td>{item.mobile}</td>
+                          <td style={{ width: "100px" }}>
+                           {new Date(item.created_at).toLocaleDateString("en-GB", {
+                             day: "numeric",
+                             month: "short",
+                             year: "numeric",
+                           })}
+                         </td>
+                          {/* <td>{item.country}</td> */}
+                          {/* <td>
+                            {item.status == 0 ? (
+                              <OverlayTrigger
+                                placement="top"
+                                overlay={
+                                  <Tooltip id="tooltip1">
+                                    Click to approve
+                                  </Tooltip>
+                                }
                               >
-                                Approve
-                              </button>
-                            </OverlayTrigger>
-                          ) : (
-                            <OverlayTrigger
-                              placement="top"
-                              overlay={
-                                <Tooltip id="tooltip1">
-                                  Click to Disapprove
-                                </Tooltip>
-                              }
-                            >
-                              <button
-                                className="btn btn-secondary bg-danger"
-                                onClick={() => submitApproveBuyer(item.id, 0)}
+                                <button
+                                  className="btn btn-secondary bg-success"
+                                  onClick={() => submitApproveBuyer(item.id, 1)}
+                                >
+                                  Approve
+                                </button>
+                              </OverlayTrigger>
+                            ) : (
+                              <OverlayTrigger
+                                placement="top"
+                                overlay={
+                                  <Tooltip id="tooltip1">
+                                    Click to Disapprove
+                                  </Tooltip>
+                                }
                               >
-                                Disapprove
-                              </button>
-                            </OverlayTrigger>
-                          )}
-                        </td> */}
-                        <td>
-                          <span>
+                                <button
+                                  className="btn btn-secondary bg-danger"
+                                  onClick={() => submitApproveBuyer(item.id, 0)}
+                                >
+                                  Disapprove
+                                </button>
+                              </OverlayTrigger>
+                            )}
+                          </td> */}
+                          <td>
+                            <span>
+                              <span
+                                className="fa fa-eye mr-3"
+                                onClick={() =>
+                                  router.push(
+                                    `/buyer-management/buyer-details/${item.id}`
+                                  )
+                                }
+                              ></span>
+                            </span>
                             <span
-                              className="fa fa-eye mr-3"
-                              onClick={() =>
-                                router.push(
-                                  `/buyer-management/buyer-details/${item.id}`
-                                )
-                              }
+                              className="fa fa-edit mr-3"
+                              onClick={() => handleUpdateVendor(item)}
                             ></span>
-                          </span>
-                          <span
-                            className="fa fa-edit mr-3"
-                            onClick={() => handleUpdateVendor(item)}
-                          ></span>
-                          {/* <span
-                            className="fa fa-trash"
-                            onClick={() => handleDeleteBudget(item.id)}
-                          ></span> */}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            {/* <span
+                              className="fa fa-trash"
+                              onClick={() => handleDeleteBudget(item.id)}
+                            ></span> */}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
 
               {/* <nav aria-label="Page navigation example">
                 <ul className="pagination">
@@ -365,16 +360,17 @@ const BuyerManagement = () => {
                 </ul>
               </nav> */}
 
-              {Math.ceil(totalPages / 10) > 1 && (
+                {totalPages > 1 && (
                 <ReactPaginate
                   breakLabel="..."
                   nextLabel={<i className="fa fa-angle-right"></i>}
                   onPageChange={handlePageClick}
                   pageRangeDisplayed={2}
-                  pageCount={Math.ceil(totalPages / 10)}
+                  pageCount={totalPages}
                   previousLabel={<i className="fa fa-angle-left"></i>}
                   renderOnZeroPageCount={null}
                   className="pagination"
+                  forcePage={page - 1}
                 />
               )}
 
