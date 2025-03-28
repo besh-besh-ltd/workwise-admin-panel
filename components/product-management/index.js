@@ -81,6 +81,8 @@ const ProductManagement = () => {
     approved_by: null
   });
   const [totalCount, setTotalCount] = useState({ total_count: 0, disapprove_count: 0, approve_count: 0 });
+  const [pageSearchInput, setPageSearchInput] = useState("");
+
 
   const customSelectStyles = {
     control: (base) => ({
@@ -150,15 +152,77 @@ const ProductManagement = () => {
     setSelectValue("")
   }
   const handlePageClick = (e) => {
-    const newPage = e.selected + 1;
-    setPage(newPage);
-    updateUrlParams({ 
-      page: newPage,
-      search: searchString,
-      approveVendor: selectedApproveVendor,
-      vendor: selectedVendor,
-      featured: selectedFeatured 
-    });
+    const totalPageCount = Math.ceil(totalPages / 10);
+    // If selected is undefined, it's an ellipsis click
+    if (e.selected === undefined) {
+      const isNext = e.nextSelectedPage !== undefined;
+      handleEllipsisClick(isNext);
+    } else {
+      const newPage = e.selected + 1;
+      setPage(newPage);
+      updateUrlParams({ 
+        page: newPage,
+        search: searchString,
+        approveVendor: selectedApproveVendor,
+        vendor: selectedVendor,
+        featured: selectedFeatured 
+      });
+    }
+  };
+
+  const handlePageSearchInput = (e) => {
+    const value = e.target.value;
+    // Allow only numbers and ensure it's within valid range
+    if (/^\d*$/.test(value)) {
+      setPageSearchInput(value);
+    }
+  };
+
+  // Handler for navigating to the entered page
+  const handlePageSearch = () => {
+    const pageNum = parseInt(pageSearchInput);
+    if (pageNum > 0 && pageNum <= Math.ceil(totalPages / limit)) {
+      setPage(pageNum);
+      updateUrlParams({ 
+        page: pageNum,
+        search: searchString,
+        approveVendor: selectedApproveVendor,
+        vendor: selectedVendor,
+        featured: selectedFeatured 
+      });
+      setPageSearchInput(""); // Clear input after navigation
+    } else {
+      toast.error(`Please enter a valid page number between 1 and ${Math.ceil(totalPages / limit)}`);
+    }
+  };
+
+  const handleEllipsisClick = (isNext) => {
+    const totalPageCount = Math.ceil(totalPages / 10);
+    const currentPage = page; // Current page (1-based index)
+
+    if (isNext) {
+      // Right ellipsis: Go to middle between current page and last page
+      const middlePage = Math.floor((currentPage + totalPageCount) / 2);
+      setPage(middlePage);
+      updateUrlParams({ 
+        page: middlePage,
+        search: searchString,
+        approveVendor: selectedApproveVendor,
+        vendor: selectedVendor,
+        featured: selectedFeatured 
+      });
+    } else {
+      // Left ellipsis: Go to middle between first page (1) and current page
+      const middlePage = Math.floor((1 + currentPage) / 2);
+      setPage(middlePage);
+      updateUrlParams({ 
+        page: middlePage,
+        search: searchString,
+        approveVendor: selectedApproveVendor,
+        vendor: selectedVendor,
+        featured: selectedFeatured 
+      });
+    }
   };
 
   const getUserProfile = async () => {
@@ -1319,6 +1383,24 @@ const ProductManagement = () => {
                     nextLinkClassName="page-link"
                     activeClassName="active"
                   />
+                  <div className="d-flex align-items-center gap-2 mt-2">
+                      <input
+                        type="text"
+                        className="form-control"
+                        style={{ width: "125px" }}
+                        placeholder="Go to page"
+                        value={pageSearchInput}
+                        onChange={handlePageSearchInput}
+                        onKeyPress={(e) => e.key === "Enter" && handlePageSearch()}
+                      />
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={handlePageSearch}
+                        disabled={!pageSearchInput || pageSearchInput === "0"}
+                      >
+                        Go
+                      </button>
+                    </div>
                 </div>
               )}
             </div>
