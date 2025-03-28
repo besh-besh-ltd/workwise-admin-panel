@@ -430,13 +430,13 @@ const VendorManagement = () => {
               </div>
 
               <div className="col-md-7">
-                {Math.ceil(totalPages / 10) > 1 && (
+                {Math.ceil(totalPages / limit) > 1 && (
                   <div className="d-flex flex-column align-items-center gap-2">
                     <ReactPaginate
                       previousLabel={<i className="fa fa-angle-left"></i>}
                       nextLabel={<i className="fa fa-angle-right"></i>}
                       breakLabel="..."
-                      pageCount={Math.ceil(totalPages / 10)}
+                      pageCount={Math.ceil(totalPages / limit)}
                       marginPagesDisplayed={2}
                       pageRangeDisplayed={5}
                       onPageChange={handlePageClick}
@@ -446,10 +446,48 @@ const VendorManagement = () => {
                       pageLinkClassName="page-link"
                       previousClassName="page-item"
                       previousLinkClassName="page-link"
-                      nextClassName="page-item" 
+                      nextClassName="page-item"
                       nextLinkClassName="page-link"
                       activeClassName="active"
                     />
+                    <div className="d-flex align-items-center gap-2 mt-2">
+                      <input
+                        type="number"
+                        className="form-control"
+                        style={{ width: "125px" }}
+                        placeholder="Go to page"
+                        min="1"
+                        max={Math.ceil(totalPages / limit)}
+                        onChange={(e) => {
+                          const pageNum = Math.max(1, Math.min(Math.ceil(totalPages / limit), parseInt(e.target.value) || 1));
+                          setPage(pageNum);
+                          updateUrlParams({ 
+                            page: pageNum,
+                            search: filter.name,
+                            approvedBy: "",
+                            status: filter.verified
+                          });
+                        }}
+                      />
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          const input = document.querySelector('input[type="number"]');
+                          const pageNum = parseInt(input.value);
+                          if (pageNum && pageNum >= 1 && pageNum <= Math.ceil(totalPages / limit)) {
+                            setPage(pageNum);
+                            updateUrlParams({ 
+                              page: pageNum,
+                              search: filter.name,
+                              approvedBy: "",
+                              status: filter.verified
+                            });
+                          }
+                        }}
+                      >
+                        Go
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

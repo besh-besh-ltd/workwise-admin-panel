@@ -252,6 +252,32 @@ const BannerManagement = () => {
                   nextLinkClassName="page-link"
                   activeClassName="active"
                 />
+                <div className="d-flex align-items-center gap-2 mt-2">
+                  <input
+                    type="number" 
+                    className="form-control"
+                    style={{ width: "125px" }}
+                    placeholder="Go to page"
+                    min="1"
+                    max={Math.ceil(totalPages / 20)}
+                    onChange={(e) => {
+                      const pageNum = Math.max(1, Math.min(Math.ceil(totalPages / 20), parseInt(e.target.value) || 1));
+                      setPage(pageNum);
+                    }}
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      const input = document.querySelector('input[type="number"]');
+                      const pageNum = parseInt(input.value);
+                      if (pageNum && pageNum >= 1 && pageNum <= Math.ceil(totalPages / 20)) {
+                        setPage(pageNum);
+                      }
+                    }}
+                  >
+                    Go
+                  </button>
+                </div>
               </div>
             )}
             <DeleteModal

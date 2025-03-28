@@ -1384,23 +1384,63 @@ const ProductManagement = () => {
                     activeClassName="active"
                   />
                   <div className="d-flex align-items-center gap-2 mt-2">
-                      <input
-                        type="text"
-                        className="form-control"
-                        style={{ width: "125px" }}
-                        placeholder="Go to page"
-                        value={pageSearchInput}
-                        onChange={handlePageSearchInput}
-                        onKeyPress={(e) => e.key === "Enter" && handlePageSearch()}
-                      />
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={handlePageSearch}
-                        disabled={!pageSearchInput || pageSearchInput === "0"}
-                      >
-                        Go
-                      </button>
-                    </div>
+                    <input
+                      type="number"
+                      className="form-control"
+                      style={{ width: "125px" }}
+                      placeholder="Go to page"
+                      min="1"
+                      max={Math.ceil(totalPages / 10)}
+                      value={pageSearchInput}
+                      onChange={(e) => {
+                        const pageNum = Math.max(1, Math.min(Math.ceil(totalPages / 10), parseInt(e.target.value) || 1));
+                        setPageSearchInput(e.target.value);
+                        if (e.key === 'Enter') {
+                          setPage(pageNum);
+                          updateUrlParams({ 
+                            page: pageNum,
+                            search: searchString,
+                            approveVendor: selectedApproveVendor,
+                            vendor: selectedVendor,
+                            featured: selectedFeatured 
+                          });
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const pageNum = parseInt(pageSearchInput);
+                          if (pageNum && pageNum >= 1 && pageNum <= Math.ceil(totalPages / 10)) {
+                            setPage(pageNum);
+                            updateUrlParams({ 
+                              page: pageNum,
+                              search: searchString,
+                              approveVendor: selectedApproveVendor,
+                              vendor: selectedVendor,
+                              featured: selectedFeatured 
+                            });
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => {
+                        const pageNum = parseInt(pageSearchInput);
+                        if (pageNum && pageNum >= 1 && pageNum <= Math.ceil(totalPages / 10)) {
+                          setPage(pageNum);
+                          updateUrlParams({ 
+                            page: pageNum,
+                            search: searchString,
+                            approveVendor: selectedApproveVendor,
+                            vendor: selectedVendor,
+                            featured: selectedFeatured 
+                          });
+                        }
+                      }}
+                    >
+                      Go
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

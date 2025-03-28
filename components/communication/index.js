@@ -228,16 +228,44 @@ const Message = () => {
             </div>
 
             {Math.ceil(totalPages/10) > 1 && (
-              <ReactPaginate
-                breakLabel="..."
-                nextLabel={<i className="fa fa-angle-right"></i>}
-                onPageChange={handlePageClick}
-                pageRangeDisplayed={2}
-                pageCount={Math.ceil(totalPages / limit)}
-                previousLabel={<i className="fa fa-angle-left"></i>}
-                renderOnZeroPageCount={null}
-                className="pagination"
-              />
+              <>
+                <ReactPaginate
+                  breakLabel="..."
+                  nextLabel={<i className="fa fa-angle-right"></i>}
+                  onPageChange={handlePageClick}
+                  pageRangeDisplayed={2}
+                  pageCount={Math.ceil(totalPages / limit)}
+                  previousLabel={<i className="fa fa-angle-left"></i>}
+                  renderOnZeroPageCount={null}
+                  className="pagination"
+                />
+                <div className="d-flex align-items-center gap-2 mt-2">
+                  <input
+                    type="number"
+                    className="form-control"
+                    style={{ width: "125px" }}
+                    placeholder="Go to page"
+                    min="1"
+                    max={Math.ceil(totalPages / limit)}
+                    onChange={(e) => {
+                      const pageNum = Math.max(1, Math.min(Math.ceil(totalPages / limit), parseInt(e.target.value) || 1));
+                      setPage(pageNum);
+                    }}
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      const input = document.querySelector('input[type="number"]');
+                      const pageNum = parseInt(input.value);
+                      if (pageNum && pageNum >= 1 && pageNum <= Math.ceil(totalPages / limit)) {
+                        setPage(pageNum);
+                      }
+                    }}
+                  >
+                    Go
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>

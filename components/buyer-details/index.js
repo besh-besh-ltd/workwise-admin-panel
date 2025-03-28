@@ -13,6 +13,8 @@ import {
 } from "@/utils/services/vendor-management";
 import { handleGetBuyerDetails, handleGetBuyerRfqList, handleGetSubscriptionDetails } from "../../utils/services/buyer-management";
 import moment from "moment";
+import ReactPaginate from "react-paginate";
+
 const BuyersDetails = () => {
   const router = useRouter();
   const id = router?.query?.id;
@@ -22,7 +24,7 @@ const BuyersDetails = () => {
   const [buyerRfqList, setBuyerRfqList] = useState([]);
   const [buyerSubscriptionList, setBuyerSubscriptionList] = useState([]);
   const [limit, setlimit] = useState(10);
-  const [page, setpage] = useState(1);
+  const [page, setPage] = useState(1);
   const [totalPages, settotalPages] = useState(null);
   const handleClose = () => {
     setShowModal(false);
@@ -113,6 +115,11 @@ const BuyersDetails = () => {
       getBuyerSubscriptionList();
     }
   },[id, page])
+
+  const handlePageClick = (data) => {
+    setPage(data.selected + 1);
+  };
+
   return (
     <>
       <div className="content-header">
@@ -295,43 +302,50 @@ const BuyersDetails = () => {
                       }
                     </tbody>
                   </table>
-                  <nav aria-label="Page navigation example">
-                    <ul className="pagination">
-                      {Array.from(Array(totalPages), (e, i) => {
-                        if (i + 1 === page) {
-                          return (
-                            <li className="active page-item" key={i + 1}>
-                              <a
-                                className="page-link"
-                                href=""
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setpage(i + 1);
-                                }}
-                              >
-                                {i + 1}
-                              </a>
-                            </li>
-                          );
-                        } else {
-                          return (
-                            <li className="page-item" key={i + 1}>
-                              <a
-                                className="page-link"
-                                href=""
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setpage(i + 1);
-                                }}
-                              >
-                                {i + 1}
-                              </a>
-                            </li>
-                          );
-                        }
-                      })}
-                    </ul>
-                  </nav>
+                  <ReactPaginate
+                      previousLabel={<i className="fa fa-angle-left"></i>}
+                      nextLabel={<i className="fa fa-angle-right"></i>}
+                      breakLabel="..."
+                      pageCount={Math.ceil(totalPages / 10)}
+                      marginPagesDisplayed={2}
+                      pageRangeDisplayed={5}
+                      onPageChange={handlePageClick}
+                      forcePage={page - 1}
+                      containerClassName="pagination mb-0"
+                      pageClassName="page-item"
+                      pageLinkClassName="page-link"
+                      previousClassName="page-item"
+                      previousLinkClassName="page-link"
+                      nextClassName="page-item" 
+                      nextLinkClassName="page-link"
+                      activeClassName="active"
+                    />
+                    <div className="d-flex align-items-center gap-2 mt-2">
+                      <input
+                        type="number"
+                        className="form-control"
+                        style={{ width: "125px" }}
+                        placeholder="Go to page"
+                        min="1"
+                        max={Math.ceil(totalPages / 10)}
+                        onChange={(e) => {
+                          const pageNum = Math.max(1, Math.min(Math.ceil(totalPages / 10), parseInt(e.target.value) || 1));
+                          setPage(pageNum);
+                        }}
+                      />
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          const input = document.querySelector('input[type="number"]');
+                          const pageNum = parseInt(input.value);
+                          if (pageNum && pageNum >= 1 && pageNum <= Math.ceil(totalPages / 10)) {
+                            setPage(pageNum);
+                          }
+                        }}
+                      >
+                        Go
+                      </button>
+                    </div>
                 </div>
               </div>
             </div>
