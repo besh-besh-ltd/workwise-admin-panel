@@ -379,55 +379,57 @@ const OtherUserManagement = () => {
               </tbody>
             </table>
 
-            {/* <nav aria-label="Page navigation example">
-              <ul className="pagination">
-                {Array.from(Array(totalPages), (e, i) => {
-                  if (i + 1 === page) {
-                    return (
-                      <li className="active page-item" key={i + 1}>
-                        <a
-                          className="page-link"
-                          href=""
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setpage(i + 1);
-                          }}
-                        >
-                          {i + 1}
-                        </a>
-                      </li>
-                    );
-                  } else {
-                    return (
-                      <li className="page-item" key={i + 1}>
-                        <a
-                          className="page-link"
-                          href=""
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setpage(i + 1);
-                          }}
-                        >
-                          {i + 1}
-                        </a>
-                      </li>
-                    );
-                  }
-                })}
-              </ul>
-            </nav> */}
-
             {Math.ceil(totalPages / 10) > 1 && (
-              <ReactPaginate
-                breakLabel="..."
-                nextLabel={<i className="fa fa-angle-right"></i>}
-                onPageChange={handlePageClick}
-                pageRangeDisplayed={2}
-                pageCount={Math.ceil(totalPages / 10)}
-                previousLabel={<i className="fa fa-angle-left"></i>}
-                renderOnZeroPageCount={null}
-                className="pagination"
-              />
+              <>
+                <ReactPaginate
+                  breakLabel="..."
+                  nextLabel={<i className="fa fa-angle-right"></i>}
+                  onPageChange={handlePageClick}
+                  pageRangeDisplayed={2}
+                  pageCount={Math.ceil(totalPages / 10)}
+                  previousLabel={<i className="fa fa-angle-left"></i>}
+                  renderOnZeroPageCount={null}
+                  className="pagination"
+                />
+                <div className="d-flex align-items-center gap-2 mt-2">
+                  <input
+                    type="number"
+                    className="form-control"
+                    style={{ width: "125px" }}
+                    placeholder="Go to page"
+                    min="1"
+                    max={Math.ceil(totalPages / 10)}
+                    onChange={(e) => {
+                      const pageNum = Math.max(
+                        1,
+                        Math.min(
+                          Math.ceil(totalPages / 10),
+                          parseInt(e.target.value) || 1
+                        )
+                      );
+                      setPage(pageNum);
+                    }}
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      const input = document.querySelector(
+                        'input[type="number"]'
+                      );
+                      const pageNum = parseInt(input.value);
+                      if (
+                        pageNum &&
+                        pageNum >= 1 &&
+                        pageNum <= Math.ceil(totalPages / 10)
+                      ) {
+                        setPage(pageNum);
+                      }
+                    }}
+                  >
+                    Go
+                  </button>
+                </div>
+              </>
             )}
 
             <DeleteModal

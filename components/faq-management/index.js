@@ -227,16 +227,52 @@ const FaqManagement = () => {
               </tbody>
             </table>
             {Math.ceil(totalPages / 20) > 1 && (
-              <ReactPaginate
-                breakLabel="..."
-                nextLabel=">"
-                onPageChange={handlePageClick}
-                pageRangeDisplayed={2}
-                pageCount={Math.ceil(totalPages / 20)}
-                previousLabel="<"
-                renderOnZeroPageCount={null}
-                className="pagination"
-              />
+              <div className="d-flex flex-column align-items-center gap-2">
+                <ReactPaginate
+                  previousLabel={<i className="fa fa-angle-left"></i>}
+                  nextLabel={<i className="fa fa-angle-right"></i>}
+                  breakLabel="..."
+                  pageCount={Math.ceil(totalPages / 20)}
+                  marginPagesDisplayed={2}
+                  pageRangeDisplayed={5}
+                  onPageChange={handlePageClick}
+                  forcePage={page - 1}
+                  containerClassName="pagination mb-0"
+                  pageClassName="page-item"
+                  pageLinkClassName="page-link"
+                  previousClassName="page-item"
+                  previousLinkClassName="page-link"
+                  nextClassName="page-item" 
+                  nextLinkClassName="page-link"
+                  activeClassName="active"
+                />
+                <div className="d-flex align-items-center gap-2 mt-2">
+                  <input
+                    type="number"
+                    className="form-control"
+                    style={{ width: "125px" }}
+                    placeholder="Go to page"
+                    min="1"
+                    max={Math.ceil(totalPages / 20)}
+                    onChange={(e) => {
+                      const pageNum = Math.max(1, Math.min(Math.ceil(totalPages / 20), parseInt(e.target.value) || 1));
+                      setPage(pageNum);
+                    }}
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      const input = document.querySelector('input[type="number"]');
+                      const pageNum = parseInt(input.value);
+                      if (pageNum && pageNum >= 1 && pageNum <= Math.ceil(totalPages / 20)) {
+                        setPage(pageNum);
+                      }
+                    }}
+                  >
+                    Go
+                  </button>
+                </div>
+              </div>
             )}
             <DeleteModal
               show={showModal}

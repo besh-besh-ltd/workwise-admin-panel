@@ -23,26 +23,30 @@ const intializeVendorCount = {
 };
 
 const VendorManagement = () => {
+  const router = useRouter();
   const [vendorData, setVendorData] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [filter, setFilter] = useState({
-    verified: "",
-    organization: "",
-    name: "",
-  });
-  const [limit, setlimit] = useState(10);
-  const [page, setPage] = useState(1);
+  const [id, setId] = useState();
+  const [limit] = useState(10);
+  const [page, setPage] = useState(parseInt(router.query.page) || 1);
   const [totalPages, settotalPages] = useState(null);
-  const [vendorCount, setVendorCount] = useState(intializeVendorCount);
+  const [vendorCount, setVendorCount] = useState({
+    total: 0,
+    approved: 0,
+    disapproved: 0,
+    deleted: 0,
+  });
   const [rejectListData, setRejectListData] = useState([]);
   const [selectedVendorId, setSelectedVendorId] = useState("");
-  const [id, setId] = useState();
-  const router = useRouter();
-  const [userType, setUserType] = useState(null);
-
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
+  const [userType, setUserType] = useState(null);
+  const [filter, setFilter] = useState({
+    verified: "",
+    organization: router.query.organization || "",
+    name: router.query.name || ""
+  });
 
   const handleInputDisapprove = (e) => {
     setInputValue(e.target.value);
@@ -152,18 +156,40 @@ const VendorManagement = () => {
     }
   }
 
-  const handlePageClick = (e) => {
-    setPage(e.selected + 1);
+  const updateUrlParams = (newParams) => {
+    const query = { ...router.query, ...newParams };
+    // Remove empty params
+    Object.keys(query).forEach(key => !query[key] && delete query[key]);
+    router.push({
+      pathname: router.pathname,
+      query
+    }, undefined, { shallow: true });
   };
+
+  const handleSearch = (e) => {
+    const newFilter = { ...filter, [e.target.name]: e.target.value };
+    setFilter(newFilter);
+    setPage(1);
+    updateUrlParams({ ...newFilter, page: 1 });
+  };
+
+  const handlePageClick = (e) => {
+    const newPage = e.selected + 1;
+    setPage(newPage);
+    updateUrlParams({ ...filter, page: newPage });
+  };
+
   const handleDeleteBudget = (id) => {
     setShowModal(true);
     setId(id);
   };
 
   const submitHandler = (values) => {
-    setVendorData([]);
     setFilter(values);
     setPage(1);
+    setVendorData([]);
+    updateUrlParams({ ...values, page: 1 });
+    
     handleGetVendorList(
       limit,
       1,
@@ -189,8 +215,25 @@ const VendorManagement = () => {
   };
 
   useEffect(() => {
+    if (!router.isReady) return;
+
+    const { page: urlPage, organization, name, verified } = router.query;
+    const newPage = urlPage ? parseInt(urlPage) : 1;
+    const newFilter = {
+      verified: verified || "",
+      organization: organization || "",
+      name: name || ""
+    };
+
+    setPage(newPage);
+    setFilter(newFilter);
     getBuyerList();
-  }, [page]);
+  }, [router.isReady]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    getBuyerList();
+  }, [page, filter, router.isReady]);
 
   useEffect(() => {
     getUserProfile();
@@ -213,9 +256,9 @@ const VendorManagement = () => {
             <Formik
               enableReinitialize={true}
               initialValues={{
-                verified: "",
-                organization: "",
-                name: "",
+                verified: filter.verified,
+                organization: filter.organization,
+                name: filter.name,
               }}
               validationSchema={yup.object().shape({
                 verified: yup.string(),
@@ -242,6 +285,7 @@ const VendorManagement = () => {
                         name="organization"
                         class="form-control"
                         placeholder="Search organization"
+                        value={values.organization}
                       />
                     </div>
 
@@ -255,12 +299,12 @@ const VendorManagement = () => {
                         type="button"
                         class="btn btn-secondary"
                         onClick={() => {
-                          resetForm(),
-                            submitHandler({
-                              verified: "",
-                              organization: "",
-                              name: "",
-                            });
+                          resetForm();
+                          submitHandler({
+                            verified: "",
+                            organization: "",
+                            name: "",
+                          });
                         }}
                       >
                         Reset
@@ -386,17 +430,65 @@ const VendorManagement = () => {
               </div>
 
               <div className="col-md-7">
-                {Math.ceil(totalPages / 10) > 1 && (
-                  <ReactPaginate
-                    breakLabel="..."
-                    nextLabel={<i className="fa fa-angle-right"></i>}
-                    onPageChange={handlePageClick}
-                    pageRangeDisplayed={2}
-                    pageCount={Math.ceil(totalPages / 10)}
-                    previousLabel={<i className="fa fa-angle-left"></i>}
-                    renderOnZeroPageCount={null}
-                    className="pagination mb-0"
-                  />
+                {Math.ceil(totalPages / limit) > 1 && (
+                  <div className="d-flex flex-column align-items-center gap-2">
+                    <ReactPaginate
+                      previousLabel={<i className="fa fa-angle-left"></i>}
+                      nextLabel={<i className="fa fa-angle-right"></i>}
+                      breakLabel="..."
+                      pageCount={Math.ceil(totalPages / limit)}
+                      marginPagesDisplayed={2}
+                      pageRangeDisplayed={5}
+                      onPageChange={handlePageClick}
+                      forcePage={page - 1}
+                      containerClassName="pagination mb-0"
+                      pageClassName="page-item"
+                      pageLinkClassName="page-link"
+                      previousClassName="page-item"
+                      previousLinkClassName="page-link"
+                      nextClassName="page-item"
+                      nextLinkClassName="page-link"
+                      activeClassName="active"
+                    />
+                    <div className="d-flex align-items-center gap-2 mt-2">
+                      <input
+                        type="number"
+                        className="form-control"
+                        style={{ width: "125px" }}
+                        placeholder="Go to page"
+                        min="1"
+                        max={Math.ceil(totalPages / limit)}
+                        onChange={(e) => {
+                          const pageNum = Math.max(1, Math.min(Math.ceil(totalPages / limit), parseInt(e.target.value) || 1));
+                          setPage(pageNum);
+                          updateUrlParams({ 
+                            page: pageNum,
+                            search: filter.name,
+                            approvedBy: "",
+                            status: filter.verified
+                          });
+                        }}
+                      />
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          const input = document.querySelector('input[type="number"]');
+                          const pageNum = parseInt(input.value);
+                          if (pageNum && pageNum >= 1 && pageNum <= Math.ceil(totalPages / limit)) {
+                            setPage(pageNum);
+                            updateUrlParams({ 
+                              page: pageNum,
+                              search: filter.name,
+                              approvedBy: "",
+                              status: filter.verified
+                            });
+                          }
+                        }}
+                      >
+                        Go
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

@@ -7,17 +7,19 @@ import { useRouter } from "next/router";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import "react-toastify/dist/ReactToastify.css";
 import { config } from "@fortawesome/fontawesome-svg-core";
-import { Provider, useSelector } from "react-redux";
+import { Provider } from "react-redux";
 import { store } from "@/app/store";
 import MainLoading from "@/components/loading";
 import Head from "next/head";
 import "react-datepicker/dist/react-datepicker.css";
 
 config.autoAddCss = false;
+
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const [isLogin, setisLogin] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isRouterReady, setIsRouterReady] = useState(false);
 
   useEffect(() => {
     const handleStart = () => setLoading(true);
@@ -31,28 +33,36 @@ export default function App({ Component, pageProps }) {
     router.events.on("routeChangeComplete", handleComplete);
     router.events.on("routeChangeError", handleComplete);
 
+    // Handle router ready state
+    if (router.isReady) {
+      setIsRouterReady(true);
+    }
+
     return () => {
       router.events.off("routeChangeStart", handleStart);
       router.events.off("routeChangeComplete", handleComplete);
       router.events.off("routeChangeError", handleComplete);
     };
   }, [router]);
+
   useEffect(() => {
     setisLogin(localStorage.getItem("token"));
   }, [router]);
+
   if (isLogin != "" && isLogin != null) {
     return (
       <>
-      <Head>
-        <title>Dashboard</title>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" 
-     integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" 
-     crossorigin="anonymous"></script>
-      </Head>
+        <Head>
+          <title>Dashboard</title>
+          <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" 
+            integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" 
+            crossOrigin="anonymous">
+          </script>
+        </Head>
         {loading && <MainLoading />}
         <Provider store={store}>
           <Layout>
-            <Component {...pageProps} />
+            {isRouterReady && <Component {...pageProps} />}
           </Layout>
         </Provider>
       </>
@@ -65,7 +75,7 @@ export default function App({ Component, pageProps }) {
         </Head>
         {loading && <MainLoading />}
         <Provider store={store}>
-          <AuthLayout></AuthLayout>;
+          <AuthLayout />
         </Provider>
       </>
     );
