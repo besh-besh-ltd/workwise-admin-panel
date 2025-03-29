@@ -45,7 +45,11 @@ const VendorManagement = () => {
   const [filter, setFilter] = useState({
     verified: "",
     organization: router.query.organization || "",
-    name: router.query.name || ""
+    name: router.query.name || "",
+    email: router.query.email || "",
+    dateFrom: router.query.dateFrom || "",
+    dateTo: router.query.dateTo || "",
+    status: router.query.status || ""
   });
 
   const handleInputDisapprove = (e) => {
@@ -68,7 +72,11 @@ const VendorManagement = () => {
       page,
       filter.verified,
       filter.organization,
-      filter.name
+      filter.name,
+      filter.email,
+      filter.dateFrom,
+      filter.dateTo,
+      filter.status
     )
       .then((res) => {
         settotalPages(res.total_count);
@@ -259,11 +267,19 @@ const VendorManagement = () => {
                 verified: filter.verified,
                 organization: filter.organization,
                 name: filter.name,
+                email: filter.email,
+                dateFrom: filter.dateFrom,
+                dateTo: filter.dateTo,
+                status: filter.status
               }}
               validationSchema={yup.object().shape({
                 verified: yup.string(),
                 organization: yup.string(),
                 name: yup.string(),
+                email: yup.string(),
+                dateFrom: yup.string(),
+                dateTo: yup.string(),
+                status: yup.string(),
               })}
               onSubmit={(values, { resetForm }) => {
                 submitHandler(values);
@@ -279,44 +295,93 @@ const VendorManagement = () => {
               }) => (
                 <Form>
                   <div className="row">
-                    <div class="col-3">
+                    <div className="col-3">
                       <Field
                         type="text"
                         name="organization"
-                        class="form-control"
+                        className="form-control"
                         placeholder="Search organization"
                         value={values.organization}
                       />
                     </div>
-
-                    <div className="col-1 d-flex flex-column">
-                      <button type="submit" class="btn btn-info ">
+                    <div className="col-3">
+                      <Field
+                        type="text"
+                        name="email"
+                        className="form-control"
+                        placeholder="Search by email"
+                        value={values.email}
+                      />
+                    </div>
+                    <div className="col-3">
+                      <Field
+                        type="text"
+                        name="name"
+                        className="form-control"
+                        placeholder="Search by name"
+                        value={values.name}
+                      />
+                    </div>
+                    <div className="col-3">
+                      <Field
+                        as="select"
+                        name="status"
+                        className="form-control"
+                        value={values.status}
+                      >
+                        <option value="">Filter by Status</option>
+                        <option value="1">Approved</option>
+                        <option value="0">Disapproved</option>
+                      </Field>
+                    </div>
+                    <div className="col-3 mt-3">
+                      <Field
+                        type="date"
+                        name="dateFrom"
+                        className="form-control"
+                        placeholder="From Date"
+                        value={values.dateFrom}
+                      />
+                    </div>
+                    <div className="col-3 mt-3">
+                      <Field
+                        type="date"
+                        name="dateTo"
+                        className="form-control"
+                        placeholder="To Date"
+                        value={values.dateTo}
+                      />
+                    </div>
+                    <div className="col-2 mt-3">
+                      <button type="submit" className="btn btn-info">
                         Search
                       </button>
                     </div>
-                    <div className="col-1 d-flex flex-column">
+                    <div className="col-2 mt-3">
                       <button
                         type="button"
-                        class="btn btn-secondary"
+                        className="btn btn-secondary"
                         onClick={() => {
                           resetForm();
                           submitHandler({
                             verified: "",
                             organization: "",
                             name: "",
+                            email: "",
+                            dateFrom: "",
+                            dateTo: "",
+                            status: ""
                           });
                         }}
                       >
                         Reset
                       </button>
                     </div>
-                    <div className="col-2 d-flex flex-column">
+                    <div className="col-2 mt-3">
                       <button
                         type="button"
-                        class="btn btn-info"
-                        onClick={() =>
-                          router.push(`/vendor-management/add-vendor`)
-                        }
+                        className="btn btn-info"
+                        onClick={() => router.push(`/vendor-management/add-vendor`)}
                       >
                         <i className="fa fa-plus"></i> Add Vendor
                       </button>
@@ -336,7 +401,10 @@ const VendorManagement = () => {
                   <th scope="col">Mobile</th>
                   <th scope="col">Organization</th>
                   <th scope="col">Approval Status</th>
+                  <th scope="col">Created By</th>
                   <th scope="col">Created At</th>
+                  <th scope="col">Updated By</th>
+                  <th scope="col">Updated At</th>
                   <th scope="col">Action</th>
                 </tr>
               </thead>
@@ -381,17 +449,23 @@ const VendorManagement = () => {
                           </div>
                         )}
                       </td>
-
-                      <td style={{ width: "100px" }}>
+                      <td>{item.created_by_name || 'N/A'}</td>
+                      <td>
                        {new Date(item.created_at).toLocaleDateString("en-GB", {
                          day: "numeric",
                          month: "short",
                          year: "numeric",
                        })}
-                     </td>
-
+                      </td>
+                      <td>{item.updated_by_name || 'N/A'}</td>
                       <td>
-                        {/* <div className="card-footer bg-transparent border-secondary"> */}
+                        {item.updated_at ? new Date(item.updated_at).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        }) : 'N/A'}
+                      </td>
+                      <td>
                         <div className="d-flex">
                           <span
                             className="fa fa-eye mr-3"
@@ -406,12 +480,7 @@ const VendorManagement = () => {
                               className="fa fa-edit mr-3"
                               onClick={() => handleUpdateVendor(item)}
                             ></span>}
-                          {/* <span
-                            className="fa fa-trash"
-                            onClick={() => handleDeleteBudget(item.id)}
-                          ></span> */}
                         </div>
-                        {/* </div> */}
                       </td>
                     </tr>
                   );
