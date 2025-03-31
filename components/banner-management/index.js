@@ -10,7 +10,9 @@ import { useRouter } from "next/router";
 import DeleteModal from "../modal/delete-modal";
 import { ToastContainer, toast } from "react-toastify";
 import moment from "moment";
-import ReactHtmlParser from "react-html-parser";
+//import ReactHtmlParser from "react-html-parser";
+import parse from "html-react-parser";
+
 
 const BannerManagement = () => {
   const [bannerData, setBannerData] = useState([]);
@@ -195,8 +197,9 @@ const BannerManagement = () => {
                   return (
                     <tr key={item.name}>
                       <td>{item.name}</td>
-                      <td>{ReactHtmlParser(item.content)}</td>
-                      <td>
+                    {/*  <td>{ReactHtmlParser(item.content)}</td> */}
+                       <td>{parse(item.content || "")}</td>
+                       <td>
                         <img
                           src={item.image_url}
                           alt="Banner"

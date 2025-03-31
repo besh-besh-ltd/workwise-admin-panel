@@ -8,8 +8,8 @@ const nextConfig = {
             port: "8002",
           },
           {
-            protocol: "https",
-            hostname: "api.letsworkwise.com",
+            protocol: "http",
+            hostname: "10.0.147.23:3000",
           },
         ],
       },
