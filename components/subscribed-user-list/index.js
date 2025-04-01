@@ -411,241 +411,61 @@ const SubscribedUserList = () => {
                       })}
                   </tbody>
                 </table>
-                {/* <nav aria-label="Page navigation example">
-                  <ul className="pagination">
-                    {Array.from(Array(totalPages), (e, i) => {
-                      if (i + 1 === page) {
-                        return (
-                          <li className="active page-item" key={i + 1}>
-                            <a
-                              className="page-link"
-                              href=""
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setpage(i + 1);
-                              }}
-                            >
-                              {i + 1}
-                            </a>
-                          </li>
-                        );
-                      } else {
-                        return (
-                          <li className="page-item" key={i + 1}>
-                            <a
-                              className="page-link"
-                              href=""
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setpage(i + 1);
-                              }}
-                            >
-                              {i + 1}
-                            </a>
-                          </li>
-                        );
-                      }
-                    })}
-                  </ul>
-                </nav> */}
                 {Math.ceil(totalPages / 10) > 1 && (
-                  <ReactPaginate
-                    breakLabel="..."
-                    nextLabel={<i className="fa fa-angle-right"></i>}
-                    onPageChange={handlePageClick}
-                    pageRangeDisplayed={2}
-                    pageCount={Math.ceil(totalPages / 10)}
-                    previousLabel={<i className="fa fa-angle-left"></i>}
-                    renderOnZeroPageCount={null}
-                    className="pagination"
-                  />
+                  <>
+                    <ReactPaginate
+                      breakLabel="..."
+                      nextLabel={<i className="fa fa-angle-right"></i>}
+                      onPageChange={handlePageClick}
+                      pageRangeDisplayed={2}
+                      pageCount={Math.ceil(totalPages / 10)}
+                      previousLabel={<i className="fa fa-angle-left"></i>}
+                      renderOnZeroPageCount={null}
+                      className="pagination"
+                    />
+                    <div className="d-flex align-items-center gap-2 mt-2">
+                      <input
+                        type="number"
+                        className="form-control"
+                        style={{ width: "125px" }}
+                        placeholder="Go to page"
+                        min="1"
+                        max={Math.ceil(totalPages / 10)}
+                        onChange={(e) => {
+                          const pageNum = Math.max(
+                            1,
+                            Math.min(
+                              Math.ceil(totalPages / 10),
+                              parseInt(e.target.value) || 1
+                            )
+                          );
+                          setPage(pageNum);
+                        }}
+                      />
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          const input = document.querySelector(
+                            'input[type="number"]'
+                          );
+                          const pageNum = parseInt(input.value);
+                          if (
+                            pageNum &&
+                            pageNum >= 1 &&
+                            pageNum <= Math.ceil(totalPages / 10)
+                          ) {
+                            setPage(pageNum);
+                          }
+                        }}
+                      >
+                        Go
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
-              {/* <div className="d-flex justify-content-end">
-                <button class="btn btn-primary">View All</button>
-              </div> */}
             </div>
           </div>
-          {/* <div className="card card-body">
-            <h5 className="heading-container">
-              Users with Custom Add-On Services
-            </h5>
-            <div className="row">
-              <div className="col-md-10">
-                <div className="form-group d-flex">
-                  <label for="staticEmail" class="col-sm-2 col-form-label">
-                    273 Subscriptions
-                  </label>
-                  <div
-                    class="input-group mb-4 col-4"
-                    style={{ height: "25px" }}
-                  >
-                    <div class="input-group-prepend">
-                      <span class="input-group-text" id="basic-addon1">
-                        @
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      class="form-control"
-                      placeholder="Search for ID/Vendor/Buyer/Company"
-                      aria-label="Username"
-                      aria-describedby="basic-addon1"
-                    />
-                  </div>
-                </div>
-                <div className="d-flex">
-                  <div className="nav-item dropdown">
-                    <Link
-                      href="#"
-                      className="nav-link dropdown-header"
-                      data-bs-toggle="dropdown"
-                      aria-expanded="true"
-                    >
-                      Ch
-                    </Link>
-                    <div className={`dropdown-menu  "show"`}>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title">
-                          System Notification
-                        </h3>
-                      </button>
-
-                      <div className="dropdown-divider"></div>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title"></h3>
-                      </button>
-                      <div className="dropdown-divider"></div>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title"></h3>
-                      </button>
-                      <div className="dropdown-divider"></div>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title"></h3>
-                      </button>
-                      <div className="dropdown-divider"></div>
-                    </div>
-                  </div>
-                  <div className="nav-item dropdown ml-3">
-                    <Link
-                      href="#"
-                      className="nav-link dropdown-header"
-                      data-bs-toggle="dropdown"
-                      aria-expanded="true"
-                    >
-                      Industry
-                    </Link>
-                    <div className={`dropdown-menu "show"`}>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title">Logo</h3>
-                      </button>
-
-                      <div className="dropdown-divider"></div>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title">Site Title</h3>
-                      </button>
-                      <div className="dropdown-divider"></div>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title">
-                          SMTP Configuration
-                        </h3>
-                      </button>
-                      <div className="dropdown-divider"></div>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title">Admin Email</h3>
-                      </button>
-                      <div className="dropdown-divider"></div>
-                    </div>
-                  </div>
-                  <div className="nav-item dropdown ml-3">
-                    <Link
-                      href="#"
-                      className="nav-link dropdown-header"
-                      data-bs-toggle="dropdown"
-                      aria-expanded="true"
-                    >
-                      User Type
-                    </Link>
-                    <div className={`dropdown-menu "show"`}>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title">Edit Profile</h3>
-                      </button>
-
-                      <div className="dropdown-divider"></div>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title">Logout</h3>
-                      </button>
-                      <div className="dropdown-divider"></div>
-                    </div>
-                  </div>
-                  <div className="nav-item dropdown ml-3">
-                    <Link
-                      href="#"
-                      className="nav-link dropdown-header"
-                      data-bs-toggle="dropdown"
-                      aria-expanded="true"
-                    >
-                      Verification Status
-                    </Link>
-                    <div className={`dropdown-menu "show"`}>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title">Edit Profile</h3>
-                      </button>
-
-                      <div className="dropdown-divider"></div>
-                      <button className="dropdown-item">
-                        <h3 className="dropdown-item-title">Logout</h3>
-                      </button>
-                      <div className="dropdown-divider"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-2 d-flex flex-column">
-                <button type="button" class="btn btn-primary mb-2">
-                  Export
-                </button>
-                <button type="button" class="btn btn-secondary ">
-                  Add Filter
-                </button>
-              </div>
-            </div>
-            <div className="row mt-3">
-              <div className="product-table">
-                <table class="table table-striped table-hover">
-                  <thead>
-                    <tr>
-                      <th scope="col">Customer ID</th>
-                      <th scope="col">Customer info</th>
-                      <th scope="col">Customer Type</th>
-                      <th scope="col">Subscribed Service</th>
-                      <th scope="col">Description</th>
-                      <th scope="col">Invoice</th>
-                      <th scope="col">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ServiceData.map((item) => {
-                      return (
-                        <tr key={item.customer_id}>
-                          <td>{item.customer_id}</td>
-                          <td>{item.customer_info}</td>
-                          <td>{item.customer_type}</td>
-                          <td>{item.subscribed_service}</td>
-                          <td>{item.description}</td>
-                          <td>Invoice</td>
-                          <td>View</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="d-flex justify-content-end">
-                <button class="btn btn-primary">View All</button>
-              </div>
-            </div>
-          </div> */}
         </div>
       </section>
     </>

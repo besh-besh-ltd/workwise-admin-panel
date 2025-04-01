@@ -66,16 +66,51 @@ const DemoBook = () => {
         </tbody>
       </table>
       {totalPages > 1 && (
-        <ReactPaginate
-          breakLabel="..."
-          nextLabel={<i className="fa fa-angle-right"></i>}
-          onPageChange={handlePageClick}
-          pageRangeDisplayed={2}
-          pageCount={totalPages}
-          previousLabel={<i className="fa fa-angle-left"></i>}
-          renderOnZeroPageCount={null}
-          className="pagination"
-        />
+        <>
+          <ReactPaginate
+            breakLabel="..."
+            nextLabel={<i className="fa fa-angle-right"></i>}
+            previousLabel={<i className="fa fa-angle-left"></i>}
+            onPageChange={handlePageClick}
+            pageCount={totalPages}
+            pageRangeDisplayed={5}
+            marginPagesDisplayed={2}
+            containerClassName="pagination mb-0"
+            pageClassName="page-item"
+            pageLinkClassName="page-link"
+            previousClassName="page-item"
+            previousLinkClassName="page-link"
+            nextClassName="page-item"
+            nextLinkClassName="page-link"
+            activeClassName="active"
+          />
+          <div className="d-flex align-items-center gap-2 mt-2">
+            <input
+              type="number"
+              className="form-control"
+              style={{ width: "125px" }}
+              placeholder="Go to page"
+              min="1"
+              max={totalPages}
+              onChange={(e) => {
+                const pageNum = Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1));
+                setPage(pageNum);
+              }}
+            />
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                const input = document.querySelector('input[type="number"]');
+                const pageNum = parseInt(input.value);
+                if (pageNum && pageNum >= 1 && pageNum <= totalPages) {
+                  setPage(pageNum);
+                }
+              }}
+            >
+              Go
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
