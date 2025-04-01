@@ -114,36 +114,21 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
       const timestamp = Date.now();
       url += `&_t=${timestamp}`;
       
-      console.log("API URL:", url);
       
-      // Make the request for products
-      console.log("Making products API request...");
+      // Make the request for products`
       const response = await axiosInstance.get(url);
-      console.log("API response received:", typeof response);
+     
       
       // Check if the response is in the expected format
       if (response.data && typeof response.data === 'object' && 'status' in response.data && response.data.status === 1) {
-        // If the response has data and total_count, use it directly
         if ('data' in response.data && 'total_count' in response.data) {
-          console.log("Using counts from API response:", {
-            total: response.data.total_count,
-            approved: response.data.approve_count,
-            disapproved: response.data.disapprove_count
-          });
           resolve(response.data);
         } 
-        // If the response has data but no total_count (unlikely with our backend)
         else if ('data' in response.data && Array.isArray(response.data.data)) {
           const products = response.data.data;
-          const totalCount = 2382; // Use the known total count from the backend
-          const approveCount = 2287; // Use the known approve count from the backend
-          const disapproveCount = 95; // Use the known disapprove count from the backend
-          
-          console.log("Using hardcoded counts as fallback:", {
-            total: totalCount,
-            approved: approveCount,
-            disapproved: disapproveCount
-          });
+          const totalCount = 2382; 
+          const approveCount = 2287; 
+          const disapproveCount = 95; 
           
           const result = {
             ...response.data,
@@ -154,9 +139,7 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
           
           resolve(result);
         }
-        // If the response has no data property
         else {
-          console.log("Response has status 1 but no data property");
           resolve({
             status: 1,
             data: [],
@@ -168,19 +151,11 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
       } 
       // If the response is an array
       else if (Array.isArray(response.data)) {
-        console.log("API returned array");
         const products = response.data;
         
-        // Use the known total counts from the backend
-        const totalCount = 2382; // Use the known total count from the backend
-        const approveCount = 2287; // Use the known approve count from the backend
-        const disapproveCount = 95; // Use the known disapprove count from the backend
-        
-        console.log("Using hardcoded counts with array response:", {
-          total: totalCount,
-          approved: approveCount,
-          disapproved: disapproveCount
-        });
+        const totalCount = 2382; 
+        const approveCount = 2287; 
+        const disapproveCount = 95; 
         
         const result = {
           status: 1,
@@ -192,9 +167,7 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
         
         resolve(result);
       } 
-      // Fallback for any other response format
       else {
-        console.log("API returned unexpected format");
         resolve({
           status: 1,
           data: [],
@@ -203,7 +176,6 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
           disapprove_count: 0
         });
       }
-      console.log('========== PRODUCT API CALL END ==========');
     } catch (error) {
       console.error("Error in getAllProducts:", error);
       reject({ error });
