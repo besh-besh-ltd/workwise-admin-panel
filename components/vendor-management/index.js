@@ -309,12 +309,15 @@ const VendorManagement = () => {
 
   return (
     <>
-      <div className="content-header">
-        <div className="container-fluid">
-          <div className="row">
-            <h1 class="m-0 text-dark">Vendor</h1>
-          </div>
-        </div>
+      <div className="content-header d-flex justify-content-between align-items-center">
+        <h1 className="m-0 text-dark">Vendor</h1>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => router.push(`/vendor-management/add-vendor`)}
+        >
+          <i className="fa fa-plus"></i> Add Vendor
+        </button>
       </div>
 
       <section className="content">
@@ -353,8 +356,8 @@ const VendorManagement = () => {
                 resetForm,
               }) => (
                 <Form>
-                  <div className="row">
-                    <div className="col-3">
+                  <div className="row align-items-end g-3">
+                    <div className="col-md-3 mb-2">
                       <Field
                         type="text"
                         name="organization"
@@ -363,7 +366,7 @@ const VendorManagement = () => {
                         value={values.organization}
                       />
                     </div>
-                    <div className="col-3">
+                    <div className="col-md-3 mb-2">
                       <Field
                         type="text"
                         name="email"
@@ -372,7 +375,7 @@ const VendorManagement = () => {
                         value={values.email}
                       />
                     </div>
-                    <div className="col-3">
+                    <div className="col-md-3 mb-2">
                       <Field
                         as="select"
                         name="status"
@@ -384,25 +387,7 @@ const VendorManagement = () => {
                         <option value="0">Disapproved</option>
                       </Field>
                     </div>
-                    <div className="col-3 mt-3">
-                      <Field
-                        type="date"
-                        name="dateFrom"
-                        className="form-control"
-                        placeholder="From Date"
-                        value={values.dateFrom}
-                      />
-                    </div>
-                    <div className="col-3 mt-3">
-                      <Field
-                        type="date"
-                        name="dateTo"
-                        className="form-control"
-                        placeholder="To Date"
-                        value={values.dateTo}
-                      />
-                    </div>
-                    <div className="col-3 mt-3">
+                    <div className="col-md-3 mb-2">
                       <Field
                         as="select"
                         name="created_by"
@@ -417,30 +402,53 @@ const VendorManagement = () => {
                         ))}
                       </Field>
                     </div>
-                    <div className="col-2 mt-3">
-                      <button type="submit" className="btn btn-info">
+                    <div className="col-md-3 mb-2">
+                      <div className="date-input-container">
+                        <Field
+                          type="text"
+                          name="dateFrom"
+                          className="form-control date-input"
+                          placeholder="Start Date"
+                          onFocus={(e) => (e.target.type = 'date')}
+                          onBlur={(e) => {
+                            if (!e.target.value) {
+                              e.target.type = 'text'
+                            }
+                          }}
+                          value={values.dateFrom}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-3 mb-2">
+                      <div className="date-input-container">
+                        <Field
+                          type="text"
+                          name="dateTo"
+                          className="form-control date-input"
+                          placeholder="End Date"
+                          onFocus={(e) => (e.target.type = 'date')}
+                          onBlur={(e) => {
+                            if (!e.target.value) {
+                              e.target.type = 'text'
+                            }
+                          }}
+                          value={values.dateTo}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-3 mb-2 d-flex gap-2">
+                      <button type="submit" className="btn btn-info flex-grow-1">
                         Search
                       </button>
-                    </div>
-                    <div className="col-2 mt-3">
                       <button
                         type="button"
-                        className="btn btn-secondary"
+                        className="btn btn-secondary flex-grow-1"
                         onClick={() => {
                           resetForm();
                           resetFilters();
                         }}
                       >
                         Reset
-                      </button>
-                    </div>
-                    <div className="col-2 mt-3">
-                      <button
-                        type="button"
-                        className="btn btn-info"
-                        onClick={() => router.push(`/vendor-management/add-vendor`)}
-                      >
-                        <i className="fa fa-plus"></i> Add Vendor
                       </button>
                     </div>
                   </div>
@@ -450,7 +458,7 @@ const VendorManagement = () => {
           </div>
 
           <div className="card card-body product-table mt-3">
-            <table class="table table-striped table-hover mb-3">
+            <table className="table table-striped table-hover mb-3">
               <thead>
                 <tr>
                   <th scope="col">Name</th>

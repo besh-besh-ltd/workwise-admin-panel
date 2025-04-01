@@ -1,0 +1,40 @@
+.date-input-container {
+  position: relative;
+}
+
+.date-input {
+  position: relative;
+}
+
+.date-input::placeholder {
+  color: #6c757d;
+}
+
+.form-control {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.g-3 {
+  gap: 0.75rem !important;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem !important;
+}
+
+.card.card-body {
+  padding: 1.25rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+/* Hover effects for form controls */
+.form-control:hover {
+  border-color: #80bdff;
+}
+
+/* Make date inputs consistent with other inputs */
+input[type="date"].form-control {
+  line-height: 1.5;
+}
