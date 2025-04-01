@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import {
-  handleDeleteVendorProfile,
   handleGetVendorList,
+  handleDeleteVendorProfile,
   handleApproveVendor,
   rejectList,
+  getAdminsList
 } from "@/utils/services/vendor-management";
 import ReactPaginate from "react-paginate";
 import { useRouter } from "next/router";
@@ -24,47 +25,33 @@ const intializeVendorCount = {
 
 const VendorManagement = () => {
   const router = useRouter();
-  const [vendorData, setVendorData] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showDisableModal, setShowDisableModal] = useState(false);
   const [id, setId] = useState();
   const [limit] = useState(10);
   const [page, setPage] = useState(parseInt(router.query.page) || 1);
   const [totalPages, settotalPages] = useState(null);
-  const [vendorCount, setVendorCount] = useState({
-    total: 0,
-    approved: 0,
-    disapproved: 0,
-    deleted: 0,
-  });
+  const [vendorCount, setVendorCount] = useState(intializeVendorCount);
   const [rejectListData, setRejectListData] = useState([]);
   const [selectedVendorId, setSelectedVendorId] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
   const [userType, setUserType] = useState(null);
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [vendorData, setVendorData] = useState([]);
   const [filter, setFilter] = useState({
-    verified: "",
+    verified: router.query.verified || "",
     organization: router.query.organization || "",
     name: router.query.name || "",
     email: router.query.email || "",
     dateFrom: router.query.dateFrom || "",
     dateTo: router.query.dateTo || "",
-    status: router.query.status || ""
+    status: router.query.status || "",
+    created_by: router.query.created_by || ""
   });
 
-  const handleInputDisapprove = (e) => {
-    setInputValue(e.target.value);
-  };
-  const handleSelect = (e) => {
-    setSelectValue(e.target.value);
-  };
-  const handleClose = () => setShowModal(false);
-  const handleCloseRejectModal = () => {
-    setShowRejectModal(false);
-    setSelectedVendorId("");
-    setInputValue("");
-    setSelectValue("");
-  };
   const getBuyerList = () => {
     setVendorData([]);
     handleGetVendorList(
@@ -76,7 +63,8 @@ const VendorManagement = () => {
       filter.email,
       filter.dateFrom,
       filter.dateTo,
-      filter.status
+      filter.status,
+      filter.created_by
     )
       .then((res) => {
         settotalPages(res.total_count);
@@ -243,10 +231,81 @@ const VendorManagement = () => {
     getBuyerList();
   }, [page, filter, router.isReady]);
 
+  const handleClose = () => setShowModal(false);
+  
+  const handleCloseRejectModal = () => {
+    setShowRejectModal(false);
+    setSelectedVendorId("");
+    setInputValue("");
+    setSelectValue("");
+  };
+
+  const handleInputDisapprove = (e) => {
+    setInputValue(e.target.value);
+  };
+
+  const handleSelect = (e) => {
+    setSelectValue(e.target.value);
+  };
+
   useEffect(() => {
     getUserProfile();
     getRejectList();
+    getAdminsList()
+      .then((res) => {
+        setAdminUsers(res.data);
+      })
+      .catch((err) => {
+        console.log("Error loading admin users:", err);
+      });
   }, []);
+
+  const resetFilters = () => {
+    const emptyFilter = {
+      verified: "",
+      organization: "",
+      name: "",
+      email: "",
+      dateFrom: "",
+      dateTo: "",
+      status: "",
+      created_by: ""
+    };
+    setFilter(emptyFilter);
+    setPage(1);
+    // Clear URL parameters by pushing empty query
+    router.push({
+      pathname: router.pathname
+    }, undefined, { shallow: true });
+    
+    // Reset the data with empty filters
+    handleGetVendorList(
+      limit,
+      1,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    )
+      .then((res) => {
+        setVendorData(res.data);
+        settotalPages(Math.ceil(res.total_count / limit));
+        setVendorCount({
+          total: res.total_count,
+          approved: res.active_vendors,
+          disapproved: res.deactivated_vendors,
+          deleted: res.deleted_vendors,
+        });
+      })
+      .catch((err) => {
+        console.log("err", err);
+        setVendorCount(intializeVendorCount);
+      });
+  };
 
   return (
     <>
@@ -266,20 +325,20 @@ const VendorManagement = () => {
               initialValues={{
                 verified: filter.verified,
                 organization: filter.organization,
-                name: filter.name,
                 email: filter.email,
                 dateFrom: filter.dateFrom,
                 dateTo: filter.dateTo,
-                status: filter.status
+                status: filter.status,
+                created_by: filter.created_by
               }}
               validationSchema={yup.object().shape({
                 verified: yup.string(),
                 organization: yup.string(),
-                name: yup.string(),
                 email: yup.string(),
                 dateFrom: yup.string(),
                 dateTo: yup.string(),
                 status: yup.string(),
+                created_by: yup.string()
               })}
               onSubmit={(values, { resetForm }) => {
                 submitHandler(values);
@@ -315,15 +374,6 @@ const VendorManagement = () => {
                     </div>
                     <div className="col-3">
                       <Field
-                        type="text"
-                        name="name"
-                        className="form-control"
-                        placeholder="Search by name"
-                        value={values.name}
-                      />
-                    </div>
-                    <div className="col-3">
-                      <Field
                         as="select"
                         name="status"
                         className="form-control"
@@ -352,6 +402,21 @@ const VendorManagement = () => {
                         value={values.dateTo}
                       />
                     </div>
+                    <div className="col-3 mt-3">
+                      <Field
+                        as="select"
+                        name="created_by"
+                        className="form-control"
+                        value={values.created_by}
+                      >
+                        <option value="">Filter by Created By</option>
+                        {adminUsers.map(user => (
+                          <option key={user.id} value={user.id}>
+                            {user.name}
+                          </option>
+                        ))}
+                      </Field>
+                    </div>
                     <div className="col-2 mt-3">
                       <button type="submit" className="btn btn-info">
                         Search
@@ -363,15 +428,7 @@ const VendorManagement = () => {
                         className="btn btn-secondary"
                         onClick={() => {
                           resetForm();
-                          submitHandler({
-                            verified: "",
-                            organization: "",
-                            name: "",
-                            email: "",
-                            dateFrom: "",
-                            dateTo: "",
-                            status: ""
-                          });
+                          resetFilters();
                         }}
                       >
                         Reset
