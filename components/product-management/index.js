@@ -381,8 +381,8 @@ const ProductManagement = () => {
   };
 
   const getProducts = () => {
+    // Set loading but keep current products to prevent flickering
     setloading(true);
-    setproducts([]);
     
     console.log("Fetching products with filters:", {
       limit,
@@ -395,8 +395,7 @@ const ProductManagement = () => {
       selectedAddedBy
     });
     
-    // Use both server-side and client-side filtering
-    // Pass all filters to the API first
+    // Pass all filters to the API
     getAllProducts(
       limit, 
       page, 
@@ -404,109 +403,52 @@ const ProductManagement = () => {
       selectedApproveVendor, 
       selectedVendor, 
       selectedFeatured,
-      null, // Explicitly null for addedBy (client-side only)
-      null  // Explicitly null for categoryId (client-side only)
+      selectedAddedBy,
+      selectedCategory
     )
       .then((res) => {
         setloading(false);
         console.log("Products response:", res);
         
-        // Handle both array response and object response with data property
-        let productsData = res.data || [];
+        // Handle API response
+        const productsData = res.data || [];
         const totalCount = res.total_count || productsData.length;
         const approveCount = res.approve_count || 0;
         const disapproveCount = res.disapprove_count || 0;
         
-        // Debug the first product's structure
+        // Debug logging
         if (productsData.length > 0) {
-          console.log("First product structure (pre-client-filter):", {
+          console.log("First product structure:", {
             id: productsData[0].id,
             name: productsData[0].name,
             categories: productsData[0].product_categories,
-            added_by_id: productsData[0].added_by_id,
-            created_by_id: productsData[0].created_by_id,
-            admin_id: productsData[0].admin_id,
             added_by: productsData[0].added_by,
             created_by: productsData[0].created_by
           });
         }
 
-        // Step 2: Apply client-side filtering for category and added_by
+        // Use the filtered count for pagination
+        const filteredTotal = res.filtered_count || totalCount;
+        settotalPages(Math.ceil(filteredTotal / limit));
         
-        let filteredData = productsData;
-
-        // Apply client-side filtering for categories if selected
-        if (selectedCategory) {
-          console.log("Applying client-side category filtering for:", selectedCategory);
-          const selectedCategoryObj = categories.find(cat => String(cat.value) === String(selectedCategory));
-          
-          filteredData = filteredData.filter(product => {
-            // Check for direct category ID match
-            if (product.category_id && String(product.category_id) === String(selectedCategory)) {
-              return true;
-            }
-            // Check product_categories array
-            if (product.product_categories && Array.isArray(product.product_categories)) {
-              return product.product_categories.some(cat => 
-                (cat.id && String(cat.id) === String(selectedCategory)) || 
-                (cat.category_id && String(cat.category_id) === String(selectedCategory)) ||
-                (selectedCategoryObj && cat.category_name && cat.category_name === selectedCategoryObj.label)
-              );
-            }
-            return false;
-          });
-          console.log(`After category filtering, ${filteredData.length} products remain`);
-        }
-        
-        // Apply client-side filtering for added_by if selected
-        if (selectedAddedBy) {
-          console.log("Applying client-side added_by filtering for:", selectedAddedBy);
-          const selectedAdmin = addedByOptions.find(admin => String(admin.value) === String(selectedAddedBy));
-          
-          filteredData = filteredData.filter(product => {
-            const adminIdString = String(selectedAddedBy);
-            // Check various ID fields
-            if (
-              (product.created_by !== undefined && String(product.created_by) === adminIdString) ||
-              (product.added_by_id !== undefined && String(product.added_by_id) === adminIdString) ||
-              (product.created_by_id !== undefined && String(product.created_by_id) === adminIdString) ||
-              (product.admin_id !== undefined && String(product.admin_id) === adminIdString) ||
-              (product.user_id !== undefined && String(product.user_id) === adminIdString)
-            ) {
-              return true;
-            }
-            // Special case for admin user with ID 1 or name "admin"
-            if (adminIdString === "1" && product.added_by === "admin") {
-              return true;
-            }
-            // Try name matching 
-            if (selectedAdmin && selectedAdmin.label && product.added_by && typeof product.added_by === 'string') {
-               if (product.added_by.toLowerCase() === selectedAdmin.label.toLowerCase()) {
-                  return true;
-               }
-            }
-            return false;
-          });
-          console.log(`After added_by filtering, ${filteredData.length} products remain`);
-        }
-
-        // Step 3: Recalculate counts and pagination based on final filtered data
-        const finalTotalCount = filteredData.length;
-        
-        // Update total pages based on the *filtered* count for correct pagination
-        settotalPages(Math.ceil(finalTotalCount / limit)); 
-        
-        // Update the displayed counts using the *original* API counts for overall context,
-        // as accurately recalculating approve/disapprove counts post-filtering is unreliable here.
+        // Update total counts with filtered data
         setTotalCount({
-          total_count: totalCount, 
-          approve_count: approveCount,
-          disapprove_count: disapproveCount
+          total_count: filteredTotal,  // Use filtered count as total
+          approve_count: res.filtered_approve_count || approveCount,
+          disapprove_count: res.filtered_disapprove_count || disapproveCount,
+          filtered_count: filteredTotal,
+          filtered_approve_count: res.filtered_approve_count || approveCount,
+          filtered_disapprove_count: res.filtered_disapprove_count || disapproveCount
         });
 
-        // Apply the checked property and update products state with the FINAL filtered data
-        const productsWithChecked = filteredData.map(item => ({ ...item, isChecked: false }));
+        // Apply the checked property to products
+        const productsWithChecked = productsData.map(item => ({ ...item, isChecked: false }));
         setproducts(productsWithChecked);
+
+        // Update page if server returns a different page (e.g., if current page is out of bounds)
+        if (res.page && res.page !== page) {
+          setPage(res.page);
+        }
       })
       .catch((err) => {
         console.error("Error fetching products:", err);
@@ -897,11 +839,49 @@ const ProductManagement = () => {
     getVendorApproveList();
   }, []);
 
+  // Track if this is the first render
+  const isFirstRender = React.useRef(true);
+
+  // Handle filter changes
   useEffect(() => {
-    // Force data reload when any filter changes
-    console.log("Filter values changed, reloading data");
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    // Clear existing products to prevent stale data display
+    setproducts([]);
+
+    // When any filter changes, reset to page 1 and update URL
+    const newParams = {
+      page: 1,
+      search: searchString,
+      approveVendor: selectedApproveVendor,
+      vendor: selectedVendor,
+      featured: selectedFeatured,
+      category: selectedCategory,
+      addedBy: selectedAddedBy,
+      limit
+    };
+
+    // Update URL with new params
+    updateUrlParams(newParams);
+
+    // Reset page and fetch data
+    setPage(1);
     getProducts();
-  }, [page, searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, limit]);
+  }, [searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, limit]);
+
+  // Handle page changes
+  useEffect(() => {
+    if (isFirstRender.current) return;
+
+    // Update URL with new page number
+    updateUrlParams({ page });
+    
+    // Fetch data for new page
+    getProducts();
+  }, [page]);
 
   const fetchCategories = async () => {
     try {
