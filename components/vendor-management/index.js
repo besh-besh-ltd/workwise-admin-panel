@@ -191,7 +191,12 @@ const VendorManagement = () => {
       1,
       values.verified,
       values.organization,
-      values.name
+      values.name,
+      values.email,
+      values.dateFrom,
+      values.dateTo,
+      values.status,
+      values.created_by
     )
       .then((res) => {
         setVendorData(res.data);
