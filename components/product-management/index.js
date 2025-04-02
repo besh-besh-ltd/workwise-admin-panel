@@ -395,7 +395,8 @@ const ProductManagement = () => {
       selectedAddedBy
     });
     
-    // Call the API to get the products with pagination
+    // Use both server-side and client-side filtering
+    // Pass all filters to the API first
     getAllProducts(
       limit, 
       page, 
@@ -403,7 +404,8 @@ const ProductManagement = () => {
       selectedApproveVendor, 
       selectedVendor, 
       selectedFeatured,
-      null // onlyAddedByAdmin
+      null, // Explicitly null for addedBy (client-side only)
+      null  // Explicitly null for categoryId (client-side only)
     )
       .then((res) => {
         setloading(false);
@@ -411,108 +413,100 @@ const ProductManagement = () => {
         
         // Handle both array response and object response with data property
         let productsData = res.data || [];
-        let totalCount = res.total_count || productsData.length;
-        let approveCount = res.approve_count || 0;
-        let disapproveCount = res.disapprove_count || 0;
+        const totalCount = res.total_count || productsData.length;
+        const approveCount = res.approve_count || 0;
+        const disapproveCount = res.disapprove_count || 0;
         
-        // Apply client-side filtering for category and added by
-        let filteredData = [...productsData];
-        
-        // Filter by category if selected
-        if (selectedCategory) {
-          console.log("Filtering by category:", selectedCategory);
-          filteredData = filteredData.filter(product => {
-            return product.product_categories && 
-                   product.product_categories.some(cat => String(cat.id) === String(selectedCategory));
+        // Debug the first product's structure
+        if (productsData.length > 0) {
+          console.log("First product structure (pre-client-filter):", {
+            id: productsData[0].id,
+            name: productsData[0].name,
+            categories: productsData[0].product_categories,
+            added_by_id: productsData[0].added_by_id,
+            created_by_id: productsData[0].created_by_id,
+            admin_id: productsData[0].admin_id,
+            added_by: productsData[0].added_by,
+            created_by: productsData[0].created_by
           });
         }
+
+        // Step 2: Apply client-side filtering for category and added_by
         
-        // Filter by added by if selected
-        if (selectedAddedBy) {
-          console.log("Filtering by added by:", selectedAddedBy);
+        let filteredData = productsData;
+
+        // Apply client-side filtering for categories if selected
+        if (selectedCategory) {
+          console.log("Applying client-side category filtering for:", selectedCategory);
+          const selectedCategoryObj = categories.find(cat => String(cat.value) === String(selectedCategory));
+          
           filteredData = filteredData.filter(product => {
-            if (!product.added_by) return false;
-            
-            // Match by ID
-            if (product.added_by_id && String(product.added_by_id) === String(selectedAddedBy)) {
+            // Check for direct category ID match
+            if (product.category_id && String(product.category_id) === String(selectedCategory)) {
               return true;
             }
-            
-            // Match by name
-            const productAddedBy = product.added_by.toLowerCase();
-            const filterAddedBy = String(selectedAddedBy).toLowerCase();
-            return productAddedBy.includes(filterAddedBy);
+            // Check product_categories array
+            if (product.product_categories && Array.isArray(product.product_categories)) {
+              return product.product_categories.some(cat => 
+                (cat.id && String(cat.id) === String(selectedCategory)) || 
+                (cat.category_id && String(cat.category_id) === String(selectedCategory)) ||
+                (selectedCategoryObj && cat.category_name && cat.category_name === selectedCategoryObj.label)
+              );
+            }
+            return false;
           });
+          console.log(`After category filtering, ${filteredData.length} products remain`);
         }
         
-        console.log("Filtered data length:", filteredData.length);
+        // Apply client-side filtering for added_by if selected
+        if (selectedAddedBy) {
+          console.log("Applying client-side added_by filtering for:", selectedAddedBy);
+          const selectedAdmin = addedByOptions.find(admin => String(admin.value) === String(selectedAddedBy));
+          
+          filteredData = filteredData.filter(product => {
+            const adminIdString = String(selectedAddedBy);
+            // Check various ID fields
+            if (
+              (product.created_by !== undefined && String(product.created_by) === adminIdString) ||
+              (product.added_by_id !== undefined && String(product.added_by_id) === adminIdString) ||
+              (product.created_by_id !== undefined && String(product.created_by_id) === adminIdString) ||
+              (product.admin_id !== undefined && String(product.admin_id) === adminIdString) ||
+              (product.user_id !== undefined && String(product.user_id) === adminIdString)
+            ) {
+              return true;
+            }
+            // Special case for admin user with ID 1 or name "admin"
+            if (adminIdString === "1" && product.added_by === "admin") {
+              return true;
+            }
+            // Try name matching 
+            if (selectedAdmin && selectedAdmin.label && product.added_by && typeof product.added_by === 'string') {
+               if (product.added_by.toLowerCase() === selectedAdmin.label.toLowerCase()) {
+                  return true;
+               }
+            }
+            return false;
+          });
+          console.log(`After added_by filtering, ${filteredData.length} products remain`);
+        }
+
+        // Step 3: Recalculate counts and pagination based on final filtered data
+        const finalTotalCount = filteredData.length;
         
-        // Store the original API counts for total display
-        console.log("Original counts from API:", {
-          totalCount,
-          approveCount,
-          disapproveCount
+        // Update total pages based on the *filtered* count for correct pagination
+        settotalPages(Math.ceil(finalTotalCount / limit)); 
+        
+        // Update the displayed counts using the *original* API counts for overall context,
+        // as accurately recalculating approve/disapprove counts post-filtering is unreliable here.
+        setTotalCount({
+          total_count: totalCount, 
+          approve_count: approveCount,
+          disapprove_count: disapproveCount
         });
-        
-        // Apply client-side filtering if needed
-        if (selectedCategory || selectedAddedBy) {
-          const filteredApproveCount = filteredData.filter(item => item.is_approve === 1).length;
-          const filteredDisapproveCount = filteredData.length - filteredApproveCount;
-          
-          console.log("Using filtered counts:", {
-            total: filteredData.length,
-            approved: filteredApproveCount,
-            disapproved: filteredDisapproveCount
-          });
-          
-          // When filtering is applied, use the filtered count for pagination
-          settotalPages(filteredData.length);
-          
-          // Set state with both original and filtered counts
-          setTotalCount({ 
-            // Total database counts (for display)
-            total_count: totalCount,
-            approve_count: approveCount,
-            disapprove_count: disapproveCount,
-            
-            // Filtered counts (for pagination)
-            filtered_count: filteredData.length,
-            filtered_approve_count: filteredApproveCount,
-            filtered_disapprove_count: filteredDisapproveCount,
-            
-            // Flag to indicate filtering is active
-            is_filtered: true
-          });
-        } else {
-          // No filtering - use the API counts for both display and pagination
-          console.log("Using API counts for display and pagination:", {
-            total: totalCount,
-            approved: approveCount,
-            disapproved: disapproveCount
-          });
-          
-          // Set pagination based on total count
-          settotalPages(totalCount);
-          
-          // Set the total count state with API values
-          setTotalCount({ 
-            total_count: totalCount,
-            approve_count: approveCount,
-            disapprove_count: disapproveCount,
-            
-            // For consistency, also set filtered values
-            filtered_count: totalCount,
-            filtered_approve_count: approveCount,
-            filtered_disapprove_count: disapproveCount,
-            
-            // Flag to indicate no filtering
-            is_filtered: false
-          });
-        }
-        
-        // Set the checked property and update products state
-        filteredData.forEach(item => item.isChecked = false);
-        setproducts(filteredData);
+
+        // Apply the checked property and update products state with the FINAL filtered data
+        const productsWithChecked = filteredData.map(item => ({ ...item, isChecked: false }));
+        setproducts(productsWithChecked);
       })
       .catch((err) => {
         console.error("Error fetching products:", err);
@@ -774,7 +768,7 @@ const ProductManagement = () => {
     }, undefined, { shallow: true });
   };
 
-  // Reset all filters function
+  // Reset all filters function - similar to vendor management implementation
   const resetFilters = () => {
     // Reset all filter states
     setSearchString("");
@@ -785,19 +779,52 @@ const ProductManagement = () => {
     setSelectedAddedBy("");
     setPage(1);
     
-    // Clear URL parameters
-    updateUrlParams({
-      page: 1,
-      search: "",
-      approveVendor: "",
-      vendor: "",
-      featured: "",
-      category: "",
-      addedBy: ""
-    });
+    // Clear URL parameters by pushing empty query
+    router.push({
+      pathname: router.pathname
+    }, undefined, { shallow: true });
+    
+    setloading(true);
     
     // Fetch products with reset filters
-    getProducts();
+    getAllProducts(
+      limit, 
+      1, 
+      "", 
+      "", 
+      "", 
+      "",
+      null, 
+      null
+    )
+      .then((res) => {
+        setloading(false);
+        console.log("Reset filters - products response:", res);
+        
+        let productsData = res.data || [];
+        let totalCount = res.total_count || productsData.length;
+        let approveCount = res.approve_count || 0;
+        let disapproveCount = res.disapprove_count || 0;
+        
+        // Set pagination based on total count
+        settotalPages(Math.ceil(totalCount / limit));
+        
+        // Set the total count state with API values
+        setTotalCount({
+          total_count: totalCount,
+          approve_count: approveCount,
+          disapprove_count: disapproveCount
+        });
+        
+        // Set the checked property and update products state
+        productsData.forEach(item => item.isChecked = false);
+        setproducts(productsData);
+      })
+      .catch((err) => {
+        console.error("Error fetching products:", err);
+        setloading(false);
+        setproducts([]);
+      });
   };
 
   // Handler for Select components
@@ -879,13 +906,27 @@ const ProductManagement = () => {
   const fetchCategories = async () => {
     try {
       const response = await getCategories(1, 1000); // Get a large number of categories to ensure we get all parent categories
-      // Filter categories with parent_id 0
-      const parentCategories = response.data.filter(category => category.parent_id === 0 || category.parent_id === "0");
+      
+      // Log the raw categories data to understand its structure
+      console.log("Raw categories data:", response.data.slice(0, 5));
+      console.log("Total categories from API:", response.data.length);
+      
+      // Filter categories with parent_id 0 as requested
+      const parentCategories = response.data.filter(category => {
+        const parentId = category.parent_id;
+        return parentId === 0 || parentId === "0" || parentId === null;
+      });
+      
       console.log("Parent categories:", parentCategories);
+      console.log("Number of parent categories:", parentCategories.length);
+      
+      // Create options only from parent categories (parent_id = 0)
       const categoryOptions = parentCategories.map(cat => ({
-        label: cat.title,
-        value: cat.id
+        label: cat.title || cat.name || cat.category_name,
+        value: cat.id,
+        slug: cat.slug
       }));
+      
       setCategories(categoryOptions);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -895,11 +936,21 @@ const ProductManagement = () => {
   const fetchAddedByOptions = async () => {
     try {
       const response = await getAdminUsersList();
-      console.log("Added by options:", response);
+      console.log("Raw admin users data:", response);
+      
+      // Log the first few admin users to understand the data structure
+      if (response.data && response.data.length > 0) {
+        console.log("Sample admin user data:", response.data.slice(0, 2));
+      }
+      
       const adminOptions = response.data.map(user => ({
-        label: user.name,
-        value: user.id
+        label: user.name || user.username || user.email || `Admin ${user.id}`,
+        value: user.id,
+        email: user.email,
+        role: user.role
       }));
+      
+      console.log("Processed admin options:", adminOptions);
       setAddedByOptions(adminOptions);
     } catch (error) {
       console.error("Error fetching added by options:", error);
@@ -981,28 +1032,32 @@ const ProductManagement = () => {
                   />
                 </div>
                 <div className="col-sm-3 mt-3">
-                  <Select
-                    id={id}
-                    options={categories}
-                    placeholder="Filter by Category"
-                    styles={customSelectStyles}
-                    isClearable={true}
-                    instanceId="category-select"
-                    value={categories.find(opt => opt.value === selectedCategory) || null}
-                    onChange={(selectedOption) => handleFilterChange('category', selectedOption)}
-                  />
+                  <select
+                    className="form-control"
+                    value={selectedCategory}
+                    onChange={(e) => handleFilterChange('category', e.target.value)}
+                  >
+                    <option value="">Filter by Category</option>
+                    {categories.map(category => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="col-sm-3 mt-3">
-                  <Select
-                    id={id}
-                    options={addedByOptions}
-                    placeholder="Filter by Added By"
-                    styles={customSelectStyles}
-                    isClearable={true}
-                    instanceId="added-by-select"
-                    value={addedByOptions.find(opt => opt.value === selectedAddedBy) || null}
-                    onChange={(selectedOption) => handleFilterChange('addedBy', selectedOption)}
-                  />
+                  <select
+                    className="form-control"
+                    value={selectedAddedBy}
+                    onChange={(e) => handleFilterChange('addedBy', e.target.value)}
+                  >
+                    <option value="">Filter by Added By</option>
+                    {addedByOptions.map(user => (
+                      <option key={user.value} value={user.value}>
+                        {user.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="d-flex flex-wrap mt-3">
                   <button

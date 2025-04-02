@@ -85,10 +85,11 @@ export const productExport = (values) => {
   });
 };
 
-export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove, vendorId, isFeatured, onlyAddedByAdmin) => {
+export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove, vendorId, isFeatured, addedBy = null, categoryId = null, onlyAddedByAdmin = false) => {
   return new Promise(async (resolve, reject) => {
     try {
       console.log('========== PRODUCT API CALL START ==========');
+      console.log('getAllProducts called with params:', { limit, page, searchString, vendorApprove, vendorId, isFeatured, addedBy, categoryId, onlyAddedByAdmin });
       
       // Construct the URL exactly as the backend expects it
       let url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-list?limit=${limit}&page=${page}`;
@@ -106,13 +107,32 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
       if(isFeatured){
         url += `&isFeatured=${encodeURIComponent(isFeatured)}`;
       }
-      if(onlyAddedByAdmin){
-        url += `&onlyAddedByAdmin=${encodeURIComponent(onlyAddedByAdmin)}`;
+      
+      // Handle added_by filtering
+      if(addedBy){
+        // Try both parameter names that might work
+        url += `&created_by=${encodeURIComponent(addedBy)}`;
+        // Keep the original parameter too in case it's used
+        url += `&addedBy=${encodeURIComponent(addedBy)}`;
+      }
+      
+      // Special case for admin-added products
+      if(onlyAddedByAdmin || (addedBy && addedBy === "1")){
+        url += `&onlyAddedByAdmin=1`;
+      }
+      
+      // Handle category filtering
+      if(categoryId){
+        url += `&categoryId=${encodeURIComponent(categoryId)}`;
+        // Also try category_id parameter
+        url += `&category_id=${encodeURIComponent(categoryId)}`;
       }
       
       // Add a cache-busting parameter to prevent 304 responses
       const timestamp = Date.now();
       url += `&_t=${timestamp}`;
+      
+      console.log('API URL with params:', url);
       
       
       // Make the request for products`
