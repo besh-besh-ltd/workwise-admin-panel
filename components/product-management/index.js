@@ -114,7 +114,6 @@ const ProductManagement = () => {
     return <div>{index + 1}</div>;
   };
   const addressEdit = (_cell, row) => {
-    console.log(row);
     return (
       <div>
         {row?.city}, {row?.state}
@@ -205,12 +204,10 @@ const ProductManagement = () => {
     const totalPageCount = Math.ceil(totalCount.total_count / limit);
     const currentPage = page; // Current page (1-based index)
     
-    console.log("Ellipsis click - total pages:", totalPageCount, "current page:", currentPage);
 
     if (isNext) {
       // Right ellipsis: Go to middle between current page and last page
       const middlePage = Math.floor((currentPage + totalPageCount) / 2);
-      console.log("Going to middle page (right):", middlePage);
       setPage(middlePage);
       updateUrlParams({ 
         page: middlePage,
@@ -224,7 +221,6 @@ const ProductManagement = () => {
     } else {
       // Left ellipsis: Go to middle between first page (1) and current page
       const middlePage = Math.floor((1 + currentPage) / 2);
-      console.log("Going to middle page (left):", middlePage);
       setPage(middlePage);
       updateUrlParams({ 
         page: middlePage,
@@ -384,17 +380,6 @@ const ProductManagement = () => {
     // Set loading but keep current products to prevent flickering
     setloading(true);
     
-    console.log("Fetching products with filters:", {
-      limit,
-      page,
-      searchString,
-      selectedApproveVendor,
-      selectedVendor,
-      selectedFeatured,
-      selectedCategory,
-      selectedAddedBy
-    });
-    
     // Pass all filters to the API
     getAllProducts(
       limit, 
@@ -408,7 +393,6 @@ const ProductManagement = () => {
     )
       .then((res) => {
         setloading(false);
-        console.log("Products response:", res);
         
         // Handle API response
         const productsData = res.data || [];
@@ -416,16 +400,6 @@ const ProductManagement = () => {
         const approveCount = res.approve_count || 0;
         const disapproveCount = res.disapprove_count || 0;
         
-        // Debug logging
-        if (productsData.length > 0) {
-          console.log("First product structure:", {
-            id: productsData[0].id,
-            name: productsData[0].name,
-            categories: productsData[0].product_categories,
-            added_by: productsData[0].added_by,
-            created_by: productsData[0].created_by
-          });
-        }
 
         // Use the filtered count for pagination
         const filteredTotal = res.filtered_count || totalCount;
@@ -508,14 +482,6 @@ const ProductManagement = () => {
         pp.push(item.id);
       }
     });
-    console.log(pp);
-
-    /* axiosInstance
-      .post(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/export-products`,
-        post_datapp
-      )
-      .then((response) => console.log(response)); */
 
     if (pp.length > 0) {
       let post_data = { product_id: pp };
@@ -741,7 +707,6 @@ const ProductManagement = () => {
     )
       .then((res) => {
         setloading(false);
-        console.log("Reset filters - products response:", res);
         
         let productsData = res.data || [];
         let totalCount = res.total_count || productsData.length;
@@ -778,7 +743,6 @@ const ProductManagement = () => {
 
     // Handle both direct value and select option object
     const value = selectedOption && typeof selectedOption === 'object' ? selectedOption.value : selectedOption;
-    console.log(`Filter changed: ${type} = ${value}`);
 
     switch(type) {
       case 'approveVendor':
@@ -887,18 +851,11 @@ const ProductManagement = () => {
     try {
       const response = await getCategories(1, 1000); // Get a large number of categories to ensure we get all parent categories
       
-      // Log the raw categories data to understand its structure
-      console.log("Raw categories data:", response.data.slice(0, 5));
-      console.log("Total categories from API:", response.data.length);
-      
       // Filter categories with parent_id 0 as requested
       const parentCategories = response.data.filter(category => {
         const parentId = category.parent_id;
         return parentId === 0 || parentId === "0" || parentId === null;
       });
-      
-      console.log("Parent categories:", parentCategories);
-      console.log("Number of parent categories:", parentCategories.length);
       
       // Create options only from parent categories (parent_id = 0)
       const categoryOptions = parentCategories.map(cat => ({
@@ -916,12 +873,6 @@ const ProductManagement = () => {
   const fetchAddedByOptions = async () => {
     try {
       const response = await getAdminUsersList();
-      console.log("Raw admin users data:", response);
-      
-      // Log the first few admin users to understand the data structure
-      if (response.data && response.data.length > 0) {
-        console.log("Sample admin user data:", response.data.slice(0, 2));
-      }
       
       const adminOptions = response.data.map(user => ({
         label: user.name || user.username || user.email || `Admin ${user.id}`,
@@ -930,7 +881,6 @@ const ProductManagement = () => {
         role: user.role
       }));
       
-      console.log("Processed admin options:", adminOptions);
       setAddedByOptions(adminOptions);
     } catch (error) {
       console.error("Error fetching added by options:", error);
@@ -939,13 +889,11 @@ const ProductManagement = () => {
 
   const handleCategoryChange = (e) => {
     const value = e.target.value;
-    console.log("Selected category:", value);
     setSelectedCategory(value);
   };
 
   const handleAddedByChange = (e) => {
     const value = e.target.value;
-    console.log("Selected added by:", value);
     setSelectedAddedBy(value);
   };
 

@@ -78,7 +78,7 @@ const VendorManagement = () => {
         setVendorData(res.data);
       })
       .catch((err) => {
-        console.log("err", err);
+        console.error("Error fetching vendor list:", err);
         setVendorCount(intializeVendorCount);
       });
   };
@@ -207,10 +207,9 @@ const VendorManagement = () => {
           disapproved: res.deactivated_vendors,
           deleted: res.deleted_vendors,
         });
-        console.log("res", res);
       })
       .catch((err) => {
-        console.log("err", err);
+        console.error("Error fetching vendor list:", err);
         setVendorCount(intializeVendorCount);
       });
   };
@@ -287,14 +286,14 @@ const VendorManagement = () => {
     handleGetVendorList(
       limit,
       1,
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      ""
+      "", // verified - empty to show all verification statuses
+      "", // organization - empty to show all organizations
+      "", // name - empty to show all names
+      "", // email - empty to show all emails
+      "", // dateFrom - empty for no start date filter
+      "", // dateTo - empty for no end date filter
+      "", // status - empty to show all statuses
+      ""  // created_by - empty to show vendors created by all admins
     )
       .then((res) => {
         setVendorData(res.data);
@@ -307,7 +306,7 @@ const VendorManagement = () => {
         });
       })
       .catch((err) => {
-        console.log("err", err);
+        console.error("Error fetching vendor list:", err);
         setVendorCount(intializeVendorCount);
       });
   };
