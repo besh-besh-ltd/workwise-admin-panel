@@ -676,34 +676,50 @@ const ProductManagement = () => {
     }, undefined, { shallow: true });
   };
 
-  // Reset all filters function - similar to vendor management implementation
+  /**
+   * Resets all filter states and fetches products with default parameters.
+   * Empty strings are used as default values to clear any existing filters.
+   * 
+   * This function:
+   * - Clears all filter states (search, vendor, category, etc.) to their default values
+   * - Resets pagination to page 1
+   * - Removes URL query parameters
+   * - Fetches products with cleared filters
+   * - Updates the products list and pagination states
+   * 
+   * The getAllProducts call uses empty strings ("") and null values to indicate
+   * no filtering should be applied for those parameters, effectively fetching
+   * all products without any filters.
+   * 
+   * @returns {void} Does not return a value, but updates multiple state variables
+   * @throws {Error} Logs error to console if product fetching fails
+   */
   const resetFilters = () => {
-    // Reset all filter states
-    setSearchString("");
-    setSelectedApproveVendor("");
-    setSelectedVendor("");
-    setSelectedFeatured("");
-    setSelectedCategory("");
-    setSelectedAddedBy("");
-    setPage(1);
+    // Clear all filter states to their default values
+    setSearchString("");             // Clear product name search filter
+    setSelectedApproveVendor("");    // Reset to show products from all approved vendors
+    setSelectedVendor("");           // Reset to show products from all vendors
+    setSelectedFeatured("");         // Reset to show both featured and non-featured products
+    setSelectedCategory("");         // Reset to show products from all categories
+    setSelectedAddedBy("");          // Reset to show products added by anyone
+    setPage(1);                      // Return to first page
     
-    // Clear URL parameters by pushing empty query
+    // Remove all URL query parameters
     router.push({
       pathname: router.pathname
     }, undefined, { shallow: true });
     
     setloading(true);
     
-    // Fetch products with reset filters
     getAllProducts(
-      limit, 
-      1, 
-      "", 
-      "", 
-      "", 
-      "",
-      null, 
-      null
+      limit,                    // Number of items per page
+      1,                        // Reset to first page
+      "",                       // No product name filter
+      "",                       // Show products from all vendors
+      "",                       // No specific vendor filter
+      "",                       // Include both featured and non-featured products
+      null,                     // Show products added by anyone
+      null                      // Show products from all categories
     )
       .then((res) => {
         setloading(false);
@@ -769,10 +785,6 @@ const ProductManagement = () => {
     setPage(1);
     updateUrlParams(updateObj);
     
-    // Trigger immediate data refresh with the new filter
-    setTimeout(() => {
-      getProducts();
-    }, 100);
   };
 
   // Sync state with URL params
