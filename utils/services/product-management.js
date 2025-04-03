@@ -88,9 +88,6 @@ export const productExport = (values) => {
 export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove, vendorId, isFeatured, addedBy = null, categoryId = null, onlyAddedByAdmin = false) => {
   return new Promise(async (resolve, reject) => {
     try {
-      console.log('========== PRODUCT API CALL START ==========');
-      console.log('getAllProducts called with params:', { limit, page, searchString, vendorApprove, vendorId, isFeatured, addedBy, categoryId, onlyAddedByAdmin });
-      
       // Construct the URL exactly as the backend expects it
       let url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-list?limit=${limit}&page=${page}`;
       
@@ -131,9 +128,6 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
       // Add a cache-busting parameter to prevent 304 responses
       const timestamp = Date.now();
       url += `&_t=${timestamp}`;
-      
-      console.log('API URL with params:', url);
-      
       
       // Make the request for products`
       const response = await axiosInstance.get(url);
