@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import {
-  handleDeleteVendorProfile,
   handleGetVendorList,
+  handleDeleteVendorProfile,
   handleApproveVendor,
   rejectList,
+  getAdminsList
 } from "@/utils/services/vendor-management";
 import ReactPaginate from "react-paginate";
 import { useRouter } from "next/router";
@@ -24,43 +25,33 @@ const intializeVendorCount = {
 
 const VendorManagement = () => {
   const router = useRouter();
-  const [vendorData, setVendorData] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showDisableModal, setShowDisableModal] = useState(false);
   const [id, setId] = useState();
   const [limit] = useState(10);
   const [page, setPage] = useState(parseInt(router.query.page) || 1);
   const [totalPages, settotalPages] = useState(null);
-  const [vendorCount, setVendorCount] = useState({
-    total: 0,
-    approved: 0,
-    disapproved: 0,
-    deleted: 0,
-  });
+  const [vendorCount, setVendorCount] = useState(intializeVendorCount);
   const [rejectListData, setRejectListData] = useState([]);
   const [selectedVendorId, setSelectedVendorId] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
   const [userType, setUserType] = useState(null);
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [vendorData, setVendorData] = useState([]);
   const [filter, setFilter] = useState({
-    verified: "",
+    verified: router.query.verified || "",
     organization: router.query.organization || "",
-    name: router.query.name || ""
+    name: router.query.name || "",
+    email: router.query.email || "",
+    dateFrom: router.query.dateFrom || "",
+    dateTo: router.query.dateTo || "",
+    status: router.query.status || "",
+    created_by: router.query.created_by || ""
   });
 
-  const handleInputDisapprove = (e) => {
-    setInputValue(e.target.value);
-  };
-  const handleSelect = (e) => {
-    setSelectValue(e.target.value);
-  };
-  const handleClose = () => setShowModal(false);
-  const handleCloseRejectModal = () => {
-    setShowRejectModal(false);
-    setSelectedVendorId("");
-    setInputValue("");
-    setSelectValue("");
-  };
   const getBuyerList = () => {
     setVendorData([]);
     handleGetVendorList(
@@ -68,7 +59,12 @@ const VendorManagement = () => {
       page,
       filter.verified,
       filter.organization,
-      filter.name
+      filter.name,
+      filter.email,
+      filter.dateFrom,
+      filter.dateTo,
+      filter.status,
+      filter.created_by
     )
       .then((res) => {
         settotalPages(res.total_count);
@@ -82,7 +78,7 @@ const VendorManagement = () => {
         setVendorData(res.data);
       })
       .catch((err) => {
-        console.log("err", err);
+        console.error("Error fetching vendor list:", err);
         setVendorCount(intializeVendorCount);
       });
   };
@@ -195,7 +191,12 @@ const VendorManagement = () => {
       1,
       values.verified,
       values.organization,
-      values.name
+      values.name,
+      values.email,
+      values.dateFrom,
+      values.dateTo,
+      values.status,
+      values.created_by
     )
       .then((res) => {
         setVendorData(res.data);
@@ -206,10 +207,9 @@ const VendorManagement = () => {
           disapproved: res.deactivated_vendors,
           deleted: res.deleted_vendors,
         });
-        console.log("res", res);
       })
       .catch((err) => {
-        console.log("err", err);
+        console.error("Error fetching vendor list:", err);
         setVendorCount(intializeVendorCount);
       });
   };
@@ -235,19 +235,93 @@ const VendorManagement = () => {
     getBuyerList();
   }, [page, filter, router.isReady]);
 
+  const handleClose = () => setShowModal(false);
+  
+  const handleCloseRejectModal = () => {
+    setShowRejectModal(false);
+    setSelectedVendorId("");
+    setInputValue("");
+    setSelectValue("");
+  };
+
+  const handleInputDisapprove = (e) => {
+    setInputValue(e.target.value);
+  };
+
+  const handleSelect = (e) => {
+    setSelectValue(e.target.value);
+  };
+
   useEffect(() => {
     getUserProfile();
     getRejectList();
+    getAdminsList()
+      .then((res) => {
+        setAdminUsers(res.data);
+      })
+      .catch((err) => {
+        console.log("Error loading admin users:", err);
+      });
   }, []);
+
+  const resetFilters = () => {
+    const emptyFilter = {
+      verified: "",
+      organization: "",
+      name: "",
+      email: "",
+      dateFrom: "",
+      dateTo: "",
+      status: "",
+      created_by: ""
+    };
+    setFilter(emptyFilter);
+    setPage(1);
+    // Clear URL parameters by pushing empty query
+    router.push({
+      pathname: router.pathname
+    }, undefined, { shallow: true });
+    
+    // Reset the data with empty filters
+    handleGetVendorList(
+      limit,
+      1,
+      "", // verified - empty to show all verification statuses
+      "", // organization - empty to show all organizations
+      "", // name - empty to show all names
+      "", // email - empty to show all emails
+      "", // dateFrom - empty for no start date filter
+      "", // dateTo - empty for no end date filter
+      "", // status - empty to show all statuses
+      ""  // created_by - empty to show vendors created by all admins
+    )
+      .then((res) => {
+        setVendorData(res.data);
+        settotalPages(Math.ceil(res.total_count / limit));
+        setVendorCount({
+          total: res.total_count,
+          approved: res.active_vendors,
+          disapproved: res.deactivated_vendors,
+          deleted: res.deleted_vendors,
+        });
+      })
+      .catch((err) => {
+        console.error("Error fetching vendor list:", err);
+        setVendorCount(intializeVendorCount);
+      });
+  };
 
   return (
     <>
-      <div className="content-header">
-        <div className="container-fluid">
-          <div className="row">
-            <h1 class="m-0 text-dark">Vendor</h1>
-          </div>
-        </div>
+      <div className="content-header d-flex justify-content-between align-items-center">
+        <h1 className="m-0 text-dark">Vendor</h1>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => router.push(`/vendor-management/add-vendor`)}
+        >
+          <i className="fa fa-plus"></i> Add Vendor
+        </button>
       </div>
 
       <section className="content">
@@ -258,12 +332,20 @@ const VendorManagement = () => {
               initialValues={{
                 verified: filter.verified,
                 organization: filter.organization,
-                name: filter.name,
+                email: filter.email,
+                dateFrom: filter.dateFrom,
+                dateTo: filter.dateTo,
+                status: filter.status,
+                created_by: filter.created_by
               }}
               validationSchema={yup.object().shape({
                 verified: yup.string(),
                 organization: yup.string(),
-                name: yup.string(),
+                email: yup.string(),
+                dateFrom: yup.string(),
+                dateTo: yup.string(),
+                status: yup.string(),
+                created_by: yup.string()
               })}
               onSubmit={(values, { resetForm }) => {
                 submitHandler(values);
@@ -278,47 +360,99 @@ const VendorManagement = () => {
                 resetForm,
               }) => (
                 <Form>
-                  <div className="row">
-                    <div class="col-3">
+                  <div className="row align-items-end g-3">
+                    <div className="col-md-3 mb-2">
                       <Field
                         type="text"
                         name="organization"
-                        class="form-control"
+                        className="form-control"
                         placeholder="Search organization"
                         value={values.organization}
                       />
                     </div>
-
-                    <div className="col-1 d-flex flex-column">
-                      <button type="submit" class="btn btn-info ">
+                    <div className="col-md-3 mb-2">
+                      <Field
+                        type="text"
+                        name="email"
+                        className="form-control"
+                        placeholder="Search by email"
+                        value={values.email}
+                      />
+                    </div>
+                    <div className="col-md-3 mb-2">
+                      <Field
+                        as="select"
+                        name="status"
+                        className="form-control"
+                        value={values.status}
+                      >
+                        <option value="">Filter by Status</option>
+                        <option value="1">Approved</option>
+                        <option value="0">Disapproved</option>
+                      </Field>
+                    </div>
+                    <div className="col-md-3 mb-2">
+                      <Field
+                        as="select"
+                        name="created_by"
+                        className="form-control"
+                        value={values.created_by}
+                      >
+                        <option value="">Filter by Created By</option>
+                        {adminUsers.map(user => (
+                          <option key={user.id} value={user.id}>
+                            {user.name}
+                          </option>
+                        ))}
+                      </Field>
+                    </div>
+                    <div className="col-md-3 mb-2">
+                      <div className="date-input-container">
+                        <Field
+                          type="text"
+                          name="dateFrom"
+                          className="form-control date-input"
+                          placeholder="Start Date"
+                          onFocus={(e) => (e.target.type = 'date')}
+                          onBlur={(e) => {
+                            if (!e.target.value) {
+                              e.target.type = 'text'
+                            }
+                          }}
+                          value={values.dateFrom}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-3 mb-2">
+                      <div className="date-input-container">
+                        <Field
+                          type="text"
+                          name="dateTo"
+                          className="form-control date-input"
+                          placeholder="End Date"
+                          onFocus={(e) => (e.target.type = 'date')}
+                          onBlur={(e) => {
+                            if (!e.target.value) {
+                              e.target.type = 'text'
+                            }
+                          }}
+                          value={values.dateTo}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-3 mb-2 d-flex gap-2">
+                      <button type="submit" className="btn btn-info flex-grow-1">
                         Search
                       </button>
-                    </div>
-                    <div className="col-1 d-flex flex-column">
                       <button
                         type="button"
-                        class="btn btn-secondary"
+                        className="btn btn-secondary flex-grow-1"
                         onClick={() => {
                           resetForm();
-                          submitHandler({
-                            verified: "",
-                            organization: "",
-                            name: "",
-                          });
+                          resetFilters();
                         }}
                       >
                         Reset
-                      </button>
-                    </div>
-                    <div className="col-2 d-flex flex-column">
-                      <button
-                        type="button"
-                        class="btn btn-info"
-                        onClick={() =>
-                          router.push(`/vendor-management/add-vendor`)
-                        }
-                      >
-                        <i className="fa fa-plus"></i> Add Vendor
                       </button>
                     </div>
                   </div>
@@ -328,7 +462,7 @@ const VendorManagement = () => {
           </div>
 
           <div className="card card-body product-table mt-3">
-            <table class="table table-striped table-hover mb-3">
+            <table className="table table-striped table-hover mb-3">
               <thead>
                 <tr>
                   <th scope="col">Name</th>
@@ -336,7 +470,10 @@ const VendorManagement = () => {
                   <th scope="col">Mobile</th>
                   <th scope="col">Organization</th>
                   <th scope="col">Approval Status</th>
+                  <th scope="col">Created By</th>
                   <th scope="col">Created At</th>
+                  <th scope="col">Updated By</th>
+                  <th scope="col">Updated At</th>
                   <th scope="col">Action</th>
                 </tr>
               </thead>
@@ -381,17 +518,23 @@ const VendorManagement = () => {
                           </div>
                         )}
                       </td>
-
-                      <td style={{ width: "100px" }}>
+                      <td>{item.created_by_name || 'N/A'}</td>
+                      <td>
                        {new Date(item.created_at).toLocaleDateString("en-GB", {
                          day: "numeric",
                          month: "short",
                          year: "numeric",
                        })}
-                     </td>
-
+                      </td>
+                      <td>{item.updated_by_name || 'N/A'}</td>
                       <td>
-                        {/* <div className="card-footer bg-transparent border-secondary"> */}
+                        {item.updated_at ? new Date(item.updated_at).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        }) : 'N/A'}
+                      </td>
+                      <td>
                         <div className="d-flex">
                           <span
                             className="fa fa-eye mr-3"
@@ -406,12 +549,7 @@ const VendorManagement = () => {
                               className="fa fa-edit mr-3"
                               onClick={() => handleUpdateVendor(item)}
                             ></span>}
-                          {/* <span
-                            className="fa fa-trash"
-                            onClick={() => handleDeleteBudget(item.id)}
-                          ></span> */}
                         </div>
-                        {/* </div> */}
                       </td>
                     </tr>
                   );

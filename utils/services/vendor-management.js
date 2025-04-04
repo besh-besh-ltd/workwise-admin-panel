@@ -3,12 +3,21 @@ import axiosFormData from "../axios/form-data";
 import axiosxdata from "../axios/xxx-form-data";
 import axios from "axios";
 
-function handleGetVendorList(limit = 10, page = 1, verified, organization, name) {
+function handleGetVendorList(limit = 10, page = 1, verified, organization, name, email, dateFrom, dateTo, status, created_by) {
   return new Promise(async (resolve, reject) => {
     try {
-      let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/vendor-list?limit=${limit}&page=${page}&verified=${verified}&organization=${organization}&name=${name}`
-      );
+      let url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/vendor-list?limit=${limit}&page=${page}`;
+      
+      if (verified) url += `&verified=${verified}`;
+      if (organization) url += `&organization=${organization}`;
+      if (name) url += `&name=${name}`;
+      if (email) url += `&email=${email}`;
+      if (dateFrom) url += `&date_from=${dateFrom}`;
+      if (dateTo) url += `&date_to=${dateTo}`;
+      if (status) url += `&status=${status}`;
+      if (created_by) url += `&created_by=${created_by}`;
+
+      let response = await axiosInstance.get(url);
       resolve(response);
     } catch (error) {
       reject({ error });
@@ -213,6 +222,19 @@ function addNewSpoc(values, vendorId){
   })
 } 
 
+function getAdminsList() {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/admin-users-list`
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  });
+}
+
 export {
   handleGetVendorList,
   handleGetVendorDetails,
@@ -228,5 +250,6 @@ export {
   handleVendorRfqList,
   handleUpdateVendorSpoc,
   addNewSpoc,
-  handleDeleteSpoc
+  handleDeleteSpoc,
+  getAdminsList
 };
