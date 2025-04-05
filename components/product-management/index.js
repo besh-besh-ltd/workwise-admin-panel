@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct } from "@/utils/services/product-management";
+import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, getCategories, getAdminUsersList } from "@/utils/services/product-management";
 import axiosFormData from "@/utils/axios/form-data";
 import FullLoading from "../loading/FullLoading";
 import { ToastContainer, toast } from "react-toastify";
@@ -61,7 +61,10 @@ const ProductManagement = () => {
   const [selectedVendor, setSelectedVendor] = useState(router.query.vendor || "");
   const [selectedFeatured, setSelectedFeatured] = useState(router.query.featured || "");
   const [userType, setUserType] = useState(null);
-
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(router.query.category || "");
+  const [selectedAddedBy, setSelectedAddedBy] = useState(router.query.addedBy || "");
+  const [addedByOptions, setAddedByOptions] = useState([]);
 
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
@@ -111,7 +114,6 @@ const ProductManagement = () => {
     return <div>{index + 1}</div>;
   };
   const addressEdit = (_cell, row) => {
-    console.log(row);
     return (
       <div>
         {row?.city}, {row?.state}
@@ -152,8 +154,6 @@ const ProductManagement = () => {
     setSelectValue("")
   }
   const handlePageClick = (e) => {
-    const totalPageCount = Math.ceil(totalPages / 10);
-    // If selected is undefined, it's an ellipsis click
     if (e.selected === undefined) {
       const isNext = e.nextSelectedPage !== undefined;
       handleEllipsisClick(isNext);
@@ -165,7 +165,9 @@ const ProductManagement = () => {
         search: searchString,
         approveVendor: selectedApproveVendor,
         vendor: selectedVendor,
-        featured: selectedFeatured 
+        featured: selectedFeatured,
+        category: selectedCategory,
+        addedBy: selectedAddedBy
       });
     }
   };
@@ -178,27 +180,30 @@ const ProductManagement = () => {
     }
   };
 
-  // Handler for navigating to the entered page
-  const handlePageSearch = () => {
+  const handlePageSearchSubmit = () => {
     const pageNum = parseInt(pageSearchInput);
-    if (pageNum > 0 && pageNum <= Math.ceil(totalPages / limit)) {
+    const maxPage = Math.ceil(totalCount.total_count / limit);
+    
+    if (pageNum && pageNum >= 1 && pageNum <= maxPage) {
       setPage(pageNum);
       updateUrlParams({ 
         page: pageNum,
         search: searchString,
         approveVendor: selectedApproveVendor,
         vendor: selectedVendor,
-        featured: selectedFeatured 
+        featured: selectedFeatured,
+        category: selectedCategory,
+        addedBy: selectedAddedBy
       });
-      setPageSearchInput(""); // Clear input after navigation
     } else {
-      toast.error(`Please enter a valid page number between 1 and ${Math.ceil(totalPages / limit)}`);
+      toast.error(`Please enter a valid page number between 1 and ${maxPage}`);
     }
   };
 
   const handleEllipsisClick = (isNext) => {
-    const totalPageCount = Math.ceil(totalPages / 10);
+    const totalPageCount = Math.ceil(totalCount.total_count / limit);
     const currentPage = page; // Current page (1-based index)
+    
 
     if (isNext) {
       // Right ellipsis: Go to middle between current page and last page
@@ -209,7 +214,9 @@ const ProductManagement = () => {
         search: searchString,
         approveVendor: selectedApproveVendor,
         vendor: selectedVendor,
-        featured: selectedFeatured 
+        featured: selectedFeatured,
+        category: selectedCategory,
+        addedBy: selectedAddedBy
       });
     } else {
       // Left ellipsis: Go to middle between first page (1) and current page
@@ -220,7 +227,9 @@ const ProductManagement = () => {
         search: searchString,
         approveVendor: selectedApproveVendor,
         vendor: selectedVendor,
-        featured: selectedFeatured 
+        featured: selectedFeatured,
+        category: selectedCategory,
+        addedBy: selectedAddedBy
       });
     }
   };
@@ -368,19 +377,57 @@ const ProductManagement = () => {
   };
 
   const getProducts = () => {
+    // Set loading but keep current products to prevent flickering
     setloading(true);
-    setproducts([]);
-    getAllProducts(limit, page, searchString, selectedApproveVendor, selectedVendor, selectedFeatured)
+    
+    // Pass all filters to the API
+    getAllProducts(
+      limit, 
+      page, 
+      searchString, 
+      selectedApproveVendor, 
+      selectedVendor, 
+      selectedFeatured,
+      selectedAddedBy,
+      selectedCategory
+    )
       .then((res) => {
         setloading(false);
-        // settotalPages(Math.ceil(res.total_count / limit));
-        settotalPages(res.total_count);
-        setTotalCount({ total_count: res.total_count, disapprove_count: res.disapprove_count, approve_count: res.approve_count });
-        res.data.map((item) => (item.isChecked = false));
-        setproducts(res.data);
+        
+        // Handle API response
+        const productsData = res.data || [];
+        const totalCount = res.total_count || productsData.length;
+        const approveCount = res.approve_count || 0;
+        const disapproveCount = res.disapprove_count || 0;
+        
+
+        // Use the filtered count for pagination
+        const filteredTotal = res.filtered_count || totalCount;
+        settotalPages(Math.ceil(filteredTotal / limit));
+        
+        // Update total counts with filtered data
+        setTotalCount({
+          total_count: filteredTotal,  // Use filtered count as total
+          approve_count: res.filtered_approve_count || approveCount,
+          disapprove_count: res.filtered_disapprove_count || disapproveCount,
+          filtered_count: filteredTotal,
+          filtered_approve_count: res.filtered_approve_count || approveCount,
+          filtered_disapprove_count: res.filtered_disapprove_count || disapproveCount
+        });
+
+        // Apply the checked property to products
+        const productsWithChecked = productsData.map(item => ({ ...item, isChecked: false }));
+        setproducts(productsWithChecked);
+
+        // Update page if server returns a different page (e.g., if current page is out of bounds)
+        if (res.page && res.page !== page) {
+          setPage(res.page);
+        }
       })
       .catch((err) => {
+        console.error("Error fetching products:", err);
         setloading(false);
+        setproducts([]);
       });
   };
 
@@ -435,14 +482,6 @@ const ProductManagement = () => {
         pp.push(item.id);
       }
     });
-    console.log(pp);
-
-    /* axiosInstance
-      .post(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/export-products`,
-        post_datapp
-      )
-      .then((response) => console.log(response)); */
 
     if (pp.length > 0) {
       let post_data = { product_id: pp };
@@ -637,12 +676,89 @@ const ProductManagement = () => {
     }, undefined, { shallow: true });
   };
 
+  /**
+   * Resets all filter states and fetches products with default parameters.
+   * Empty strings are used as default values to clear any existing filters.
+   * 
+   * This function:
+   * - Clears all filter states (search, vendor, category, etc.) to their default values
+   * - Resets pagination to page 1
+   * - Removes URL query parameters
+   * - Fetches products with cleared filters
+   * - Updates the products list and pagination states
+   * 
+   * The getAllProducts call uses empty strings ("") and null values to indicate
+   * no filtering should be applied for those parameters, effectively fetching
+   * all products without any filters.
+   * 
+   * @returns {void} Does not return a value, but updates multiple state variables
+   * @throws {Error} Logs error to console if product fetching fails
+   */
+  const resetFilters = () => {
+    // Clear all filter states to their default values
+    setSearchString("");             // Clear product name search filter
+    setSelectedApproveVendor("");    // Reset to show products from all approved vendors
+    setSelectedVendor("");           // Reset to show products from all vendors
+    setSelectedFeatured("");         // Reset to show both featured and non-featured products
+    setSelectedCategory("");         // Reset to show products from all categories
+    setSelectedAddedBy("");          // Reset to show products added by anyone
+    setPage(1);                      // Return to first page
+    
+    // Remove all URL query parameters
+    router.push({
+      pathname: router.pathname
+    }, undefined, { shallow: true });
+    
+    setloading(true);
+    
+    getAllProducts(
+      limit,                    // Number of items per page
+      1,                        // Reset to first page
+      "",                       // No product name filter
+      "",                       // Show products from all vendors
+      "",                       // No specific vendor filter
+      "",                       // Include both featured and non-featured products
+      null,                     // Show products added by anyone
+      null                      // Show products from all categories
+    )
+      .then((res) => {
+        setloading(false);
+        
+        let productsData = res.data || [];
+        let totalCount = res.total_count || productsData.length;
+        let approveCount = res.approve_count || 0;
+        let disapproveCount = res.disapprove_count || 0;
+        
+        // Set pagination based on total count
+        settotalPages(Math.ceil(totalCount / limit));
+        
+        // Set the total count state with API values
+        setTotalCount({
+          total_count: totalCount,
+          approve_count: approveCount,
+          disapprove_count: disapproveCount
+        });
+        
+        // Set the checked property and update products state
+        productsData.forEach(item => item.isChecked = false);
+        setproducts(productsData);
+      })
+      .catch((err) => {
+        console.error("Error fetching products:", err);
+        setloading(false);
+        setproducts([]);
+      });
+  };
+
   // Handler for Select components
-  const handleFilterChange = (type, value) => {
+  const handleFilterChange = (type, selectedOption) => {
     let updateObj = {
       search: searchString,
       page: 1
     };
+
+    // Handle both direct value and select option object
+    const value = selectedOption && typeof selectedOption === 'object' ? selectedOption.value : selectedOption;
 
     switch(type) {
       case 'approveVendor':
@@ -657,31 +773,141 @@ const ProductManagement = () => {
         setSelectedFeatured(value || "");
         updateObj.featured = value;
         break;
+      case 'category':
+        setSelectedCategory(value || "");
+        updateObj.category = value;
+        break;
+      case 'addedBy':
+        setSelectedAddedBy(value || "");
+        updateObj.addedBy = value;
+        break;
     }
     setPage(1);
     updateUrlParams(updateObj);
+    
   };
 
   // Sync state with URL params
   useEffect(() => {
-    const { page, search, approveVendor, vendor, featured } = router.query;
+    const { page, search, approveVendor, vendor, featured, category, addedBy } = router.query;
     if (page) setPage(parseInt(page));
     if (search !== undefined) setSearchString(search);
     if (approveVendor !== undefined) setSelectedApproveVendor(approveVendor);
     if (vendor !== undefined) setSelectedVendor(vendor);
     if (featured !== undefined) setSelectedFeatured(featured);
+    if (category !== undefined) setSelectedCategory(category);
+    if (addedBy !== undefined) setSelectedAddedBy(addedBy);
   }, [router.query]);
 
+  // Initial data loading
   useEffect(() => {
     getUserProfile();
-    getReasonList();
-    getVendorApproveList();
     getVendor();
+    fetchCategories();
+    fetchAddedByOptions();
+    
+    // Force initial data load
+    getProducts();
   }, []);
 
   useEffect(() => {
+    getReasonList();
+    getVendorApproveList();
+  }, []);
+
+  // Track if this is the first render
+  const isFirstRender = React.useRef(true);
+
+  // Handle filter changes
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    // Clear existing products to prevent stale data display
+    setproducts([]);
+
+    // When any filter changes, reset to page 1 and update URL
+    const newParams = {
+      page: 1,
+      search: searchString,
+      approveVendor: selectedApproveVendor,
+      vendor: selectedVendor,
+      featured: selectedFeatured,
+      category: selectedCategory,
+      addedBy: selectedAddedBy,
+      limit
+    };
+
+    // Update URL with new params
+    updateUrlParams(newParams);
+
+    // Reset page and fetch data
+    setPage(1);
     getProducts();
-  }, [page, searchString, selectedApproveVendor, selectedVendor, selectedFeatured]);
+  }, [searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, limit]);
+
+  // Handle page changes
+  useEffect(() => {
+    if (isFirstRender.current) return;
+
+    // Update URL with new page number
+    updateUrlParams({ page });
+    
+    // Fetch data for new page
+    getProducts();
+  }, [page]);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await getCategories(1, 1000); // Get a large number of categories to ensure we get all parent categories
+      
+      // Filter categories with parent_id 0 as requested
+      const parentCategories = response.data.filter(category => {
+        const parentId = category.parent_id;
+        return parentId === 0 || parentId === "0" || parentId === null;
+      });
+      
+      // Create options only from parent categories (parent_id = 0)
+      const categoryOptions = parentCategories.map(cat => ({
+        label: cat.title || cat.name || cat.category_name,
+        value: cat.id,
+        slug: cat.slug
+      }));
+      
+      setCategories(categoryOptions);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchAddedByOptions = async () => {
+    try {
+      const response = await getAdminUsersList();
+      
+      const adminOptions = response.data.map(user => ({
+        label: user.name || user.username || user.email || `Admin ${user.id}`,
+        value: user.id,
+        email: user.email,
+        role: user.role
+      }));
+      
+      setAddedByOptions(adminOptions);
+    } catch (error) {
+      console.error("Error fetching added by options:", error);
+    }
+  };
+
+  const handleCategoryChange = (e) => {
+    const value = e.target.value;
+    setSelectedCategory(value);
+  };
+
+  const handleAddedByChange = (e) => {
+    const value = e.target.value;
+    setSelectedAddedBy(value);
+  };
 
   return (
     <>
@@ -718,7 +944,7 @@ const ProductManagement = () => {
                     isClearable={true}
                     instanceId="long-value-select"
                     value={vendorApprovedList.find(opt => opt.value === selectedApproveVendor) || null}
-                    onChange={(e) => handleFilterChange('approveVendor', e?.value)}
+                    onChange={(selectedOption) => handleFilterChange('approveVendor', selectedOption)}
                   />
                 </div>
                 <div className="col-sm-3">
@@ -730,7 +956,7 @@ const ProductManagement = () => {
                     isClearable={true}
                     instanceId="long-value-select"
                     value={vendorData.find(opt => opt.value === selectedVendor) || null}
-                    onChange={(e) => handleFilterChange('vendor', e?.value)}
+                    onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
                   />
                 </div>
                 <div className="col-sm-3">
@@ -742,8 +968,36 @@ const ProductManagement = () => {
                     isClearable={true}
                     instanceId="long-value-select"
                     value={isFeaturesArray.find(opt => opt.value === selectedFeatured) || null}
-                    onChange={(e) => handleFilterChange('featured', e?.value)}
+                    onChange={(selectedOption) => handleFilterChange('featured', selectedOption)}
                   />
+                </div>
+                <div className="col-sm-3 mt-3">
+                  <select
+                    className="form-control"
+                    value={selectedCategory}
+                    onChange={(e) => handleFilterChange('category', e.target.value)}
+                  >
+                    <option value="">Filter by Category</option>
+                    {categories.map(category => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-sm-3 mt-3">
+                  <select
+                    className="form-control"
+                    value={selectedAddedBy}
+                    onChange={(e) => handleFilterChange('addedBy', e.target.value)}
+                  >
+                    <option value="">Filter by Added By</option>
+                    {addedByOptions.map(user => (
+                      <option key={user.value} value={user.value}>
+                        {user.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="d-flex flex-wrap mt-3">
                   <button
@@ -775,6 +1029,13 @@ const ProductManagement = () => {
                     >
                       Export
                     </button>}
+                  <button
+                    type="button"
+                    className="btn btn-secondary mr-2"
+                    onClick={resetFilters}
+                  >
+                    Reset Filters
+                  </button>
                 </div>
                 {/* </div> */}
                 {/* </div> */}
@@ -904,7 +1165,7 @@ const ProductManagement = () => {
                     isClearable={false}
                     isSearchable
                     placeholder="Select Vendor"
-                    onChange={handleMappingObj}
+                    onChange={(selectedOption) => handleMappingObj(selectedOption, { name: "vendor" })}
                     components={{ Option: CustomSelectOption }}
                     className="mb-3"
                     />
@@ -959,7 +1220,7 @@ const ProductManagement = () => {
                     isMulti
                     isSearchable
                     isClearable={false}
-                    onChange={handleMappingObj}
+                    onChange={(selectedOption) => handleMappingObj(selectedOption, { name: "approved_by" })}
                     placeholder="Approved By"
                         className="mb-3"
                   />
@@ -1107,13 +1368,13 @@ const ProductManagement = () => {
                 </>
               )}
 
-              {Math.ceil(productWithVendorErrors.length / 10) > 1 && (
+              {Math.ceil(productWithVendorErrors.length / limit) > 1 && (
                 <ReactPaginate
                   breakLabel="..."
                   nextLabel={<i className="fa fa-angle-right"></i>}
                   onPageChange={handlePageClick}
                   pageRangeDisplayed={2}
-                  pageCount={Math.ceil(productWithVendorErrors.length / 10)}
+                  pageCount={Math.ceil(productWithVendorErrors.length / limit)}
                   previousLabel={<i className="fa fa-angle-left"></i>}
                   renderOnZeroPageCount={null}
                   className="pagination"
@@ -1179,13 +1440,13 @@ const ProductManagement = () => {
                 </>
               )}
 
-              {Math.ceil(productErrors.length / 10) > 1 && (
+              {Math.ceil(productErrors.length / limit) > 1 && (
                 <ReactPaginate
                   breakLabel="..."
                   nextLabel={<i className="fa fa-angle-right"></i>}
                   onPageChange={handlePageClick}
                   pageRangeDisplayed={2}
-                  pageCount={Math.ceil(productErrors.length / 10)}
+                  pageCount={Math.ceil(productErrors.length / limit)}
                   previousLabel={<i className="fa fa-angle-left"></i>}
                   renderOnZeroPageCount={null}
                   className="pagination"
@@ -1359,90 +1620,70 @@ const ProductManagement = () => {
 
             <div className="d-flex justify-content-between align-items-center">
               <div>
+                {/* Always show database totals */}
                 <p><b>Total Products: </b>{totalCount.total_count}</p>
                 <p><b>Total Approved Products: </b>{totalCount.approve_count}</p>
                 <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p>
-              </div>
-              {Math.ceil(totalPages / 10) > 1 && (
-                <div className="d-flex flex-column align-items-center gap-2">
-                  <ReactPaginate
-                    previousLabel={<i className="fa fa-angle-left"></i>}
-                    nextLabel={<i className="fa fa-angle-right"></i>}
-                    breakLabel="..."
-                    pageCount={Math.ceil(totalPages / 10)}
-                    marginPagesDisplayed={2}
-                    pageRangeDisplayed={5}
-                    onPageChange={handlePageClick}
-                    forcePage={page - 1}
-                    containerClassName="pagination mb-0"
-                    pageClassName="page-item"
-                    pageLinkClassName="page-link"
-                    previousClassName="page-item"
-                    previousLinkClassName="page-link"
-                    nextClassName="page-item" 
-                    nextLinkClassName="page-link"
-                    activeClassName="active"
-                  />
-                  <div className="d-flex align-items-center gap-2 mt-2">
-                    <input
-                      type="number"
-                      className="form-control"
-                      style={{ width: "125px" }}
-                      placeholder="Go to page"
-                      min="1"
-                      max={Math.ceil(totalPages / 10)}
-                      value={pageSearchInput}
-                      onChange={(e) => {
-                        const pageNum = Math.max(1, Math.min(Math.ceil(totalPages / 10), parseInt(e.target.value) || 1));
-                        setPageSearchInput(e.target.value);
-                        if (e.key === 'Enter') {
-                          setPage(pageNum);
-                          updateUrlParams({ 
-                            page: pageNum,
-                            search: searchString,
-                            approveVendor: selectedApproveVendor,
-                            vendor: selectedVendor,
-                            featured: selectedFeatured 
-                          });
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          const pageNum = parseInt(pageSearchInput);
-                          if (pageNum && pageNum >= 1 && pageNum <= Math.ceil(totalPages / 10)) {
-                            setPage(pageNum);
-                            updateUrlParams({ 
-                              page: pageNum,
-                              search: searchString,
-                              approveVendor: selectedApproveVendor,
-                              vendor: selectedVendor,
-                              featured: selectedFeatured 
-                            });
-                          }
-                        }
-                      }}
-                    />
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => {
-                        const pageNum = parseInt(pageSearchInput);
-                        if (pageNum && pageNum >= 1 && pageNum <= Math.ceil(totalPages / 10)) {
-                          setPage(pageNum);
-                          updateUrlParams({ 
-                            page: pageNum,
-                            search: searchString,
-                            approveVendor: selectedApproveVendor,
-                            vendor: selectedVendor,
-                            featured: selectedFeatured 
-                          });
-                        }
-                      }}
-                    >
-                      Go
-                    </button>
+                
+                {/* Show filtered counts when filtering is applied */}
+                {totalCount.is_filtered && (
+                  <div className="mt-2 pt-2 border-top">
+                    <p><b>Filtered Results: </b>{totalCount.filtered_count}</p>
+                    <p><b>Filtered Approved: </b>{totalCount.filtered_approve_count}</p>
+                    <p><b>Filtered Disapproved: </b>{totalCount.filtered_disapprove_count}</p>
                   </div>
+                )}
+              </div>
+              {/* Always show pagination if we have total count from API */}
+              <div className="d-flex flex-column align-items-center gap-2">
+                <ReactPaginate
+                  previousLabel={<i className="fa fa-angle-left"></i>}
+                  nextLabel={<i className="fa fa-angle-right"></i>}
+                  breakLabel="..."
+                  pageCount={Math.ceil(
+                    // Use filtered count when filtering is active, otherwise use total count
+                    totalCount.is_filtered ? totalCount.filtered_count : totalCount.total_count
+                  ) / limit}
+                  marginPagesDisplayed={2}
+                  pageRangeDisplayed={5}
+                  onPageChange={handlePageClick}
+                  forcePage={page - 1}
+                  containerClassName="pagination mb-0"
+                  pageClassName="page-item"
+                  pageLinkClassName="page-link"
+                  previousClassName="page-item"
+                  previousLinkClassName="page-link"
+                  nextClassName="page-item" 
+                  nextLinkClassName="page-link"
+                  activeClassName="active"
+                />
+                <div className="d-flex align-items-center gap-2 mt-2">
+                  <input
+                    type="number"
+                    className="form-control"
+                    style={{ width: "125px" }}
+                    placeholder="Go to page"
+                    min="1"
+                    max={Math.ceil(
+                      // Use filtered count when filtering is active, otherwise use total count
+                      totalCount.is_filtered ? totalCount.filtered_count : totalCount.total_count
+                    ) / limit}
+                    value={pageSearchInput}
+                    onChange={handlePageSearchInput}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handlePageSearchSubmit();
+                      }
+                    }}
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handlePageSearchSubmit}
+                  >
+                    Go
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
