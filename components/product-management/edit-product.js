@@ -41,6 +41,8 @@ const EditProduct = () => {
 	const [tdsFile, setTdsFile] = useState(null);
 	const [galleryImages, setGalleryImages] = useState([]);
 	const [vendorListData, setVendorListData] = useState([])
+	const [isEditable, setIsEditable] = useState(true);
+	const [vendorApprovalChanged, setVendorApprovalChanged] = useState(false);
 	const router = useRouter();
 	const { id } = router.query;
 	const uploadedImage = React.useRef(null);
@@ -190,6 +192,10 @@ const EditProduct = () => {
 		try {
 			const response = await getProducts(id);
 			const { data, vendor_list } = response;
+			
+			// Set editability based on conditions
+			const isEditableProduct = (data.added_by === 1 || data.added_by === 111) && !data.vendor;
+			setIsEditable(isEditableProduct);
 
 			setProductDetailsData(data);
 			setVendorListData(vendor_list);
@@ -289,6 +295,15 @@ const EditProduct = () => {
 							<span className="fa fa-angle-left mr-2"></span>Go Back
 						</Link>
 					</div>
+
+					{/* Add warning message for uneditable products */}
+					{!isEditable && (
+						<div className="alert alert-warning" role="alert">
+							This product cannot be edited as it is either mapped to a vendor or was not created by an admin. 
+							You can only modify the vendor approvals.
+						</div>
+					)}
+
 					<div class="card col-12">
 						<div class="card-body mt-3">
 							<div className="container-fluid">
@@ -315,7 +330,10 @@ const EditProduct = () => {
 														.required("Is featured is required"),
 												})}
 												onSubmit={(values, { resetForm }) => {
-													submitHandler(values);
+													// Only allow submit if editable or vendor approvals changed
+													if (isEditable || vendorApprovalChanged) {
+														submitHandler(values);
+													}
 												}}
 											>
 												{({
@@ -337,6 +355,7 @@ const EditProduct = () => {
 																				name="name"
 																				touched={touched}
 																				errors={errors}
+																				disabled={!isEditable}
 																			/>
 																		</div>
 																	</div>
@@ -359,7 +378,9 @@ const EditProduct = () => {
 																							isClearable={index !== 0}
 																							value={selectedValues[index] || null}
 																							styles={customSelectStyles}
+																							isDisabled={!isEditable}
 																							onChange={(selectedOption) => {
+																								if (!isEditable) return;
 																								const updatedSelectedValues = [...selectedValues];
 																								updatedSelectedValues[index] = selectedOption || null;
 
@@ -391,6 +412,7 @@ const EditProduct = () => {
 																				className="text-editor-area"
 																				cols="30"
 																				rows="10"
+																				disabled={!isEditable}
 																			/>
 																		</div>
 																	</div>
@@ -491,32 +513,65 @@ const EditProduct = () => {
 																		</div>
 																	)} */}
 
-																	<div className="col-md-12">
-																		<div className="row">
+																	{!isEditable && (
+																		<div className="col-md-12">
 																			<div className="form-group">
-																				<label>
-																					Upload Product Images
-																					<small className="form-text d-inline-flex text-muted ms-2">
-																						( Accepted formats: .jpg, .jpeg, .png, .webp. Maximum size: 2MB. Limit: 8 Images )
-																					</small>
-																				</label>
-																				<Field
-																					id="gallery"
-																					name="gallery"
-																					type="file"
-																					className="file-control"
-																					value={undefined}
-																					multiple
-																					ref={imageUploader}
-																					onChange={(event) => {
-																						handleImageChange(event);
-																						gallery = event.target.files;
-																						setFieldValue("gallery", gallery);
+																				<label htmlFor="approved_id">Approved Vendors</label>
+																				<Select
+																					isMulti
+																					name={"approved_id"}
+																					options={vendorApprovedList}
+																					placeholder="Select Vendor list"
+																					value={vendorApprovedList.filter(
+																						(option) => values?.approved_id?.includes(option?.value)
+																					)}
+																					styles={customSelectStyles}
+																					isDisabled={isEditable}
+																					onChange={(selectedOptions) => {
+																						const selectedValues = selectedOptions
+																							? selectedOptions?.map((option) => option.value)
+																							: [];
+																						setFieldValue("approved_id", selectedValues);
+																						setVendorApprovalChanged(true);
 																					}}
+																				/>
+																				<ErrorMessage
+																					name={"approved_id"}
+																					component="div"
+																					className="form-error"
 																				/>
 																			</div>
 																		</div>
-																	</div>
+																	)}
+
+																	{isEditable && (
+																		<>
+																			<div className="col-md-12">
+																				<div className="row">
+																					<div className="form-group">
+																						<label>
+																							Upload Product Images
+																							<small className="form-text d-inline-flex text-muted ms-2">
+																								( Accepted formats: .jpg, .jpeg, .png, .webp. Maximum size: 2MB. Limit: 8 Images )
+																							</small>
+																						</label>
+																						<Field
+																							id="gallery"
+																							name="gallery"
+																							type="file"
+																							className="file-control"
+																							value={undefined}
+																							multiple
+																							ref={imageUploader}
+																							onChange={handleImageChange}
+																						/>
+																					</div>
+																				</div>
+																			</div>
+																			{/* ... rest of file upload sections ... */}
+																		</>
+																	)}
+
 																	<div className="gallery-image-pane d-flex">
 																		{galleryImages &&
 																			galleryImages.length != 0 &&
@@ -554,178 +609,182 @@ const EditProduct = () => {
 																			})}
 																	</div>
 
-																	<div className="col-md-12">
-																		<div className="row featured-image">
-																			<div className="form-group">
-																				<label>
-																					Upload Featured Image
-																					<small className="form-text d-inline-flex text-muted ms-2">
-																						( Accepted formats: .jpg, .jpeg, .png, .webp. Maximum size: 2MB. Limit: 1 Image )
-																					</small>
-																				</label>
-																				<Field
-																					id="file"
-																					name="featured"
-																					type="file"
-																					className="file-control"
-																					touched={touched}
-																					errors={errors}
-																					value={undefined}
-																					onChange={(e) => {
-																						const selectFiles = e.target.files[0];
-																						setFieldValue(
-																							"featured",
-																							selectFiles
-																						);
-																						setImage(
-																							URL.createObjectURL(selectFiles)
-																						);
-																						setSelectedFeaturedFiles([
-																							selectFiles,
-																						]);
-																					}}
-																				/>
-																			</div>
-																			{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
+																	{isEditable && (
+																		<>
+																			<div className="col-md-12">
+																				<div className="row featured-image">
+																					<div className="form-group">
+																						<label>
+																							Upload Featured Image
+																							<small className="form-text d-inline-flex text-muted ms-2">
+																								( Accepted formats: .jpg, .jpeg, .png, .webp. Maximum size: 2MB. Limit: 1 Image )
+																							</small>
+																						</label>
+																						<Field
+																							id="file"
+																							name="featured"
+																							type="file"
+																							className="file-control"
+																							touched={touched}
+																							errors={errors}
+																							value={undefined}
+																							onChange={(e) => {
+																								const selectFiles = e.target.files[0];
+																								setFieldValue(
+																									"featured",
+																									selectFiles
+																								);
+																								setImage(
+																									URL.createObjectURL(selectFiles)
+																								);
+																								setSelectedFeaturedFiles([
+																									selectFiles,
+																								]);
+																							}}
+																						/>
+																					</div>
+																					{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
 
-																			{productDetailsData.product_images &&
-																				!image &&
-																				productDetailsData.product_images
-																					.length != 0 &&
-																				productDetailsData.product_images.map(
-																					(data, index) => {
-																						return (
-																							data.is_featured == 1 && (
-																								<div className="m-2">
-																									<img
-																										key={index}
-																										ref={uploadedImage}
-																										src={data.product_image_url}
-																										style={{
-																											width: "80px",
-																											height: "80px",
-																											objectFit: "cover",
-																										}}
-																									/>
-																								</div>
-																							)
-																						);
-																					}
-																				)}
-																			{image && (
-																				<div className="mt-2 mb-2">
-																					<img
-																						src={image}
-																						style={{
-																							width: "80px",
-																							height: "80px",
-																							objectFit: "cover",
-																						}}
-																					/>
+																					{productDetailsData.product_images &&
+																						!image &&
+																						productDetailsData.product_images
+																							.length != 0 &&
+																						productDetailsData.product_images.map(
+																							(data, index) => {
+																								return (
+																									data.is_featured == 1 && (
+																										<div className="m-2">
+																											<img
+																												key={index}
+																												ref={uploadedImage}
+																												src={data.product_image_url}
+																												style={{
+																													width: "80px",
+																													height: "80px",
+																													objectFit: "cover",
+																												}}
+																											/>
+																										</div>
+																									)
+																								);
+																							}
+																						)}
+																					{image && (
+																						<div className="mt-2 mb-2">
+																							<img
+																								src={image}
+																								style={{
+																									width: "80px",
+																									height: "80px",
+																									objectFit: "cover",
+																								}}
+																							/>
+																						</div>
+																					)}
 																				</div>
-																			)}
-																		</div>
-																	</div>
-																	<div className="col-md-12">
-																		<div className="row qap-file">
-																			<div className="form-group">
-																				<label>
-																					Upload QAP File
-																					<small className="form-text d-inline-flex text-muted ms-2">
-																						( Accepted formats: .pdf. Maximum size: 2MB. Limit: 1 File )
-																					</small>
-																				</label>
-																				<Field
-																					id="qap-file"
-																					name="qap"
-																					accept=".pdf"
-																					type="file"
-																					className="file-control"
-																					touched={touched}
-																					errors={errors}
-																					value={undefined}
-																					onChange={(e) => {
-																						const qap = e.target.files[0];
-																						setFieldValue("qap", qap);
-																						setQapFile(URL.createObjectURL(qap));
-																						setSelectedQapFiles([qap]);
-																					}}
-																				/>
 																			</div>
-																			{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
-
-																			{productDetailsData?.qap_new_file_name &&
-																				!qapFile && (
-																					<div className="m-2">
-																						<>
-																							<a
-																								href={
-																									productDetailsData?.qap_new_file_name
-																								}
-																								target="_blank"
-																							>
-																								<i class="fa fa-file"></i>
-																							</a>
-																							<a>
-																								{
-																									productDetailsData?.qap_original_file_name
-																								}
-																							</a>
-																						</>
+																			<div className="col-md-12">
+																				<div className="row qap-file">
+																					<div className="form-group">
+																						<label>
+																							Upload QAP File
+																							<small className="form-text d-inline-flex text-muted ms-2">
+																								( Accepted formats: .pdf. Maximum size: 2MB. Limit: 1 File )
+																							</small>
+																						</label>
+																						<Field
+																							id="qap-file"
+																							name="qap"
+																							accept=".pdf"
+																							type="file"
+																							className="file-control"
+																							touched={touched}
+																							errors={errors}
+																							value={undefined}
+																							onChange={(e) => {
+																								const qap = e.target.files[0];
+																								setFieldValue("qap", qap);
+																								setQapFile(URL.createObjectURL(qap));
+																								setSelectedQapFiles([qap]);
+																							}}
+																						/>
 																					</div>
-																				)}
-																		</div>
-																	</div>
-																	<div className="col-md-12">
-																		<div className="row qap-file">
-																			<div className="form-group">
-																				<label>
-																					Upload TDS File
-																					<small className="form-text d-inline-flex text-muted ms-2">
-																						( Accepted formats: .pdf. Maximum size: 2MB. Limit: 1 File )
-																					</small>
-																				</label>
-																				<Field
-																					id="tds-file"
-																					name="tds"
-																					accept=".pdf"
-																					type="file"
-																					className="file-control"
-																					touched={touched}
-																					errors={errors}
-																					value={undefined}
-																					onChange={(e) => {
-																						const tds = e.target.files[0];
-																						setFieldValue("tds", tds);
-																						setTdsFile(URL.createObjectURL(tds));
-																						setSelectedTdsFiles([tds]);
-																					}}
-																				/>
+																					{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
+
+																					{productDetailsData?.qap_new_file_name &&
+																						!qapFile && (
+																							<div className="m-2">
+																								<>
+																									<a
+																										href={
+																											productDetailsData?.qap_new_file_name
+																										}
+																										target="_blank"
+																									>
+																										<i class="fa fa-file"></i>
+																									</a>
+																									<a>
+																										{
+																											productDetailsData?.qap_original_file_name
+																										}
+																									</a>
+																								</>
+																							</div>
+																						)}
+																				</div>
 																			</div>
-																			{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
-
-																			{productDetailsData?.tds_new_file_name &&
-																				!tdsFile && (
-																					<div className="m-2">
-																						<>
-																							<a
-																								href={
-																									productDetailsData?.tds_new_file_name
-																								}
-																								target="_blank"
-																							>
-																								<i class="fa fa-file"></i>
-																							</a>
-																							<a>
-																								{
-																									productDetailsData?.tds_original_file_name
-																								}
-																							</a>
-																						</>
+																			<div className="col-md-12">
+																				<div className="row qap-file">
+																					<div className="form-group">
+																						<label>
+																							Upload TDS File
+																							<small className="form-text d-inline-flex text-muted ms-2">
+																								( Accepted formats: .pdf. Maximum size: 2MB. Limit: 1 File )
+																							</small>
+																						</label>
+																						<Field
+																							id="tds-file"
+																							name="tds"
+																							accept=".pdf"
+																							type="file"
+																							className="file-control"
+																							touched={touched}
+																							errors={errors}
+																							value={undefined}
+																							onChange={(e) => {
+																								const tds = e.target.files[0];
+																								setFieldValue("tds", tds);
+																								setTdsFile(URL.createObjectURL(tds));
+																								setSelectedTdsFiles([tds]);
+																							}}
+																						/>
 																					</div>
-																				)}
-																		</div>
-																	</div>
+																					{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
+
+																					{productDetailsData?.tds_new_file_name &&
+																						!tdsFile && (
+																							<div className="m-2">
+																								<>
+																									<a
+																										href={
+																											productDetailsData?.tds_new_file_name
+																										}
+																										target="_blank"
+																									>
+																										<i class="fa fa-file"></i>
+																									</a>
+																									<a>
+																										{
+																											productDetailsData?.tds_original_file_name
+																										}
+																									</a>
+																								</>
+																							</div>
+																						)}
+																				</div>
+																			</div>
+																		</>
+																	)}
 
 																	<div className="prod-spec-sec p-0 pt-3">
 																		<div className="col-md-12">
@@ -747,6 +806,7 @@ const EditProduct = () => {
 																														name={`variations.${index}.attribute`}
 																														type="text"
 																														placeholder="Attribute"
+																														disabled={!isEditable}
 																													/>
 																													<div className="form-error">
 																														<ErrorMessage
@@ -763,6 +823,7 @@ const EditProduct = () => {
 																														name={`variations.${index}.attributeValue`}
 																														type="text"
 																														placeholder="Attribute Value"
+																														disabled={!isEditable}
 																													/>
 																													<div className="form-error">
 																														<ErrorMessage
@@ -773,7 +834,7 @@ const EditProduct = () => {
 																												</div>
 																											</div>
 
-																											{values.variations
+																											{isEditable && values.variations
 																												.length > 1 && (
 																													<div className="col-md-3">
 																														<div className="form-group">
@@ -795,18 +856,20 @@ const EditProduct = () => {
 																										</div>
 																									)
 																								)}
-																							<button
-																								type="button"
-																								className="btn btn-primary"
-																								onClick={() =>
-																									push({
-																										attribute: "",
-																										attributeValue: "",
-																									})
-																								}
-																							>
-																								Add Field
-																							</button>
+																							{isEditable && (
+																								<button
+																									type="button"
+																									className="btn btn-primary"
+																									onClick={() =>
+																										push({
+																											attribute: "",
+																											attributeValue: "",
+																										})
+																									}
+																								>
+																									Add Field
+																								</button>
+																							)}
 																						</>
 																					)}
 																				</FieldArray>
@@ -840,12 +903,14 @@ const EditProduct = () => {
 																</div>
 															)}
 
-														<button
-															type="submit"
-															className="page-link btn btn-secondary"
-														>
-															Save
-														</button>
+														{(isEditable || vendorApprovalChanged) && (
+															<button
+																type="submit"
+																className="page-link btn btn-secondary"
+															>
+																Save
+															</button>
+														)}
 													</Form>
 												)}
 											</Formik>
