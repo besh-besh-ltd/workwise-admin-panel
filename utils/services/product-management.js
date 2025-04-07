@@ -85,7 +85,20 @@ export const productExport = (values) => {
   });
 };
 
-export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove, vendorId, isFeatured, addedBy = null, categoryId = null, onlyAddedByAdmin = false, dateFrom = null, dateTo = null, status = null) => {
+export const getAllProducts = (
+  limit = 10, 
+  page = 1, 
+  searchString, 
+  vendorApprove, 
+  vendorId, 
+  isFeatured, 
+  addedBy = null, 
+  categoryId = null, 
+  dateFrom = null,
+  dateTo = null,
+  approvalStatus = null,
+  onlyAddedByAdmin = false
+) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Construct the URL exactly as the backend expects it
@@ -111,7 +124,7 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
       }
       
       // Special case for admin-added products
-      if(onlyAddedByAdmin){
+      if(onlyAddedByAdmin || (addedBy && addedBy === "1")){
         url += `&onlyAddedByAdmin=1`;
       }
       
@@ -122,15 +135,15 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
 
       // Handle date filtering
       if(dateFrom){
-        url += `&date_from=${encodeURIComponent(dateFrom)}`;
+        url += `&dateFrom=${encodeURIComponent(dateFrom)}`;
       }
       if(dateTo){
-        url += `&date_to=${encodeURIComponent(dateTo)}`;
+        url += `&dateTo=${encodeURIComponent(dateTo)}`;
       }
 
-      // Handle status filtering - ensure it's sent as a number
-      if(status !== null && status !== undefined && status !== ''){
-        url += `&is_approve=${encodeURIComponent(status)}`;
+      // Handle approval status filtering
+      if(approvalStatus !== null && approvalStatus !== ""){
+        url += `&is_approve=${encodeURIComponent(approvalStatus)}`;
       }
       
       // Add a cache-busting parameter to prevent 304 responses
@@ -139,29 +152,7 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
       
       // Make the request for products
       const response = await axiosInstance.get(url);
-     
-      // Check if the response is in the expected format
-      if (response.data && typeof response.data === 'object' && 'status' in response.data && response.data.status === 1) {
-        if ('data' in response.data && 'total_count' in response.data) {
-          resolve(response.data);
-        } 
-        else if ('data' in response.data && Array.isArray(response.data.data)) {
-          const products = response.data.data;
-          const totalCount = products.length;
-          const approveCount = products.filter(p => p.is_approve === 1).length;
-          const disapproveCount = totalCount - approveCount;
-          
-          const result = {
-            ...response.data,
-            total_count: totalCount,
-            approve_count: approveCount,
-            disapprove_count: disapproveCount
-          };
-          resolve(result);
-        }
-      } else {
-        reject(new Error('Invalid response format'));
-      }
+      resolve(response);
     } catch (error) {
       reject(error);
     }

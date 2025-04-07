@@ -23,12 +23,6 @@ const customStyles = {
   }),
 };
 
-const statusOptions = [
-  { label: 'All', value: '' },
-  { label: 'Approved', value: '1' },
-  { label: 'Disapproved', value: '0' }
-];
-
 // Modified Select Component to show email along with vendor Name
 const CustomSelectOption = (props) => (
   <components.Option {...props}>
@@ -73,7 +67,7 @@ const ProductManagement = () => {
   const [addedByOptions, setAddedByOptions] = useState([]);
   const [dateFrom, setDateFrom] = useState(router.query.dateFrom || "");
   const [dateTo, setDateTo] = useState(router.query.dateTo || "");
-  const [selectedStatus, setSelectedStatus] = useState(router.query.status || "");
+  const [selectedApprovalStatus, setSelectedApprovalStatus] = useState(router.query.approvalStatus || "");
 
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
@@ -95,6 +89,10 @@ const ProductManagement = () => {
   const [totalCount, setTotalCount] = useState({ total_count: 0, disapprove_count: 0, approve_count: 0 });
   const [pageSearchInput, setPageSearchInput] = useState("");
 
+  const approvalStatusOptions = [
+    { label: 'Approved', value: '1' },
+    { label: 'Disapproved', value: '0' }
+  ];
 
   const customSelectStyles = {
     control: (base) => ({
@@ -178,8 +176,7 @@ const ProductManagement = () => {
         category: selectedCategory,
         addedBy: selectedAddedBy,
         dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: selectedStatus
+        dateTo: dateTo
       });
     }
   };
@@ -207,8 +204,7 @@ const ProductManagement = () => {
         category: selectedCategory,
         addedBy: selectedAddedBy,
         dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: selectedStatus
+        dateTo: dateTo
       });
     } else {
       toast.error(`Please enter a valid page number between 1 and ${maxPage}`);
@@ -233,8 +229,7 @@ const ProductManagement = () => {
         category: selectedCategory,
         addedBy: selectedAddedBy,
         dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: selectedStatus
+        dateTo: dateTo
       });
     } else {
       // Left ellipsis: Go to middle between first page (1) and current page
@@ -249,8 +244,7 @@ const ProductManagement = () => {
         category: selectedCategory,
         addedBy: selectedAddedBy,
         dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: selectedStatus
+        dateTo: dateTo
       });
     }
   };
@@ -398,50 +392,74 @@ const ProductManagement = () => {
   };
 
   const getProducts = () => {
+    // Set loading but keep current products to prevent flickering
     setloading(true);
+    
+    // Pass all filters to the API
     getAllProducts(
-      limit,
-      page,
-      searchString,
-      selectedApproveVendor,
-      selectedVendor,
+      limit, 
+      page, 
+      searchString, 
+      selectedApproveVendor, 
+      selectedVendor, 
       selectedFeatured,
       selectedAddedBy,
       selectedCategory,
-      false,
       dateFrom,
       dateTo,
-      selectedStatus
+      selectedApprovalStatus
     )
       .then((res) => {
         setloading(false);
-        let productsData = res.data || [];
-        let totalCount = res.total_count || productsData.length;
-        let approveCount = res.approve_count || 0;
-        let disapproveCount = res.disapprove_count || 0;
         
-        // Set pagination based on total count
-        settotalPages(Math.ceil(totalCount / limit));
+        // Handle API response
+        const productsData = res.data || [];
+        const totalCount = res.total_count || 0;
+        const approveCount = res.approve_count || 0;
+        const disapproveCount = res.disapprove_count || 0;
         
-        // Set the total count state with API values
+        // Use the filtered count for pagination if filters are active
+        const isFiltered = res.is_filtered || false;
+        const filteredTotal = isFiltered ? res.filtered_count : totalCount;
+        const filteredApproveCount = isFiltered ? res.filtered_approve_count : approveCount;
+        const filteredDisapproveCount = isFiltered ? res.filtered_disapprove_count : disapproveCount;
+        
+        // Set pagination based on filtered count
+        settotalPages(Math.ceil(filteredTotal / limit));
+        
+        // Update total counts with filtered data
         setTotalCount({
           total_count: totalCount,
           approve_count: approveCount,
           disapprove_count: disapproveCount,
-          is_filtered: res.is_filtered || false,
-          filtered_count: res.filtered_count || totalCount,
-          filtered_approve_count: res.filtered_approve_count || approveCount,
-          filtered_disapprove_count: res.filtered_disapprove_count || disapproveCount
+          filtered_count: filteredTotal,
+          filtered_approve_count: filteredApproveCount,
+          filtered_disapprove_count: filteredDisapproveCount,
+          is_filtered: isFiltered
         });
-        
-        // Set the checked property and update products state
-        productsData.forEach(item => item.isChecked = false);
-        setproducts(productsData);
+
+        // Apply the checked property to products
+        const productsWithChecked = productsData.map(item => ({ ...item, isChecked: false }));
+        setproducts(productsWithChecked);
+
+        // Update page if server returns a different page (e.g., if current page is out of bounds)
+        if (res.page && res.page !== page) {
+          setPage(res.page);
+        }
       })
       .catch((err) => {
         console.error("Error fetching products:", err);
         setloading(false);
         setproducts([]);
+        setTotalCount({
+          total_count: 0,
+          approve_count: 0,
+          disapprove_count: 0,
+          filtered_count: 0,
+          filtered_approve_count: 0,
+          filtered_disapprove_count: 0,
+          is_filtered: false
+        });
       });
   };
 
@@ -710,16 +728,16 @@ const ProductManagement = () => {
    */
   const resetFilters = () => {
     // Clear all filter states to their default values
-    setSearchString("");             // Clear product name search filter
-    setSelectedApproveVendor("");    // Reset to show products from all approved vendors
-    setSelectedVendor("");           // Reset to show products from all vendors
-    setSelectedFeatured("");         // Reset to show both featured and non-featured products
-    setSelectedCategory("");         // Reset to show products from all categories
-    setSelectedAddedBy("");          // Reset to show products added by anyone
-    setDateFrom("");                 // Reset date from filter
-    setDateTo("");                   // Reset date to filter
-    setSelectedStatus("");           // Reset status filter
-    setPage(1);                      // Return to first page
+    setSearchString("");             
+    setSelectedApproveVendor("");    
+    setSelectedVendor("");           
+    setSelectedFeatured("");         
+    setSelectedCategory("");         
+    setSelectedAddedBy("");          
+    setDateFrom("");                 
+    setDateTo("");                   
+    setSelectedApprovalStatus("");   // Reset approval status
+    setPage(1);                      
     
     // Remove all URL query parameters
     router.push({
@@ -729,14 +747,17 @@ const ProductManagement = () => {
     setloading(true);
     
     getAllProducts(
-      limit,                    // Number of items per page
-      1,                        // Reset to first page
-      "",                       // No product name filter
-      "",                       // Show products from all vendors
-      "",                       // No specific vendor filter
-      "",                       // Include both featured and non-featured products
-      null,                     // Show products added by anyone
-      null                      // Show products from all categories
+      limit,                    
+      1,                        
+      "",                       
+      "",                       
+      "",                       
+      null,                     
+      null,                     
+      "",                       
+      "",                       
+      "",                       
+      null                      // Pass null for approval status when resetting
     )
       .then((res) => {
         setloading(false);
@@ -753,7 +774,8 @@ const ProductManagement = () => {
         setTotalCount({
           total_count: totalCount,
           approve_count: approveCount,
-          disapprove_count: disapproveCount
+          disapprove_count: disapproveCount,
+          is_filtered: false
         });
         
         // Set the checked property and update products state
@@ -767,49 +789,72 @@ const ProductManagement = () => {
       });
   };
 
-  // Update the handleFilterChange function
-  const handleFilterChange = (type, value) => {
-    setPage(1);
-    
-    switch (type) {
+  // Handler for Select components
+  const handleFilterChange = (type, selectedOption) => {
+    let updateObj = {
+      search: searchString,
+      page: 1,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      approvalStatus: selectedApprovalStatus
+    };
+
+    const value = selectedOption && typeof selectedOption === 'object' ? selectedOption.value : selectedOption;
+
+    switch(type) {
       case 'approveVendor':
-        setSelectedApproveVendor(value);
-        updateUrlParams({ approveVendor: value, page: 1 });
+        setSelectedApproveVendor(value || "");
+        updateObj.approveVendor = value;
         break;
       case 'vendor':
-        setSelectedVendor(value);
-        updateUrlParams({ vendor: value, page: 1 });
+        setSelectedVendor(value || "");
+        updateObj.vendor = value;
         break;
       case 'featured':
-        setSelectedFeatured(value);
-        updateUrlParams({ featured: value, page: 1 });
+        setSelectedFeatured(value || "");
+        updateObj.featured = value;
         break;
       case 'category':
-        setSelectedCategory(value);
-        updateUrlParams({ category: value, page: 1 });
+        setSelectedCategory(value || "");
+        updateObj.category = value;
         break;
       case 'addedBy':
-        setSelectedAddedBy(value);
-        updateUrlParams({ addedBy: value, page: 1 });
+        setSelectedAddedBy(value || "");
+        updateObj.addedBy = value;
         break;
       case 'dateFrom':
-        setDateFrom(value);
-        updateUrlParams({ dateFrom: value, page: 1 });
+        setDateFrom(value || "");
+        updateObj.dateFrom = value;
         break;
       case 'dateTo':
-        setDateTo(value);
-        updateUrlParams({ dateTo: value, page: 1 });
+        setDateTo(value || "");
+        updateObj.dateTo = value;
         break;
-      case 'status':
-        setSelectedStatus(value);
-        updateUrlParams({ status: value, page: 1 });
+      case 'approvalStatus':
+        setSelectedApprovalStatus(value || "");
+        updateObj.approvalStatus = value;
         break;
     }
+    setPage(1);
+    updateUrlParams(updateObj);
+    
   };
 
   // Sync state with URL params
   useEffect(() => {
-    const { page, search, approveVendor, vendor, featured, category, addedBy, dateFrom, dateTo, status } = router.query;
+    const { 
+      page, 
+      search, 
+      approveVendor, 
+      vendor, 
+      featured, 
+      category, 
+      addedBy, 
+      dateFrom: urlDateFrom, 
+      dateTo: urlDateTo,
+      approvalStatus 
+    } = router.query;
+    
     if (page) setPage(parseInt(page));
     if (search !== undefined) setSearchString(search);
     if (approveVendor !== undefined) setSelectedApproveVendor(approveVendor);
@@ -817,9 +862,9 @@ const ProductManagement = () => {
     if (featured !== undefined) setSelectedFeatured(featured);
     if (category !== undefined) setSelectedCategory(category);
     if (addedBy !== undefined) setSelectedAddedBy(addedBy);
-    if (dateFrom !== undefined) setDateFrom(dateFrom);
-    if (dateTo !== undefined) setDateTo(dateTo);
-    if (status !== undefined) setSelectedStatus(status);
+    if (urlDateFrom !== undefined) setDateFrom(urlDateFrom);
+    if (urlDateTo !== undefined) setDateTo(urlDateTo);
+    if (approvalStatus !== undefined) setSelectedApprovalStatus(approvalStatus);
   }, [router.query]);
 
   // Initial data loading
@@ -862,7 +907,7 @@ const ProductManagement = () => {
       addedBy: selectedAddedBy,
       dateFrom: dateFrom,
       dateTo: dateTo,
-      status: selectedStatus,
+      approvalStatus: selectedApprovalStatus,
       limit
     };
 
@@ -872,7 +917,7 @@ const ProductManagement = () => {
     // Reset page and fetch data
     setPage(1);
     getProducts();
-  }, [searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, dateFrom, dateTo, selectedStatus, limit]);
+  }, [searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, dateFrom, dateTo, selectedApprovalStatus, limit]);
 
   // Handle page changes
   useEffect(() => {
@@ -935,6 +980,41 @@ const ProductManagement = () => {
     setSelectedAddedBy(value);
   };
 
+  const getApprovalInfo = (item) => {
+    // Get the added by ID and approved by ID
+    const addedById = item.added_by;
+    const approvedById = item.vendor_approved_by;
+    
+    // Find the admin name for added by
+    let addedByName = "N/A";
+    if (!isNaN(addedById)) {
+      const admin = addedByOptions.find(admin => admin.value === parseInt(addedById));
+      if (admin) {
+        addedByName = `${admin.label}`;
+      }
+    }
+    
+    // Find the admin name for approved by
+    let approvedByName = "N/A";
+    if (!isNaN(approvedById)) {
+      const admin = addedByOptions.find(admin => admin.value === parseInt(approvedById));
+      if (admin) {
+        approvedByName = `${admin.label}`;
+      }
+    }
+
+    return (
+      <>
+        <p className="text-sm text-capitalize text-nowrap mb-1">
+          <b>Added By: </b>{addedByName}
+        </p>
+        <p className="text-sm text-capitalize text-nowrap mb-1">
+          <b>Approved By: </b>{approvedByName}
+        </p>
+      </>
+    );
+  };
+
   return (
     <>
       <ToastContainer />
@@ -987,6 +1067,18 @@ const ProductManagement = () => {
                 <div className="col-sm-3">
                   <Select
                     id={id}
+                    options={approvalStatusOptions}
+                    placeholder="Filter by Approval Status"
+                    styles={customSelectStyles}
+                    isClearable={true}
+                    instanceId="approval-status-select"
+                    value={approvalStatusOptions.find(opt => opt.value === selectedApprovalStatus) || null}
+                    onChange={(selectedOption) => handleFilterChange('approvalStatus', selectedOption)}
+                  />
+                </div>
+                <div className="col-sm-3">
+                  <Select
+                    id={id}
                     options={isFeaturesArray}
                     placeholder="Select is featured"
                     styles={customSelectStyles}
@@ -1025,21 +1117,6 @@ const ProductManagement = () => {
                   </select>
                 </div>
                 <div className="col-sm-3 mt-3">
-                  <select
-                    className="form-select"
-                    style={{ maxWidth: "300px" }}
-                    value={selectedStatus}
-                    onChange={(e) => handleFilterChange('status', e.target.value)}
-                  >
-                    <option value="">Filter by Status</option>
-                    {statusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="col-sm-3 mt-3">
                   <div className="date-input-container">
                     <input
                       type="text"
@@ -1052,10 +1129,7 @@ const ProductManagement = () => {
                         }
                       }}
                       value={dateFrom}
-                      onChange={(e) => {
-                        setDateFrom(e.target.value);
-                        handleFilterChange('dateFrom', e.target.value);
-                      }}
+                      onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
                     />
                   </div>
                 </div>
@@ -1072,10 +1146,7 @@ const ProductManagement = () => {
                         }
                       }}
                       value={dateTo}
-                      onChange={(e) => {
-                        setDateTo(e.target.value);
-                        handleFilterChange('dateTo', e.target.value);
-                      }}
+                      onChange={(e) => handleFilterChange('dateTo', e.target.value)}
                     />
                   </div>
                 </div>
@@ -1634,8 +1705,7 @@ const ProductManagement = () => {
                                     </OverlayTrigger>}
                                 </div>
                               ))}
-                            <p className="text-sm text-capitalize text-nowrap mb-1"><b>Added By: </b>{item.added_by}</p>
-                            <p className="text-sm text-capitalize text-nowrap mb-1"><b>Approved By: </b>{item.vendor_approved_by}</p>
+                            {getApprovalInfo(item)}
                           </td>
 
                           <td>
