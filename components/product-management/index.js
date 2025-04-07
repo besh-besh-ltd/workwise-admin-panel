@@ -637,6 +637,7 @@ const ProductManagement = () => {
     }
   }
 
+  
   setproductMapObj({
     product: null,
     vendor: null,
