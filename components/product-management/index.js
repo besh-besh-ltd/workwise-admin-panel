@@ -65,6 +65,9 @@ const ProductManagement = () => {
   const [selectedCategory, setSelectedCategory] = useState(router.query.category || "");
   const [selectedAddedBy, setSelectedAddedBy] = useState(router.query.addedBy || "");
   const [addedByOptions, setAddedByOptions] = useState([]);
+  const [dateFrom, setDateFrom] = useState(router.query.dateFrom || "");
+  const [dateTo, setDateTo] = useState(router.query.dateTo || "");
+  const [selectedApprovalStatus, setSelectedApprovalStatus] = useState(router.query.approvalStatus || "");
 
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
@@ -86,6 +89,10 @@ const ProductManagement = () => {
   const [totalCount, setTotalCount] = useState({ total_count: 0, disapprove_count: 0, approve_count: 0 });
   const [pageSearchInput, setPageSearchInput] = useState("");
 
+  const approvalStatusOptions = [
+    { label: 'Approved', value: '1' },
+    { label: 'Disapproved', value: '0' }
+  ];
 
   const customSelectStyles = {
     control: (base) => ({
@@ -167,7 +174,9 @@ const ProductManagement = () => {
         vendor: selectedVendor,
         featured: selectedFeatured,
         category: selectedCategory,
-        addedBy: selectedAddedBy
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo
       });
     }
   };
@@ -193,7 +202,9 @@ const ProductManagement = () => {
         vendor: selectedVendor,
         featured: selectedFeatured,
         category: selectedCategory,
-        addedBy: selectedAddedBy
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo
       });
     } else {
       toast.error(`Please enter a valid page number between 1 and ${maxPage}`);
@@ -216,7 +227,9 @@ const ProductManagement = () => {
         vendor: selectedVendor,
         featured: selectedFeatured,
         category: selectedCategory,
-        addedBy: selectedAddedBy
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo
       });
     } else {
       // Left ellipsis: Go to middle between first page (1) and current page
@@ -229,7 +242,9 @@ const ProductManagement = () => {
         vendor: selectedVendor,
         featured: selectedFeatured,
         category: selectedCategory,
-        addedBy: selectedAddedBy
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo
       });
     }
   };
@@ -389,45 +404,73 @@ const ProductManagement = () => {
       selectedVendor, 
       selectedFeatured,
       selectedAddedBy,
-      selectedCategory
+      selectedCategory,
+      dateFrom,
+      dateTo,
+      selectedApprovalStatus
     )
       .then((res) => {
         setloading(false);
         
         // Handle API response
         const productsData = res.data || [];
-        const totalCount = res.total_count || productsData.length;
-        const approveCount = res.approve_count || 0;
-        const disapproveCount = res.disapprove_count || 0;
         
-
-        // Use the filtered count for pagination
-        const filteredTotal = res.filtered_count || totalCount;
-        settotalPages(Math.ceil(filteredTotal / limit));
+        // Get the filtered count from the response
+        const filteredTotal = res.filtered_count || productsData.length;
+        
+        // Calculate total pages based on filtered count
+        const calculatedTotalPages = Math.ceil(filteredTotal / limit);
+        
+        // If current page is greater than total pages, reset to page 1
+        if (page > calculatedTotalPages) {
+          setPage(1);
+          updateUrlParams({ 
+            page: 1,
+            search: searchString,
+            approveVendor: selectedApproveVendor,
+            vendor: selectedVendor,
+            featured: selectedFeatured,
+            category: selectedCategory,
+            addedBy: selectedAddedBy,
+            dateFrom: dateFrom,
+            dateTo: dateTo,
+            approvalStatus: selectedApprovalStatus
+          });
+          return; // This will trigger a re-fetch with page 1
+        }
+        
+        // Set pagination based on filtered count
+        settotalPages(calculatedTotalPages);
         
         // Update total counts with filtered data
         setTotalCount({
-          total_count: filteredTotal,  // Use filtered count as total
-          approve_count: res.filtered_approve_count || approveCount,
-          disapprove_count: res.filtered_disapprove_count || disapproveCount,
+          total_count: res.total_count || 0,
+          approve_count: res.approve_count || 0,
+          disapprove_count: res.disapprove_count || 0,
           filtered_count: filteredTotal,
-          filtered_approve_count: res.filtered_approve_count || approveCount,
-          filtered_disapprove_count: res.filtered_disapprove_count || disapproveCount
+          filtered_approve_count: res.filtered_approve_count || 0,
+          filtered_disapprove_count: res.filtered_disapprove_count || 0,
+          is_filtered: res.is_filtered || false
         });
 
         // Apply the checked property to products
         const productsWithChecked = productsData.map(item => ({ ...item, isChecked: false }));
         setproducts(productsWithChecked);
-
-        // Update page if server returns a different page (e.g., if current page is out of bounds)
-        if (res.page && res.page !== page) {
-          setPage(res.page);
-        }
       })
       .catch((err) => {
         console.error("Error fetching products:", err);
         setloading(false);
         setproducts([]);
+        setTotalCount({
+          total_count: 0,
+          approve_count: 0,
+          disapprove_count: 0,
+          filtered_count: 0,
+          filtered_approve_count: 0,
+          filtered_disapprove_count: 0,
+          is_filtered: false
+        });
+        settotalPages(0);
       });
   };
 
@@ -697,13 +740,16 @@ const ProductManagement = () => {
    */
   const resetFilters = () => {
     // Clear all filter states to their default values
-    setSearchString("");             // Clear product name search filter
-    setSelectedApproveVendor("");    // Reset to show products from all approved vendors
-    setSelectedVendor("");           // Reset to show products from all vendors
-    setSelectedFeatured("");         // Reset to show both featured and non-featured products
-    setSelectedCategory("");         // Reset to show products from all categories
-    setSelectedAddedBy("");          // Reset to show products added by anyone
-    setPage(1);                      // Return to first page
+    setSearchString("");             
+    setSelectedApproveVendor("");    
+    setSelectedVendor("");           
+    setSelectedFeatured("");         
+    setSelectedCategory("");         
+    setSelectedAddedBy("");          
+    setDateFrom("");                 
+    setDateTo("");                   
+    setSelectedApprovalStatus("");   // Reset approval status
+    setPage(1);                      
     
     // Remove all URL query parameters
     router.push({
@@ -713,14 +759,17 @@ const ProductManagement = () => {
     setloading(true);
     
     getAllProducts(
-      limit,                    // Number of items per page
-      1,                        // Reset to first page
-      "",                       // No product name filter
-      "",                       // Show products from all vendors
-      "",                       // No specific vendor filter
-      "",                       // Include both featured and non-featured products
-      null,                     // Show products added by anyone
-      null                      // Show products from all categories
+      limit,                    
+      1,                        
+      "",                       
+      "",                       
+      "",                       
+      null,                     
+      null,                     
+      "",                       
+      "",                       
+      "",                       
+      null                      // Pass null for approval status when resetting
     )
       .then((res) => {
         setloading(false);
@@ -737,7 +786,8 @@ const ProductManagement = () => {
         setTotalCount({
           total_count: totalCount,
           approve_count: approveCount,
-          disapprove_count: disapproveCount
+          disapprove_count: disapproveCount,
+          is_filtered: false
         });
         
         // Set the checked property and update products state
@@ -753,12 +803,18 @@ const ProductManagement = () => {
 
   // Handler for Select components
   const handleFilterChange = (type, selectedOption) => {
+    // Reset pagination to page 1 and clear page search input
+    setPage(1);
+    setPageSearchInput("");
+    
     let updateObj = {
       search: searchString,
-      page: 1
+      page: 1,  // Always reset to page 1 when filters change
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      approvalStatus: selectedApprovalStatus
     };
 
-    // Handle both direct value and select option object
     const value = selectedOption && typeof selectedOption === 'object' ? selectedOption.value : selectedOption;
 
     switch(type) {
@@ -782,15 +838,65 @@ const ProductManagement = () => {
         setSelectedAddedBy(value || "");
         updateObj.addedBy = value;
         break;
+      case 'dateFrom':
+        setDateFrom(value || "");
+        updateObj.dateFrom = value;
+        break;
+      case 'dateTo':
+        setDateTo(value || "");
+        updateObj.dateTo = value;
+        break;
+      case 'approvalStatus':
+        setSelectedApprovalStatus(value || "");
+        updateObj.approvalStatus = value;
+        break;
     }
-    setPage(1);
-    updateUrlParams(updateObj);
     
+    // Update URL and trigger data fetch
+    updateUrlParams(updateObj);
   };
+
+  // Handle filter changes
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    // Clear existing products and reset pagination when filters change
+    setproducts([]);
+    setPageSearchInput("");
+    
+    // Fetch new data with updated filters
+    getProducts();
+  }, [
+    searchString,
+    selectedApproveVendor,
+    selectedVendor,
+    selectedFeatured,
+    selectedCategory,
+    selectedAddedBy,
+    dateFrom,
+    dateTo,
+    selectedApprovalStatus,
+    page
+  ]);
 
   // Sync state with URL params
   useEffect(() => {
-    const { page, search, approveVendor, vendor, featured, category, addedBy } = router.query;
+    const { 
+      page, 
+      search, 
+      approveVendor, 
+      vendor, 
+      featured, 
+      category, 
+      addedBy, 
+      dateFrom: urlDateFrom, 
+      dateTo: urlDateTo,
+      approvalStatus 
+    } = router.query;
+    
     if (page) setPage(parseInt(page));
     if (search !== undefined) setSearchString(search);
     if (approveVendor !== undefined) setSelectedApproveVendor(approveVendor);
@@ -798,6 +904,9 @@ const ProductManagement = () => {
     if (featured !== undefined) setSelectedFeatured(featured);
     if (category !== undefined) setSelectedCategory(category);
     if (addedBy !== undefined) setSelectedAddedBy(addedBy);
+    if (urlDateFrom !== undefined) setDateFrom(urlDateFrom);
+    if (urlDateTo !== undefined) setDateTo(urlDateTo);
+    if (approvalStatus !== undefined) setSelectedApprovalStatus(approvalStatus);
   }, [router.query]);
 
   // Initial data loading
@@ -818,47 +927,6 @@ const ProductManagement = () => {
 
   // Track if this is the first render
   const isFirstRender = React.useRef(true);
-
-  // Handle filter changes
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    // Clear existing products to prevent stale data display
-    setproducts([]);
-
-    // When any filter changes, reset to page 1 and update URL
-    const newParams = {
-      page: 1,
-      search: searchString,
-      approveVendor: selectedApproveVendor,
-      vendor: selectedVendor,
-      featured: selectedFeatured,
-      category: selectedCategory,
-      addedBy: selectedAddedBy,
-      limit
-    };
-
-    // Update URL with new params
-    updateUrlParams(newParams);
-
-    // Reset page and fetch data
-    setPage(1);
-    getProducts();
-  }, [searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, limit]);
-
-  // Handle page changes
-  useEffect(() => {
-    if (isFirstRender.current) return;
-
-    // Update URL with new page number
-    updateUrlParams({ page });
-    
-    // Fetch data for new page
-    getProducts();
-  }, [page]);
 
   const fetchCategories = async () => {
     try {
@@ -910,6 +978,41 @@ const ProductManagement = () => {
     setSelectedAddedBy(value);
   };
 
+  const getApprovalInfo = (item) => {
+    // Get the added by ID and approved by ID
+    const addedById = item.added_by;
+    const approvedById = item.vendor_approved_by;
+    
+    // Find the admin name for added by
+    let addedByName = "N/A";
+    if (!isNaN(addedById)) {
+      const admin = addedByOptions.find(admin => admin.value === parseInt(addedById));
+      if (admin) {
+        addedByName = `${admin.label}`;
+      }
+    }
+    
+    // Find the admin name for approved by
+    let approvedByName = "N/A";
+    if (!isNaN(approvedById)) {
+      const admin = addedByOptions.find(admin => admin.value === parseInt(approvedById));
+      if (admin) {
+        approvedByName = `${admin.label}`;
+      }
+    }
+
+    return (
+      <>
+        <p className="text-sm text-capitalize text-nowrap mb-1">
+          <b>Added By: </b>{addedByName}
+        </p>
+        <p className="text-sm text-capitalize text-nowrap mb-1">
+          <b>Approved By: </b>{approvedByName}
+        </p>
+      </>
+    );
+  };
+
   return (
     <>
       <ToastContainer />
@@ -925,9 +1028,9 @@ const ProductManagement = () => {
         <div className="container-fluid">
           <div className="card card-body">
             {!enableBulkUpload && !enableBulkProdUpload && !openProductMap && (
-              <div className="row">
-                {/* <div className="d-flex justify-content-end flex-wrap"> */}
-                <div className="col-sm-3">
+              <div className="row g-3">
+                {/* Search and Primary Filters */}
+                <div className="col-sm-3 mb-3">
                   <input
                     type="text"
                     className="form-control"
@@ -936,43 +1039,45 @@ const ProductManagement = () => {
                     onChange={handleSearch}
                   />
                 </div>
-                <div className="col-sm-3">
+                <div className="col-sm-3 mb-3">
                   <Select
                     id={id}
                     options={vendorApprovedList}
                     placeholder="Approved Vendor"
                     styles={customSelectStyles}
                     isClearable={true}
-                    instanceId="long-value-select"
+                    instanceId="approved-vendor-select"
                     value={vendorApprovedList.find(opt => opt.value === selectedApproveVendor) || null}
                     onChange={(selectedOption) => handleFilterChange('approveVendor', selectedOption)}
                   />
                 </div>
-                <div className="col-sm-3">
+                <div className="col-sm-3 mb-3">
                   <Select
                     id={id}
                     options={vendorData}
                     placeholder="Select Vendor"
                     styles={customSelectStyles}
                     isClearable={true}
-                    instanceId="long-value-select"
+                    instanceId="vendor-select"
                     value={vendorData.find(opt => opt.value === selectedVendor) || null}
                     onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
                   />
                 </div>
-                <div className="col-sm-3">
+                <div className="col-sm-3 mb-3">
                   <Select
                     id={id}
-                    options={isFeaturesArray}
-                    placeholder="Select is featured"
+                    options={approvalStatusOptions}
+                    placeholder="Filter by Approval Status"
                     styles={customSelectStyles}
                     isClearable={true}
-                    instanceId="long-value-select"
-                    value={isFeaturesArray.find(opt => opt.value === selectedFeatured) || null}
-                    onChange={(selectedOption) => handleFilterChange('featured', selectedOption)}
+                    instanceId="approval-status-select"
+                    value={approvalStatusOptions.find(opt => opt.value === selectedApprovalStatus) || null}
+                    onChange={(selectedOption) => handleFilterChange('approvalStatus', selectedOption)}
                   />
                 </div>
-                <div className="col-sm-3 mt-3">
+
+                {/* Secondary Filters */}
+                <div className="col-sm-3 mb-3">
                   <select
                     className="form-control"
                     value={selectedCategory}
@@ -986,7 +1091,7 @@ const ProductManagement = () => {
                     ))}
                   </select>
                 </div>
-                <div className="col-sm-3 mt-3">
+                <div className="col-sm-3 mb-3">
                   <select
                     className="form-control"
                     value={selectedAddedBy}
@@ -1000,46 +1105,81 @@ const ProductManagement = () => {
                     ))}
                   </select>
                 </div>
-                <div className="d-flex flex-wrap mt-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      router.push("/product-management/add-product")
-                    }
-                    className="btn btn-primary mr-2"
-                  >
-                    <i className="fa fa-plus"></i> Add Product
-                  </button>
 
+                {/* Date Filters */}
+                <div className="col-sm-3 mb-3">
+                  <div className="date-input-container">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Start Date"
+                      onFocus={(e) => (e.target.type = 'date')}
+                      onBlur={(e) => {
+                        if (!e.target.value) {
+                          e.target.type = 'text'
+                        }
+                      }}
+                      value={dateFrom}
+                      onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="col-sm-3 mb-3">
+                  <div className="date-input-container">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="End Date"
+                      onFocus={(e) => (e.target.type = 'date')}
+                      onBlur={(e) => {
+                        if (!e.target.value) {
+                          e.target.type = 'text'
+                        }
+                      }}
+                      value={dateTo}
+                      onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                    />
+                  </div>
+                </div>
 
-                  <button
-                    type="button"
-                    className="btn btn-secondary mr-2"
-                    onClick={() => {
-                      setOpenProductMap(true)
-                    }}
-                  >
-                    Map Product with Vendor
-                  </button>
-
-                  {userType != 6 &&
+                {/* Action Buttons */}
+                <div className="col-12">
+                  <div className="d-flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="btn btn-primary mr-2"
-                      onClick={handleExport}
+                      onClick={() => router.push("/product-management/add-product")}
+                      className="btn btn-primary"
                     >
-                      Export
-                    </button>}
-                  <button
-                    type="button"
-                    className="btn btn-secondary mr-2"
-                    onClick={resetFilters}
-                  >
-                    Reset Filters
-                  </button>
+                      <i className="fa fa-plus"></i> Add Product
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setOpenProductMap(true)
+                      }}
+                    >
+                      Map Product with Vendor
+                    </button>
+
+                    {userType != 6 &&
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={handleExport}
+                      >
+                        Export
+                      </button>}
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={resetFilters}
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
                 </div>
-                {/* </div> */}
-                {/* </div> */}
               </div>
             )}
             {enableBulkUpload && (
@@ -1557,8 +1697,7 @@ const ProductManagement = () => {
                                     </OverlayTrigger>}
                                 </div>
                               ))}
-                            <p className="text-sm text-capitalize text-nowrap mb-1"><b>Added By: </b>{item.added_by}</p>
-                            <p className="text-sm text-capitalize text-nowrap mb-1"><b>Approved By: </b>{item.vendor_approved_by}</p>
+                            {getApprovalInfo(item)}
                           </td>
 
                           <td>
@@ -1637,52 +1776,50 @@ const ProductManagement = () => {
               </div>
               {/* Always show pagination if we have total count from API */}
               <div className="d-flex flex-column align-items-center gap-2">
-                <ReactPaginate
-                  previousLabel={<i className="fa fa-angle-left"></i>}
-                  nextLabel={<i className="fa fa-angle-right"></i>}
-                  breakLabel="..."
-                  pageCount={Math.ceil(
-                    // Use filtered count when filtering is active, otherwise use total count
-                    totalCount.is_filtered ? totalCount.filtered_count : totalCount.total_count
-                  ) / limit}
-                  marginPagesDisplayed={2}
-                  pageRangeDisplayed={5}
-                  onPageChange={handlePageClick}
-                  forcePage={page - 1}
-                  containerClassName="pagination mb-0"
-                  pageClassName="page-item"
-                  pageLinkClassName="page-link"
-                  previousClassName="page-item"
-                  previousLinkClassName="page-link"
-                  nextClassName="page-item" 
-                  nextLinkClassName="page-link"
-                  activeClassName="active"
-                />
-                <div className="d-flex align-items-center gap-2 mt-2">
-                  <input
-                    type="number"
-                    className="form-control"
-                    style={{ width: "125px" }}
-                    placeholder="Go to page"
-                    min="1"
-                    max={Math.ceil(
-                      // Use filtered count when filtering is active, otherwise use total count
-                      totalCount.is_filtered ? totalCount.filtered_count : totalCount.total_count
-                    ) / limit}
-                    value={pageSearchInput}
-                    onChange={handlePageSearchInput}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handlePageSearchSubmit();
-                      }
-                    }}
-                  />
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={handlePageSearchSubmit}
-                  >
-                    Go
-                  </button>
+                {/* Pagination Section */}
+                <div className="d-flex justify-content-between align-items-center mt-3">
+                  {totalCount.filtered_count > 0 && (
+                    <>
+                      <ReactPaginate
+                        previousLabel={"Previous"}
+                        nextLabel={"Next"}
+                        breakLabel={"..."}
+                        pageCount={totalPages}
+                        marginPagesDisplayed={2}
+                        pageRangeDisplayed={5}
+                        onPageChange={handlePageClick}
+                        containerClassName={"pagination mb-0"}
+                        pageClassName={"page-item"}
+                        pageLinkClassName={"page-link"}
+                        previousClassName={"page-item"}
+                        previousLinkClassName={"page-link"}
+                        nextClassName={"page-item"}
+                        nextLinkClassName={"page-link"}
+                        breakClassName={"page-item"}
+                        breakLinkClassName={"page-link"}
+                        activeClassName={"active"}
+                        forcePage={page - 1}
+                      />
+                      
+                      <div className="d-flex align-items-center">
+                        <input
+                          type="text"
+                          className="form-control me-2"
+                          style={{ width: "80px" }}
+                          value={pageSearchInput}
+                          onChange={handlePageSearchInput}
+                          placeholder="Page #"
+                        />
+                        <button
+                          className="btn btn-primary"
+                          onClick={handlePageSearchSubmit}
+                          disabled={!pageSearchInput || parseInt(pageSearchInput) < 1 || parseInt(pageSearchInput) > totalPages}
+                        >
+                          Go
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
