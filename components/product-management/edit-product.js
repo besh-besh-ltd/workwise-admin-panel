@@ -83,10 +83,47 @@ const EditProduct = () => {
 		}
 	}, [categoryData, groupedCategories]);
 
-
 	useEffect(() => {
 		getGalleryImage();
 	}, [productDetailsData]);
+
+	// Track vendor approval data structure for debugging
+	useEffect(() => {
+		if (productDetailsData?.vendor_approved_by) {
+			console.log("Vendor approved_by structure:", productDetailsData.vendor_approved_by);
+			if (Array.isArray(productDetailsData.vendor_approved_by)) {
+				console.log("Vendor IDs:", productDetailsData.vendor_approved_by.map(vendor => vendor.id));
+			}
+		}
+	}, [productDetailsData]);
+
+	// Special handling for vendor list data to combine vendor_list and vendor_approved_by
+	useEffect(() => {
+		if (vendorListData && vendorListData.length > 0) {
+			// Extract all approved by data from vendor list
+			const allApprovals = [];
+			vendorListData.forEach(vendor => {
+				if (vendor.vendor_approved_by && vendor.vendor_approved_by.length > 0) {
+					vendor.vendor_approved_by.forEach(approval => {
+						if (!allApprovals.includes(approval.id)) {
+							allApprovals.push(approval.id);
+						}
+					});
+				}
+			});
+			
+			console.log("All approvals extracted from vendor list:", allApprovals);
+			
+			// If we have approvals but the form doesn't, update the form
+			if (allApprovals.length > 0) {
+				// This will be picked up by the Formik component's useEffect
+				setProductDetailsData(prev => ({
+					...prev,
+					vendor_approved_by: allApprovals.map(id => ({ id }))
+				}));
+			}
+		}
+	}, [vendorListData]);
 
 	const initialValues = {
 		name: productDetailsData?.name || "",
@@ -96,9 +133,9 @@ const EditProduct = () => {
 			: [],
 		featured: productDetailsData?.featured || [],
 		status: 1,
-		approved_id: productDetailsData?.vendor_approved_by ? 
-			productDetailsData.vendor_approved_by.map(vendor => vendor.id) : 
-			[],
+		approved_id: productDetailsData?.vendor_approved_by && Array.isArray(productDetailsData.vendor_approved_by) && productDetailsData.vendor_approved_by.length > 0
+			? productDetailsData.vendor_approved_by.map(vendor => vendor.id) 
+			: [],
 		approved_name: productDetailsData?.approved_name || "",
 		variations: variantData.length
 			? [...variantData]
@@ -200,6 +237,7 @@ const EditProduct = () => {
 			// Log the raw data to verify what we're getting
 			console.log("Product Details Data:", data);
 			console.log("Vendor List Data:", vendor_list);
+			console.log("Vendor Approved By:", data.vendor_approved_by);
 
 			setProductDetailsData(data);
 			setVendorListData(vendor_list);
@@ -511,13 +549,40 @@ const EditProduct = () => {
 													handleChange,
 													setFieldValue,
 												}) => {
-													// Update vendor approvals when productDetailsData changes
+													// Initialize vendor approvals when productDetailsData changes
 													useEffect(() => {
 														if (productDetailsData?.vendor_approved_by) {
-															const approvedIds = productDetailsData.vendor_approved_by.map(vendor => vendor.id);
-															setFieldValue('approved_id', approvedIds);
+															console.log("Re-initializing vendor approvals from:", productDetailsData.vendor_approved_by);
+															
+															// Handle different data structures that might come from the API
+															let approvedIds = [];
+															
+															if (Array.isArray(productDetailsData.vendor_approved_by)) {
+																// If it's already an array, map out the IDs
+																approvedIds = productDetailsData.vendor_approved_by.map(vendor => 
+																	typeof vendor === 'object' ? vendor.id : vendor
+																);
+															} else if (typeof productDetailsData.vendor_approved_by === 'string') {
+																// If it's a comma-separated string
+																approvedIds = productDetailsData.vendor_approved_by.split(',').map(id => parseInt(id.trim()));
+															}
+															
+															// Filter out any invalid values
+															approvedIds = approvedIds.filter(id => id !== undefined && id !== null);
+															
+															console.log("Setting vendor approvals to:", approvedIds);
+															
+															// Only update if there are actual IDs and they're different from current values
+															if (approvedIds.length > 0 && JSON.stringify(approvedIds) !== JSON.stringify(values.approved_id)) {
+																setFieldValue('approved_id', approvedIds);
+															}
 														}
 													}, [productDetailsData, setFieldValue]);
+
+													// Log when values change
+													useEffect(() => {
+														console.log("Current approved_id values:", values.approved_id);
+													}, [values.approved_id]);
 
 													return (
 														<Form>
@@ -698,13 +763,22 @@ const EditProduct = () => {
 																						<strong>Approved Vendors</strong>
 																						<span className="text-danger ml-1">*</span>
 																					</label>
+																					{/* Debug values */}
+																					<div className="small text-muted mb-2">
+																						{values?.approved_id?.length > 0 ? (
+																							<span>Selected approvals: {values.approved_id.join(', ')}</span>
+																						) : (
+																							<span>No approvals selected</span>
+																						)}
+																					</div>
 																					<Select
 																						isMulti
 																						name="approved_id"
 																						options={vendorApprovedList}
 																						placeholder="Select Approved Vendors"
 																						value={vendorApprovedList.filter(
-																							(option) => values?.approved_id?.includes(option.value)
+																							(option) => Array.isArray(values?.approved_id) && 
+																								values.approved_id.includes(option.value)
 																						)}
 																						styles={{
 																							...customSelectStyles,
@@ -721,19 +795,13 @@ const EditProduct = () => {
 																								? selectedOptions.map((option) => option.value)
 																								: [];
 																							
-																							// Compare with current values to detect changes
-																							const currentValues = values?.approved_id || [];
-																							const hasChanged = 
-																								selectedValues.length !== currentValues.length ||
-																								selectedValues.some(id => !currentValues.includes(id)) ||
-																								currentValues.some(id => !selectedValues.includes(id));
+																							// Log detailed information about the selection
+																							console.log('Selected vendor options:', selectedOptions);
+																							console.log('Mapped to values:', selectedValues);
 																							
-																							if (hasChanged) {
-																								setVendorApprovalChanged(true);
-																								// Set the field value
-																								setFieldValue("approved_id", selectedValues);
-																								console.log('Selected vendor approvals:', selectedValues);
-																							}
+																							// Set the field value immediately
+																							setFieldValue("approved_id", selectedValues);
+																							setVendorApprovalChanged(true);
 																						}}
 																					/>
 																					{vendorApprovalChanged && (
