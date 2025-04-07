@@ -120,12 +120,12 @@ export const getAllProducts = (
       
       // Handle added_by filtering
       if(addedBy){
-        url += `&created_by=${encodeURIComponent(addedBy)}`;
+        url += `&addedBy=${encodeURIComponent(addedBy)}`;
       }
       
       // Special case for admin-added products
       if(onlyAddedByAdmin || (addedBy && addedBy === "1")){
-        url += `&onlyAddedByAdmin=1`;
+        url += `&onlyAddedByAdmin=true`;
       }
       
       // Handle category filtering
