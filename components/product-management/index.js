@@ -1030,8 +1030,9 @@ const ProductManagement = () => {
         <div className="container-fluid">
           <div className="card card-body">
             {!enableBulkUpload && !enableBulkProdUpload && !openProductMap && (
-              <div className="row">
-                <div className="col-sm-3">
+              <div className="row g-3">
+                {/* Search and Primary Filters */}
+                <div className="col-sm-3 mb-3">
                   <input
                     type="text"
                     className="form-control"
@@ -1040,31 +1041,31 @@ const ProductManagement = () => {
                     onChange={handleSearch}
                   />
                 </div>
-                <div className="col-sm-3">
+                <div className="col-sm-3 mb-3">
                   <Select
                     id={id}
                     options={vendorApprovedList}
                     placeholder="Approved Vendor"
                     styles={customSelectStyles}
                     isClearable={true}
-                    instanceId="long-value-select"
+                    instanceId="approved-vendor-select"
                     value={vendorApprovedList.find(opt => opt.value === selectedApproveVendor) || null}
                     onChange={(selectedOption) => handleFilterChange('approveVendor', selectedOption)}
                   />
                 </div>
-                <div className="col-sm-3">
+                <div className="col-sm-3 mb-3">
                   <Select
                     id={id}
                     options={vendorData}
                     placeholder="Select Vendor"
                     styles={customSelectStyles}
                     isClearable={true}
-                    instanceId="long-value-select"
+                    instanceId="vendor-select"
                     value={vendorData.find(opt => opt.value === selectedVendor) || null}
                     onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
                   />
                 </div>
-                <div className="col-sm-3">
+                <div className="col-sm-3 mb-3">
                   <Select
                     id={id}
                     options={approvalStatusOptions}
@@ -1076,19 +1077,9 @@ const ProductManagement = () => {
                     onChange={(selectedOption) => handleFilterChange('approvalStatus', selectedOption)}
                   />
                 </div>
-                <div className="col-sm-3">
-                  <Select
-                    id={id}
-                    options={isFeaturesArray}
-                    placeholder="Select is featured"
-                    styles={customSelectStyles}
-                    isClearable={true}
-                    instanceId="long-value-select"
-                    value={isFeaturesArray.find(opt => opt.value === selectedFeatured) || null}
-                    onChange={(selectedOption) => handleFilterChange('featured', selectedOption)}
-                  />
-                </div>
-                <div className="col-sm-3 mt-3">
+
+                {/* Secondary Filters */}
+                <div className="col-sm-3 mb-3">
                   <select
                     className="form-control"
                     value={selectedCategory}
@@ -1102,7 +1093,7 @@ const ProductManagement = () => {
                     ))}
                   </select>
                 </div>
-                <div className="col-sm-3 mt-3">
+                <div className="col-sm-3 mb-3">
                   <select
                     className="form-control"
                     value={selectedAddedBy}
@@ -1116,11 +1107,13 @@ const ProductManagement = () => {
                     ))}
                   </select>
                 </div>
-                <div className="col-sm-3 mt-3">
+
+                {/* Date Filters */}
+                <div className="col-sm-3 mb-3">
                   <div className="date-input-container">
                     <input
                       type="text"
-                      className="form-control date-input"
+                      className="form-control"
                       placeholder="Start Date"
                       onFocus={(e) => (e.target.type = 'date')}
                       onBlur={(e) => {
@@ -1133,11 +1126,11 @@ const ProductManagement = () => {
                     />
                   </div>
                 </div>
-                <div className="col-sm-3 mt-3">
+                <div className="col-sm-3 mb-3">
                   <div className="date-input-container">
                     <input
                       type="text"
-                      className="form-control date-input"
+                      className="form-control"
                       placeholder="End Date"
                       onFocus={(e) => (e.target.type = 'date')}
                       onBlur={(e) => {
@@ -1150,43 +1143,44 @@ const ProductManagement = () => {
                     />
                   </div>
                 </div>
-                <div className="d-flex flex-wrap mt-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      router.push("/product-management/add-product")
-                    }
-                    className="btn btn-primary mr-2"
-                  >
-                    <i className="fa fa-plus"></i> Add Product
-                  </button>
 
-
-                  <button
-                    type="button"
-                    className="btn btn-secondary mr-2"
-                    onClick={() => {
-                      setOpenProductMap(true)
-                    }}
-                  >
-                    Map Product with Vendor
-                  </button>
-
-                  {userType != 6 &&
+                {/* Action Buttons */}
+                <div className="col-12">
+                  <div className="d-flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="btn btn-primary mr-2"
-                      onClick={handleExport}
+                      onClick={() => router.push("/product-management/add-product")}
+                      className="btn btn-primary"
                     >
-                      Export
-                    </button>}
-                  <button
-                    type="button"
-                    className="btn btn-secondary mr-2"
-                    onClick={resetFilters}
-                  >
-                    Reset Filters
-                  </button>
+                      <i className="fa fa-plus"></i> Add Product
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setOpenProductMap(true)
+                      }}
+                    >
+                      Map Product with Vendor
+                    </button>
+
+                    {userType != 6 &&
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={handleExport}
+                      >
+                        Export
+                      </button>}
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={resetFilters}
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
