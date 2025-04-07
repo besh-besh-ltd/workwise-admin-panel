@@ -252,30 +252,146 @@ const EditProduct = () => {
 	};
 
 	const submitHandler = (values) => {
-		let payload = {
-			...values,
-			status: 1,
-			categories: selectedValues
-				.filter(cat => cat != null)
-				.map(cat => cat.value),
-			gallery: selectedGalleryFiles,
-			featured: selectedFeaturedFiles,
-			qap: selectedQapFiles,
-			tds: selectedTdsFiles
-		}
+		// Create FormData object
+		const formData = new FormData();
 
-		setMainLoading(true);
-		handleUpdateProduct(payload, id)
-			.then((res) => {
-				toast.success(res.message);
-				setTimeout(() => {
-					router.push("/product-management");
-				}, 1000);
-			})
-			.catch((error) => {
-				console.error(error);
-				toast.error(error.message);
-			});
+		try {
+			// For non-editable products, only update vendor approvals while preserving other fields
+			if (!isEditable) {
+				// Include required fields from existing data
+				formData.append('name', productDetailsData.name);
+				formData.append('status', '1');
+				formData.append('is_featured', productDetailsData.is_featured.toString());
+				formData.append('description', productDetailsData.description || '');
+				
+				// Handle categories array
+				const existingCategories = productDetailsData.product_categories?.map(cat => cat.id) || [];
+				existingCategories.forEach((categoryId) => {
+					formData.append('categories[]', categoryId.toString());
+				});
+
+				// Handle approved_id array
+				const approvedIds = values.approved_id || [];
+				formData.append('approved_id', approvedIds.join(','));
+
+				// Include variations if they exist
+				if (productDetailsData.variations && productDetailsData.variations.length > 0) {
+					// Send each variation as a separate field
+					productDetailsData.variations.forEach((variation, index) => {
+						formData.append(`variations[${index}][attribute]`, variation.attribute || '');
+						formData.append(`variations[${index}][attributeValue]`, variation.attributeValue || '');
+					});
+				} else {
+					// Send an empty array by appending a single empty variation
+					formData.append('variations[0][attribute]', '');
+					formData.append('variations[0][attributeValue]', '');
+				}
+			} else {
+				// For editable products, send all values
+				formData.append('name', values.name);
+				formData.append('status', '1');
+				formData.append('is_featured', values.is_featured.toString());
+				formData.append('description', values.description || '');
+
+				// Handle categories array
+				const categories = selectedValues
+					.filter(cat => cat != null)
+					.map(cat => cat.value);
+				
+				if (categories.length === 0) {
+					throw new Error('At least one category is required');
+				}
+
+				categories.forEach((categoryId) => {
+					formData.append('categories[]', categoryId.toString());
+				});
+
+				// Handle approved_id array if present
+				if (values.approved_id && values.approved_id.length > 0) {
+					formData.append('approved_id', values.approved_id.join(','));
+				} else {
+					formData.append('approved_id', '');
+				}
+
+				// Handle variations array
+				if (values.variations && values.variations.length > 0) {
+					// Filter out empty variations
+					const filteredVariations = values.variations.filter(
+						v => v.attribute.trim() !== '' || v.attributeValue.trim() !== ''
+					);
+					
+					// Send each variation as a separate field
+					filteredVariations.forEach((variation, index) => {
+						formData.append(`variations[${index}][attribute]`, variation.attribute || '');
+						formData.append(`variations[${index}][attributeValue]`, variation.attributeValue || '');
+					});
+				} else {
+					// Send an empty array by appending a single empty variation
+					formData.append('variations[0][attribute]', '');
+					formData.append('variations[0][attributeValue]', '');
+				}
+
+				// Append files if present
+				if (selectedGalleryFiles.length > 0) {
+					selectedGalleryFiles.forEach(file => {
+						formData.append('gallery[]', file);
+					});
+				}
+				if (selectedFeaturedFiles.length > 0) {
+					selectedFeaturedFiles.forEach(file => {
+						formData.append('featured[]', file);
+					});
+				}
+				if (selectedQapFiles.length > 0) {
+					selectedQapFiles.forEach(file => {
+						formData.append('qap[]', file);
+					});
+				}
+				if (selectedTdsFiles.length > 0) {
+					selectedTdsFiles.forEach(file => {
+						formData.append('tds[]', file);
+					});
+				}
+			}
+
+			// For debugging - log the FormData contents
+			console.log('Form Data Contents:');
+			for (let [key, value] of formData.entries()) {
+				console.log(`${key}: ${value}`);
+			}
+
+			setMainLoading(true);
+			handleUpdateProduct(formData, id)
+				.then((res) => {
+					toast.success(res.message);
+					setTimeout(() => {
+						router.push("/product-management");
+					}, 1000);
+				})
+				.catch((error) => {
+					console.error('Error updating product:', error);
+					// Show the actual error message from the backend if available
+					const errorMessage = error.response?.data?.message || 
+						error.response?.data?.error || 
+						error.message ||
+						"Failed to update product. Please try again.";
+					
+					toast.error(errorMessage, {
+						position: "top-right",
+						autoClose: 5000,
+						hideProgressBar: false,
+						closeOnClick: true,
+						pauseOnHover: true,
+						draggable: true,
+					});
+				})
+				.finally(() => {
+					setMainLoading(false);
+				});
+		} catch (error) {
+			console.error('Error preparing form data:', error);
+			toast.error(error.message || 'Error preparing form data');
+		}
 	};
 
 	return (
@@ -298,7 +414,16 @@ const EditProduct = () => {
 
 					{/* Add warning message for uneditable products */}
 					{!isEditable && (
-						<div className="alert alert-warning" role="alert">
+						<div className="alert alert-warning" role="alert" style={{
+							backgroundColor: "#fff3cd",
+							color: "#856404",
+							border: "1px solid #ffeeba",
+							borderRadius: "4px",
+							padding: "15px",
+							marginBottom: "20px",
+							fontSize: "16px"
+						}}>
+							<i className="fas fa-exclamation-triangle mr-2"></i>
 							This product cannot be edited as it is either mapped to a vendor or was not created by an admin. 
 							You can only modify the vendor approvals.
 						</div>
@@ -316,24 +441,25 @@ const EditProduct = () => {
 												validationSchema={yup.object().shape({
 													name: yup.string().required("Name is required"),
 													description: yup.string(),
-													// .required("Description is required"),
-													// manufacturer: yup
-													//   .string()
-													//   .required("Manufacturer is required"),
-													// availability: yup.string(),
-													// .required("Availability is required"),
-													approved_id: yup.array(),
-													// .required("Approved Vendor is required"),
-													// vendor: yup.string().required("Vendor is required"),
-													is_featured: yup
-														.string()
-														.required("Is featured is required"),
+													approved_id: !isEditable ? yup.array().min(1, "At least one approved vendor is required") : yup.array(),
+													is_featured: yup.string().required("Is featured is required"),
 												})}
 												onSubmit={(values, { resetForm }) => {
-													// Only allow submit if editable or vendor approvals changed
-													if (isEditable || vendorApprovalChanged) {
-														submitHandler(values);
+													// For non-editable products, only allow vendor approval changes
+													if (!isEditable) {
+														if (!vendorApprovalChanged) {
+															toast.info("No changes made to vendor approvals");
+															return;
+														}
+														// Only send approved_id in payload for non-editable products
+														submitHandler({
+															approved_id: values.approved_id
+														});
+														return;
 													}
+													
+													// For editable products, send all values
+													submitHandler(values);
 												}}
 											>
 												{({
@@ -513,20 +639,32 @@ const EditProduct = () => {
 																		</div>
 																	)} */}
 
+																	{/* Vendor Approval Section - Show when product is NOT editable */}
 																	{!isEditable && (
 																		<div className="col-md-12">
 																			<div className="form-group">
-																				<label htmlFor="approved_id">Approved Vendors</label>
+																				<label htmlFor="approved_id">
+																					<strong>Approved Vendors</strong>
+																					<span className="text-danger ml-1">*</span>
+																				</label>
 																				<Select
 																					isMulti
 																					name={"approved_id"}
 																					options={vendorApprovedList}
-																					placeholder="Select Vendor list"
+																					placeholder="Select Approved Vendors"
 																					value={vendorApprovedList.filter(
 																						(option) => values?.approved_id?.includes(option?.value)
 																					)}
-																					styles={customSelectStyles}
-																					isDisabled={isEditable}
+																					styles={{
+																						...customSelectStyles,
+																						control: (base) => ({
+																							...base,
+																							borderColor: touched.approved_id && errors.approved_id ? '#dc3545' : base.borderColor,
+																							'&:hover': {
+																								borderColor: touched.approved_id && errors.approved_id ? '#dc3545' : base.borderColor
+																							}
+																						})
+																					}}
 																					onChange={(selectedOptions) => {
 																						const selectedValues = selectedOptions
 																							? selectedOptions?.map((option) => option.value)
@@ -538,7 +676,7 @@ const EditProduct = () => {
 																				<ErrorMessage
 																					name={"approved_id"}
 																					component="div"
-																					className="form-error"
+																					className="text-danger mt-1"
 																				/>
 																			</div>
 																		</div>
