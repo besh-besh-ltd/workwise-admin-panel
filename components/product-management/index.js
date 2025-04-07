@@ -414,38 +414,48 @@ const ProductManagement = () => {
         
         // Handle API response
         const productsData = res.data || [];
-        const totalCount = res.total_count || 0;
-        const approveCount = res.approve_count || 0;
-        const disapproveCount = res.disapprove_count || 0;
         
-        // Use the filtered count for pagination if filters are active
-        const isFiltered = res.is_filtered || false;
-        const filteredTotal = isFiltered ? res.filtered_count : totalCount;
-        const filteredApproveCount = isFiltered ? res.filtered_approve_count : approveCount;
-        const filteredDisapproveCount = isFiltered ? res.filtered_disapprove_count : disapproveCount;
+        // Get the filtered count from the response
+        const filteredTotal = res.filtered_count || productsData.length;
+        
+        // Calculate total pages based on filtered count
+        const calculatedTotalPages = Math.ceil(filteredTotal / limit);
+        
+        // If current page is greater than total pages, reset to page 1
+        if (page > calculatedTotalPages) {
+          setPage(1);
+          updateUrlParams({ 
+            page: 1,
+            search: searchString,
+            approveVendor: selectedApproveVendor,
+            vendor: selectedVendor,
+            featured: selectedFeatured,
+            category: selectedCategory,
+            addedBy: selectedAddedBy,
+            dateFrom: dateFrom,
+            dateTo: dateTo,
+            approvalStatus: selectedApprovalStatus
+          });
+          return; // This will trigger a re-fetch with page 1
+        }
         
         // Set pagination based on filtered count
-        settotalPages(Math.ceil(filteredTotal / limit));
+        settotalPages(calculatedTotalPages);
         
         // Update total counts with filtered data
         setTotalCount({
-          total_count: totalCount,
-          approve_count: approveCount,
-          disapprove_count: disapproveCount,
+          total_count: res.total_count || 0,
+          approve_count: res.approve_count || 0,
+          disapprove_count: res.disapprove_count || 0,
           filtered_count: filteredTotal,
-          filtered_approve_count: filteredApproveCount,
-          filtered_disapprove_count: filteredDisapproveCount,
-          is_filtered: isFiltered
+          filtered_approve_count: res.filtered_approve_count || 0,
+          filtered_disapprove_count: res.filtered_disapprove_count || 0,
+          is_filtered: res.is_filtered || false
         });
 
         // Apply the checked property to products
         const productsWithChecked = productsData.map(item => ({ ...item, isChecked: false }));
         setproducts(productsWithChecked);
-
-        // Update page if server returns a different page (e.g., if current page is out of bounds)
-        if (res.page && res.page !== page) {
-          setPage(res.page);
-        }
       })
       .catch((err) => {
         console.error("Error fetching products:", err);
@@ -460,6 +470,7 @@ const ProductManagement = () => {
           filtered_disapprove_count: 0,
           is_filtered: false
         });
+        settotalPages(0);
       });
   };
 
@@ -791,9 +802,13 @@ const ProductManagement = () => {
 
   // Handler for Select components
   const handleFilterChange = (type, selectedOption) => {
+    // Reset pagination to page 1 and clear page search input
+    setPage(1);
+    setPageSearchInput("");
+    
     let updateObj = {
       search: searchString,
-      page: 1,
+      page: 1,  // Always reset to page 1 when filters change
       dateFrom: dateFrom,
       dateTo: dateTo,
       approvalStatus: selectedApprovalStatus
@@ -835,10 +850,36 @@ const ProductManagement = () => {
         updateObj.approvalStatus = value;
         break;
     }
-    setPage(1);
-    updateUrlParams(updateObj);
     
+    // Update URL and trigger data fetch
+    updateUrlParams(updateObj);
   };
+
+  // Handle filter changes
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    // Clear existing products and reset pagination when filters change
+    setproducts([]);
+    setPageSearchInput("");
+    
+    // Fetch new data with updated filters
+    getProducts();
+  }, [
+    searchString,
+    selectedApproveVendor,
+    selectedVendor,
+    selectedFeatured,
+    selectedCategory,
+    selectedAddedBy,
+    dateFrom,
+    dateTo,
+    selectedApprovalStatus,
+    page
+  ]);
 
   // Sync state with URL params
   useEffect(() => {
@@ -885,50 +926,6 @@ const ProductManagement = () => {
 
   // Track if this is the first render
   const isFirstRender = React.useRef(true);
-
-  // Handle filter changes
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    // Clear existing products to prevent stale data display
-    setproducts([]);
-
-    // When any filter changes, reset to page 1 and update URL
-    const newParams = {
-      page: 1,
-      search: searchString,
-      approveVendor: selectedApproveVendor,
-      vendor: selectedVendor,
-      featured: selectedFeatured,
-      category: selectedCategory,
-      addedBy: selectedAddedBy,
-      dateFrom: dateFrom,
-      dateTo: dateTo,
-      approvalStatus: selectedApprovalStatus,
-      limit
-    };
-
-    // Update URL with new params
-    updateUrlParams(newParams);
-
-    // Reset page and fetch data
-    setPage(1);
-    getProducts();
-  }, [searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, dateFrom, dateTo, selectedApprovalStatus, limit]);
-
-  // Handle page changes
-  useEffect(() => {
-    if (isFirstRender.current) return;
-
-    // Update URL with new page number
-    updateUrlParams({ page });
-    
-    // Fetch data for new page
-    getProducts();
-  }, [page]);
 
   const fetchCategories = async () => {
     try {
@@ -1778,52 +1775,50 @@ const ProductManagement = () => {
               </div>
               {/* Always show pagination if we have total count from API */}
               <div className="d-flex flex-column align-items-center gap-2">
-                <ReactPaginate
-                  previousLabel={<i className="fa fa-angle-left"></i>}
-                  nextLabel={<i className="fa fa-angle-right"></i>}
-                  breakLabel="..."
-                  pageCount={Math.ceil(
-                    // Use filtered count when filtering is active, otherwise use total count
-                    totalCount.is_filtered ? totalCount.filtered_count : totalCount.total_count
-                  ) / limit}
-                  marginPagesDisplayed={2}
-                  pageRangeDisplayed={5}
-                  onPageChange={handlePageClick}
-                  forcePage={page - 1}
-                  containerClassName="pagination mb-0"
-                  pageClassName="page-item"
-                  pageLinkClassName="page-link"
-                  previousClassName="page-item"
-                  previousLinkClassName="page-link"
-                  nextClassName="page-item" 
-                  nextLinkClassName="page-link"
-                  activeClassName="active"
-                />
-                <div className="d-flex align-items-center gap-2 mt-2">
-                  <input
-                    type="number"
-                    className="form-control"
-                    style={{ width: "125px" }}
-                    placeholder="Go to page"
-                    min="1"
-                    max={Math.ceil(
-                      // Use filtered count when filtering is active, otherwise use total count
-                      totalCount.is_filtered ? totalCount.filtered_count : totalCount.total_count
-                    ) / limit}
-                    value={pageSearchInput}
-                    onChange={handlePageSearchInput}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handlePageSearchSubmit();
-                      }
-                    }}
-                  />
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={handlePageSearchSubmit}
-                  >
-                    Go
-                  </button>
+                {/* Pagination Section */}
+                <div className="d-flex justify-content-between align-items-center mt-3">
+                  {totalCount.filtered_count > 0 && (
+                    <>
+                      <ReactPaginate
+                        previousLabel={"Previous"}
+                        nextLabel={"Next"}
+                        breakLabel={"..."}
+                        pageCount={totalPages}
+                        marginPagesDisplayed={2}
+                        pageRangeDisplayed={5}
+                        onPageChange={handlePageClick}
+                        containerClassName={"pagination mb-0"}
+                        pageClassName={"page-item"}
+                        pageLinkClassName={"page-link"}
+                        previousClassName={"page-item"}
+                        previousLinkClassName={"page-link"}
+                        nextClassName={"page-item"}
+                        nextLinkClassName={"page-link"}
+                        breakClassName={"page-item"}
+                        breakLinkClassName={"page-link"}
+                        activeClassName={"active"}
+                        forcePage={page - 1}
+                      />
+                      
+                      <div className="d-flex align-items-center">
+                        <input
+                          type="text"
+                          className="form-control me-2"
+                          style={{ width: "80px" }}
+                          value={pageSearchInput}
+                          onChange={handlePageSearchInput}
+                          placeholder="Page #"
+                        />
+                        <button
+                          className="btn btn-primary"
+                          onClick={handlePageSearchSubmit}
+                          disabled={!pageSearchInput || parseInt(pageSearchInput) < 1 || parseInt(pageSearchInput) > totalPages}
+                        >
+                          Go
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
