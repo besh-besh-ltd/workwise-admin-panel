@@ -85,7 +85,7 @@ export const productExport = (values) => {
   });
 };
 
-export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove, vendorId, isFeatured, addedBy = null, categoryId = null, onlyAddedByAdmin = false) => {
+export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove, vendorId, isFeatured, addedBy = null, categoryId = null, onlyAddedByAdmin = false, dateFrom = null, dateTo = null, status = null) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Construct the URL exactly as the backend expects it
@@ -107,32 +107,39 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
       
       // Handle added_by filtering
       if(addedBy){
-        // Try both parameter names that might work
         url += `&created_by=${encodeURIComponent(addedBy)}`;
-        // Keep the original parameter too in case it's used
-        url += `&addedBy=${encodeURIComponent(addedBy)}`;
       }
       
       // Special case for admin-added products
-      if(onlyAddedByAdmin || (addedBy && addedBy === "1")){
+      if(onlyAddedByAdmin){
         url += `&onlyAddedByAdmin=1`;
       }
       
       // Handle category filtering
       if(categoryId){
         url += `&categoryId=${encodeURIComponent(categoryId)}`;
-        // Also try category_id parameter
-        url += `&category_id=${encodeURIComponent(categoryId)}`;
+      }
+
+      // Handle date filtering
+      if(dateFrom){
+        url += `&date_from=${encodeURIComponent(dateFrom)}`;
+      }
+      if(dateTo){
+        url += `&date_to=${encodeURIComponent(dateTo)}`;
+      }
+
+      // Handle status filtering - ensure it's sent as a number
+      if(status !== null && status !== undefined && status !== ''){
+        url += `&is_approve=${encodeURIComponent(status)}`;
       }
       
       // Add a cache-busting parameter to prevent 304 responses
       const timestamp = Date.now();
       url += `&_t=${timestamp}`;
       
-      // Make the request for products`
+      // Make the request for products
       const response = await axiosInstance.get(url);
      
-      
       // Check if the response is in the expected format
       if (response.data && typeof response.data === 'object' && 'status' in response.data && response.data.status === 1) {
         if ('data' in response.data && 'total_count' in response.data) {
@@ -140,9 +147,9 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
         } 
         else if ('data' in response.data && Array.isArray(response.data.data)) {
           const products = response.data.data;
-          const totalCount = 2382; 
-          const approveCount = 2287; 
-          const disapproveCount = 95; 
+          const totalCount = products.length;
+          const approveCount = products.filter(p => p.is_approve === 1).length;
+          const disapproveCount = totalCount - approveCount;
           
           const result = {
             ...response.data,
@@ -150,52 +157,16 @@ export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove
             approve_count: approveCount,
             disapprove_count: disapproveCount
           };
-          
           resolve(result);
         }
-        else {
-          resolve({
-            status: 1,
-            data: [],
-            total_count: 0,
-            approve_count: 0,
-            disapprove_count: 0
-          });
-        }
-      } 
-      // If the response is an array
-      else if (Array.isArray(response.data)) {
-        const products = response.data;
-        
-        const totalCount = 2382; 
-        const approveCount = 2287; 
-        const disapproveCount = 95; 
-        
-        const result = {
-          status: 1,
-          data: response.data,
-          total_count: totalCount,
-          approve_count: approveCount,
-          disapprove_count: disapproveCount
-        };
-        
-        resolve(result);
-      } 
-      else {
-        resolve({
-          status: 1,
-          data: [],
-          total_count: 0,
-          approve_count: 0,
-          disapprove_count: 0
-        });
+      } else {
+        reject(new Error('Invalid response format'));
       }
     } catch (error) {
-      console.error("Error in getAllProducts:", error);
-      reject({ error });
+      reject(error);
     }
   });
-}
+};
 
 export const approvedProductList = () => {
   return new Promise(async (resolve, reject) => {

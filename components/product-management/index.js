@@ -23,6 +23,12 @@ const customStyles = {
   }),
 };
 
+const statusOptions = [
+  { label: 'All', value: '' },
+  { label: 'Approved', value: '1' },
+  { label: 'Disapproved', value: '0' }
+];
+
 // Modified Select Component to show email along with vendor Name
 const CustomSelectOption = (props) => (
   <components.Option {...props}>
@@ -65,6 +71,9 @@ const ProductManagement = () => {
   const [selectedCategory, setSelectedCategory] = useState(router.query.category || "");
   const [selectedAddedBy, setSelectedAddedBy] = useState(router.query.addedBy || "");
   const [addedByOptions, setAddedByOptions] = useState([]);
+  const [dateFrom, setDateFrom] = useState(router.query.dateFrom || "");
+  const [dateTo, setDateTo] = useState(router.query.dateTo || "");
+  const [selectedStatus, setSelectedStatus] = useState(router.query.status || "");
 
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
@@ -167,7 +176,10 @@ const ProductManagement = () => {
         vendor: selectedVendor,
         featured: selectedFeatured,
         category: selectedCategory,
-        addedBy: selectedAddedBy
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        status: selectedStatus
       });
     }
   };
@@ -193,7 +205,10 @@ const ProductManagement = () => {
         vendor: selectedVendor,
         featured: selectedFeatured,
         category: selectedCategory,
-        addedBy: selectedAddedBy
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        status: selectedStatus
       });
     } else {
       toast.error(`Please enter a valid page number between 1 and ${maxPage}`);
@@ -216,7 +231,10 @@ const ProductManagement = () => {
         vendor: selectedVendor,
         featured: selectedFeatured,
         category: selectedCategory,
-        addedBy: selectedAddedBy
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        status: selectedStatus
       });
     } else {
       // Left ellipsis: Go to middle between first page (1) and current page
@@ -229,7 +247,10 @@ const ProductManagement = () => {
         vendor: selectedVendor,
         featured: selectedFeatured,
         category: selectedCategory,
-        addedBy: selectedAddedBy
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        status: selectedStatus
       });
     }
   };
@@ -377,52 +398,45 @@ const ProductManagement = () => {
   };
 
   const getProducts = () => {
-    // Set loading but keep current products to prevent flickering
     setloading(true);
-    
-    // Pass all filters to the API
     getAllProducts(
-      limit, 
-      page, 
-      searchString, 
-      selectedApproveVendor, 
-      selectedVendor, 
+      limit,
+      page,
+      searchString,
+      selectedApproveVendor,
+      selectedVendor,
       selectedFeatured,
       selectedAddedBy,
-      selectedCategory
+      selectedCategory,
+      false,
+      dateFrom,
+      dateTo,
+      selectedStatus
     )
       .then((res) => {
         setloading(false);
+        let productsData = res.data || [];
+        let totalCount = res.total_count || productsData.length;
+        let approveCount = res.approve_count || 0;
+        let disapproveCount = res.disapprove_count || 0;
         
-        // Handle API response
-        const productsData = res.data || [];
-        const totalCount = res.total_count || productsData.length;
-        const approveCount = res.approve_count || 0;
-        const disapproveCount = res.disapprove_count || 0;
+        // Set pagination based on total count
+        settotalPages(Math.ceil(totalCount / limit));
         
-
-        // Use the filtered count for pagination
-        const filteredTotal = res.filtered_count || totalCount;
-        settotalPages(Math.ceil(filteredTotal / limit));
-        
-        // Update total counts with filtered data
+        // Set the total count state with API values
         setTotalCount({
-          total_count: filteredTotal,  // Use filtered count as total
-          approve_count: res.filtered_approve_count || approveCount,
-          disapprove_count: res.filtered_disapprove_count || disapproveCount,
-          filtered_count: filteredTotal,
+          total_count: totalCount,
+          approve_count: approveCount,
+          disapprove_count: disapproveCount,
+          is_filtered: res.is_filtered || false,
+          filtered_count: res.filtered_count || totalCount,
           filtered_approve_count: res.filtered_approve_count || approveCount,
           filtered_disapprove_count: res.filtered_disapprove_count || disapproveCount
         });
-
-        // Apply the checked property to products
-        const productsWithChecked = productsData.map(item => ({ ...item, isChecked: false }));
-        setproducts(productsWithChecked);
-
-        // Update page if server returns a different page (e.g., if current page is out of bounds)
-        if (res.page && res.page !== page) {
-          setPage(res.page);
-        }
+        
+        // Set the checked property and update products state
+        productsData.forEach(item => item.isChecked = false);
+        setproducts(productsData);
       })
       .catch((err) => {
         console.error("Error fetching products:", err);
@@ -702,6 +716,9 @@ const ProductManagement = () => {
     setSelectedFeatured("");         // Reset to show both featured and non-featured products
     setSelectedCategory("");         // Reset to show products from all categories
     setSelectedAddedBy("");          // Reset to show products added by anyone
+    setDateFrom("");                 // Reset date from filter
+    setDateTo("");                   // Reset date to filter
+    setSelectedStatus("");           // Reset status filter
     setPage(1);                      // Return to first page
     
     // Remove all URL query parameters
@@ -750,46 +767,49 @@ const ProductManagement = () => {
       });
   };
 
-  // Handler for Select components
-  const handleFilterChange = (type, selectedOption) => {
-    let updateObj = {
-      search: searchString,
-      page: 1
-    };
-
-    // Handle both direct value and select option object
-    const value = selectedOption && typeof selectedOption === 'object' ? selectedOption.value : selectedOption;
-
-    switch(type) {
+  // Update the handleFilterChange function
+  const handleFilterChange = (type, value) => {
+    setPage(1);
+    
+    switch (type) {
       case 'approveVendor':
-        setSelectedApproveVendor(value || "");
-        updateObj.approveVendor = value;
+        setSelectedApproveVendor(value);
+        updateUrlParams({ approveVendor: value, page: 1 });
         break;
       case 'vendor':
-        setSelectedVendor(value || "");
-        updateObj.vendor = value;
+        setSelectedVendor(value);
+        updateUrlParams({ vendor: value, page: 1 });
         break;
       case 'featured':
-        setSelectedFeatured(value || "");
-        updateObj.featured = value;
+        setSelectedFeatured(value);
+        updateUrlParams({ featured: value, page: 1 });
         break;
       case 'category':
-        setSelectedCategory(value || "");
-        updateObj.category = value;
+        setSelectedCategory(value);
+        updateUrlParams({ category: value, page: 1 });
         break;
       case 'addedBy':
-        setSelectedAddedBy(value || "");
-        updateObj.addedBy = value;
+        setSelectedAddedBy(value);
+        updateUrlParams({ addedBy: value, page: 1 });
+        break;
+      case 'dateFrom':
+        setDateFrom(value);
+        updateUrlParams({ dateFrom: value, page: 1 });
+        break;
+      case 'dateTo':
+        setDateTo(value);
+        updateUrlParams({ dateTo: value, page: 1 });
+        break;
+      case 'status':
+        setSelectedStatus(value);
+        updateUrlParams({ status: value, page: 1 });
         break;
     }
-    setPage(1);
-    updateUrlParams(updateObj);
-    
   };
 
   // Sync state with URL params
   useEffect(() => {
-    const { page, search, approveVendor, vendor, featured, category, addedBy } = router.query;
+    const { page, search, approveVendor, vendor, featured, category, addedBy, dateFrom, dateTo, status } = router.query;
     if (page) setPage(parseInt(page));
     if (search !== undefined) setSearchString(search);
     if (approveVendor !== undefined) setSelectedApproveVendor(approveVendor);
@@ -797,6 +817,9 @@ const ProductManagement = () => {
     if (featured !== undefined) setSelectedFeatured(featured);
     if (category !== undefined) setSelectedCategory(category);
     if (addedBy !== undefined) setSelectedAddedBy(addedBy);
+    if (dateFrom !== undefined) setDateFrom(dateFrom);
+    if (dateTo !== undefined) setDateTo(dateTo);
+    if (status !== undefined) setSelectedStatus(status);
   }, [router.query]);
 
   // Initial data loading
@@ -837,6 +860,9 @@ const ProductManagement = () => {
       featured: selectedFeatured,
       category: selectedCategory,
       addedBy: selectedAddedBy,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      status: selectedStatus,
       limit
     };
 
@@ -846,7 +872,7 @@ const ProductManagement = () => {
     // Reset page and fetch data
     setPage(1);
     getProducts();
-  }, [searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, limit]);
+  }, [searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, dateFrom, dateTo, selectedStatus, limit]);
 
   // Handle page changes
   useEffect(() => {
@@ -925,7 +951,6 @@ const ProductManagement = () => {
           <div className="card card-body">
             {!enableBulkUpload && !enableBulkProdUpload && !openProductMap && (
               <div className="row">
-                {/* <div className="d-flex justify-content-end flex-wrap"> */}
                 <div className="col-sm-3">
                   <input
                     type="text"
@@ -999,6 +1024,61 @@ const ProductManagement = () => {
                     ))}
                   </select>
                 </div>
+                <div className="col-sm-3 mt-3">
+                  <select
+                    className="form-select"
+                    style={{ maxWidth: "300px" }}
+                    value={selectedStatus}
+                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                  >
+                    <option value="">Filter by Status</option>
+                    {statusOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-sm-3 mt-3">
+                  <div className="date-input-container">
+                    <input
+                      type="text"
+                      className="form-control date-input"
+                      placeholder="Start Date"
+                      onFocus={(e) => (e.target.type = 'date')}
+                      onBlur={(e) => {
+                        if (!e.target.value) {
+                          e.target.type = 'text'
+                        }
+                      }}
+                      value={dateFrom}
+                      onChange={(e) => {
+                        setDateFrom(e.target.value);
+                        handleFilterChange('dateFrom', e.target.value);
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="col-sm-3 mt-3">
+                  <div className="date-input-container">
+                    <input
+                      type="text"
+                      className="form-control date-input"
+                      placeholder="End Date"
+                      onFocus={(e) => (e.target.type = 'date')}
+                      onBlur={(e) => {
+                        if (!e.target.value) {
+                          e.target.type = 'text'
+                        }
+                      }}
+                      value={dateTo}
+                      onChange={(e) => {
+                        setDateTo(e.target.value);
+                        handleFilterChange('dateTo', e.target.value);
+                      }}
+                    />
+                  </div>
+                </div>
                 <div className="d-flex flex-wrap mt-3">
                   <button
                     type="button"
@@ -1037,8 +1117,6 @@ const ProductManagement = () => {
                     Reset Filters
                   </button>
                 </div>
-                {/* </div> */}
-                {/* </div> */}
               </div>
             )}
             {enableBulkUpload && (
