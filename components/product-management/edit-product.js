@@ -96,9 +96,9 @@ const EditProduct = () => {
 			: [],
 		featured: productDetailsData?.featured || [],
 		status: 1,
-		approved_id: productDetailsData?.vendor_approved_by?.length
-			? [...productDetailsData.vendor_approved_by]
-			: "",
+		approved_id: productDetailsData?.vendor_approved_by ? 
+			productDetailsData.vendor_approved_by.map(vendor => vendor.id) : 
+			[],
 		approved_name: productDetailsData?.approved_name || "",
 		variations: variantData.length
 			? [...variantData]
@@ -197,6 +197,10 @@ const EditProduct = () => {
 			const isEditableProduct = (data.added_by === 1 || data.added_by === 111) && !data.vendor;
 			setIsEditable(isEditableProduct);
 
+			// Log the raw data to verify what we're getting
+			console.log("Product Details Data:", data);
+			console.log("Vendor List Data:", vendor_list);
+
 			setProductDetailsData(data);
 			setVendorListData(vendor_list);
 
@@ -270,19 +274,24 @@ const EditProduct = () => {
 					formData.append('categories[]', categoryId.toString());
 				});
 
-				// Handle approved_id array
+				// Handle approved_id array - Send as comma-separated string as required by backend
 				const approvedIds = values.approved_id || [];
-				formData.append('approved_id', approvedIds.join(','));
+				if (approvedIds.length > 0) {
+					// Convert the array to a comma-separated string
+					formData.append('approved_id', approvedIds.join(','));
+					console.log('Sending approved vendors as string:', approvedIds.join(','));
+				} else {
+					formData.append('approved_id', '');
+				}
 
-				// Include variations if they exist
-				if (productDetailsData.variations && productDetailsData.variations.length > 0) {
-					// Send each variation as a separate field
-					productDetailsData.variations.forEach((variation, index) => {
-						formData.append(`variations[${index}][attribute]`, variation.attribute || '');
-						formData.append(`variations[${index}][attributeValue]`, variation.attributeValue || '');
+				// Include product variants
+				if (productDetailsData.product_variants && productDetailsData.product_variants.length > 0) {
+					productDetailsData.product_variants.forEach((variant, index) => {
+						formData.append(`variations[${index}][attribute]`, variant.variant_name || '');
+						formData.append(`variations[${index}][attributeValue]`, variant.variant_value || '');
 					});
 				} else {
-					// Send an empty array by appending a single empty variation
+					// Send an empty variation
 					formData.append('variations[0][attribute]', '');
 					formData.append('variations[0][attributeValue]', '');
 				}
@@ -306,9 +315,12 @@ const EditProduct = () => {
 					formData.append('categories[]', categoryId.toString());
 				});
 
-				// Handle approved_id array if present
-				if (values.approved_id && values.approved_id.length > 0) {
-					formData.append('approved_id', values.approved_id.join(','));
+				// Handle approved_id array - Send as comma-separated string as required by backend
+				const approvedIds = values.approved_id || [];
+				if (approvedIds.length > 0) {
+					// Convert the array to a comma-separated string
+					formData.append('approved_id', approvedIds.join(','));
+					console.log('Sending approved vendors as string:', approvedIds.join(','));
 				} else {
 					formData.append('approved_id', '');
 				}
@@ -364,9 +376,24 @@ const EditProduct = () => {
 			handleUpdateProduct(formData, id)
 				.then((res) => {
 					toast.success(res.message);
-					setTimeout(() => {
-						router.push("/product-management");
-					}, 1000);
+					
+					// Don't redirect automatically
+					// Instead, update the product data in place
+					getProducts(id).then(response => {
+						const { data, vendor_list } = response;
+						setProductDetailsData(data);
+						setVendorListData(vendor_list);
+						console.log("Updated product details:", data);
+						console.log("Updated vendor list:", vendor_list);
+						setMainLoading(false);
+						setVendorApprovalChanged(false); // Reset the change flag
+						
+						// Don't auto-redirect, let the user decide when to go back
+						toast.info("Product updated successfully. You can continue editing or go back to the product list.");
+					}).catch(error => {
+						console.error("Failed to refresh product details:", error);
+						setMainLoading(false);
+					});
 				})
 				.catch((error) => {
 					console.error('Error updating product:', error);
@@ -384,13 +411,12 @@ const EditProduct = () => {
 						pauseOnHover: true,
 						draggable: true,
 					});
-				})
-				.finally(() => {
 					setMainLoading(false);
 				});
 		} catch (error) {
 			console.error('Error preparing form data:', error);
 			toast.error(error.message || 'Error preparing form data');
+			setMainLoading(false);
 		}
 	};
 
@@ -451,6 +477,22 @@ const EditProduct = () => {
 															toast.info("No changes made to vendor approvals");
 															return;
 														}
+														
+														// Compare the current approvals with the original approvals
+														const originalApprovals = productDetailsData?.vendor_approved_by?.map(vendor => vendor.id) || [];
+														const currentApprovals = values.approved_id || [];
+														
+														// Check if there are actual changes in the approvals
+														const hasChanges = 
+															originalApprovals.length !== currentApprovals.length || 
+															originalApprovals.some(id => !currentApprovals.includes(id)) ||
+															currentApprovals.some(id => !originalApprovals.includes(id));
+														
+														if (!hasChanges) {
+															toast.info("No changes detected in vendor approvals");
+															return;
+														}
+														
 														// Only send approved_id in payload for non-editable products
 														submitHandler({
 															approved_id: values.approved_id
@@ -468,349 +510,286 @@ const EditProduct = () => {
 													values,
 													handleChange,
 													setFieldValue,
-												}) => (
-													<Form>
-														{productDetailsData &&
-															productDetailsData.length != 0 && (
-																<div className="row add-product">
-																	<div className="col-md-12">
-																		<div className="form-group">
-																			<FormikField
-																				label="Product Name"
-																				isRequired={true}
-																				name="name"
-																				touched={touched}
-																				errors={errors}
-																				disabled={!isEditable}
-																			/>
-																		</div>
-																	</div>
+												}) => {
+													// Update vendor approvals when productDetailsData changes
+													useEffect(() => {
+														if (productDetailsData?.vendor_approved_by) {
+															const approvedIds = productDetailsData.vendor_approved_by.map(vendor => vendor.id);
+															setFieldValue('approved_id', approvedIds);
+														}
+													}, [productDetailsData, setFieldValue]);
 
-																	{!catloading && categories?.length > 0 &&
-																		<>
-																			<div className="form-group mb-0">
-																				<label htmlFor="categories">Categories *</label>
-																				{touched.categories && errors.categories && (
-																					<div className="text-danger">{errors.categories}</div>
-																				)}
-																			</div>
-																			{categories.map((options, index) => (
-																				<div className="col-md-3" key={`cat_level_${index}`}>
-																					<div className="form-group">
-																						<Select
-																							id={`category_level_${index}`}
-																							options={options}
-																							placeholder={`Select ${index == 0 ? 'Category' : 'Sub-category'}`}
-																							isClearable={index !== 0}
-																							value={selectedValues[index] || null}
-																							styles={customSelectStyles}
-																							isDisabled={!isEditable}
-																							onChange={(selectedOption) => {
-																								if (!isEditable) return;
-																								const updatedSelectedValues = [...selectedValues];
-																								updatedSelectedValues[index] = selectedOption || null;
-
-																								const truncatedValues = updatedSelectedValues.slice(0, index + 1);
-																								setSelectedValues(truncatedValues);
-
-																								if (selectedOption) {
-																									getChildCategories(selectedOption.value, index + 1);
-																								} else {
-																									hideChildLevels(index);
-																								}
-																							}}
-																						/>
-																					</div>
-																				</div>
-																			))}
-																		</>
-																	}
-
-																	<div className="col-md-12">
-																		<div className="form-group">
-																			<FormikField
-																				label="Product Description"
-																				type="textarea"
-																				isRequired={false}
-																				name="description"
-																				touched={touched}
-																				errors={errors}
-																				className="text-editor-area"
-																				cols="30"
-																				rows="10"
-																				disabled={!isEditable}
-																			/>
-																		</div>
-																	</div>
-
-																	{/* <div className="col-md-8">
-                                    <div className="form-group">
-                                      <FormikField
-                                        label="Manufacturer"
-                                        isRequired={true}
-                                        name="manufacturer"
-                                        touched={touched}
-                                        errors={errors}
-                                      />
-                                    </div>
-                                  </div> */}
-
-																	{/* <div className="col-md-4">
-                                    <div className="form-group">
-                                      <FormikField
-                                        label="Availability"
-                                        type="select"
-                                        selectOptions={[
-                                          {
-                                            label: "Select Availability",
-                                            value: "",
-                                          },
-                                          { label: "Unavailable", value: 0 },
-                                          { label: "Available", value: 1 },
-                                        ]}
-                                        isRequired={false}
-                                        name="availability"
-                                        touched={touched}
-                                        errors={errors}
-                                      />
-                                    </div>
-                                  </div> */}
-
-																	<div className="col-md-4">
-																		{/* <div className="form-group">
-                                    <FormikField
-                                      label="Approved Vendor"
-                                      type="select"
-                                      selectOptions={vendorApprovedList}
-                                      isRequired={true}
-                                      name="approved_id"
-                                      touched={touched}
-                                      errors={errors}
-                                    />
-                                  </div> */}
-																		{/* <div className="form-group">
-																			<label htmlFor="approved_id">
-																				Approved Vendor
-																			</label>
-																			<Select
-																				isMulti
-																				name={"approved_id"}
-																				options={vendorApprovedList}
-																				placeholder="Select Vendor list"
-																				isClearable={true}
-																				value={vendorApprovedList.filter(
-																					(option) =>
-																						values?.approved_id?.includes(
-																							option?.value
-																						)
-																				)}
-																				styles={customSelectStyles}
-																				onChange={(selectedOptions) => {
-																					const selectedValues = selectedOptions
-																						? selectedOptions?.map(
-																							(option) => option.value
-																						)
-																						: [];
-																					setFieldValue(
-																						"approved_id",
-																						selectedValues
-																					);
-																				}}
-																			/>
-																			<ErrorMessage
-																				name={"approved_id"}
-																				component="div"
-																				className="form-error"
-																			/>
-																		</div> */}
-																	</div>
-
-																	{/* {values.approved_id == "o" && (
-																		<div className="col-md-8">
+													return (
+														<Form>
+															{productDetailsData &&
+																productDetailsData.length != 0 && (
+																	<div className="row add-product">
+																		<div className="col-md-12">
 																			<div className="form-group">
 																				<FormikField
-																					label="Approved name"
+																					label="Product Name"
 																					isRequired={true}
-																					name="approved_name"
+																					name="name"
 																					touched={touched}
 																					errors={errors}
+																					disabled={!isEditable}
 																				/>
 																			</div>
 																		</div>
-																	)} */}
 
-																	{/* Vendor Approval Section - Show when product is NOT editable */}
-																	{!isEditable && (
+																		{!catloading && categories?.length > 0 &&
+																			<>
+																				<div className="form-group mb-0">
+																					<label htmlFor="categories">Categories *</label>
+																					{touched.categories && errors.categories && (
+																						<div className="text-danger">{errors.categories}</div>
+																					)}
+																				</div>
+																				{categories.map((options, index) => (
+																					<div className="col-md-3" key={`cat_level_${index}`}>
+																						<div className="form-group">
+																							<Select
+																								id={`category_level_${index}`}
+																								options={options}
+																								placeholder={`Select ${index == 0 ? 'Category' : 'Sub-category'}`}
+																								isClearable={index !== 0}
+																								value={selectedValues[index] || null}
+																								styles={customSelectStyles}
+																								isDisabled={!isEditable}
+																								onChange={(selectedOption) => {
+																									if (!isEditable) return;
+																									const updatedSelectedValues = [...selectedValues];
+																									updatedSelectedValues[index] = selectedOption || null;
+
+																									const truncatedValues = updatedSelectedValues.slice(0, index + 1);
+																									setSelectedValues(truncatedValues);
+
+																									if (selectedOption) {
+																										getChildCategories(selectedOption.value, index + 1);
+																									} else {
+																										hideChildLevels(index);
+																									}
+																								}}
+																							/>
+																						</div>
+																					</div>
+																				))}
+																			</>
+																		}
+
 																		<div className="col-md-12">
 																			<div className="form-group">
+																				<FormikField
+																					label="Product Description"
+																					type="textarea"
+																					isRequired={false}
+																					name="description"
+																					touched={touched}
+																					errors={errors}
+																					className="text-editor-area"
+																					cols="30"
+																					rows="10"
+																					disabled={!isEditable}
+																				/>
+																			</div>
+																		</div>
+
+																		{/* <div className="col-md-8">
+																		<div className="form-group">
+																			<FormikField
+																				label="Manufacturer"
+																				isRequired={true}
+																				name="manufacturer"
+																				touched={touched}
+																				errors={errors}
+																			/>
+																		</div>
+																	</div> */}
+
+																		{/* <div className="col-md-4">
+																		<div className="form-group">
+																			<FormikField
+																				label="Availability"
+																				type="select"
+																				selectOptions={[
+																					{
+																						label: "Select Availability",
+																						value: "",
+																					},
+																					{ label: "Unavailable", value: 0 },
+																					{ label: "Available", value: 1 },
+																				]}
+																				isRequired={false}
+																				name="availability"
+																				touched={touched}
+																				errors={errors}
+																			/>
+																		</div>
+																	</div> */}
+
+																		<div className="col-md-4">
+																			{/* <div className="form-group">
+																			<FormikField
+																				label="Approved Vendor"
+																				type="select"
+																				selectOptions={vendorApprovedList}
+																				isRequired={true}
+																				name="approved_id"
+																				touched={touched}
+																				errors={errors}
+																			/>
+																		</div> */}
+																			{/* <div className="form-group">
 																				<label htmlFor="approved_id">
-																					<strong>Approved Vendors</strong>
-																					<span className="text-danger ml-1">*</span>
+																					Approved Vendor
 																				</label>
 																				<Select
 																					isMulti
 																					name={"approved_id"}
 																					options={vendorApprovedList}
-																					placeholder="Select Approved Vendors"
+																					placeholder="Select Vendor list"
+																					isClearable={true}
 																					value={vendorApprovedList.filter(
-																						(option) => values?.approved_id?.includes(option?.value)
+																						(option) =>
+																							values?.approved_id?.includes(
+																								option?.value
+																							)
 																					)}
-																					styles={{
-																						...customSelectStyles,
-																						control: (base) => ({
-																							...base,
-																							borderColor: touched.approved_id && errors.approved_id ? '#dc3545' : base.borderColor,
-																							'&:hover': {
-																								borderColor: touched.approved_id && errors.approved_id ? '#dc3545' : base.borderColor
-																							}
-																						})
-																					}}
+																					styles={customSelectStyles}
 																					onChange={(selectedOptions) => {
 																						const selectedValues = selectedOptions
-																							? selectedOptions?.map((option) => option.value)
-																							: [];
-																						setFieldValue("approved_id", selectedValues);
-																						setVendorApprovalChanged(true);
+																							? selectedOptions?.map(
+																								(option) => option.value
+																							)
+																								: [];
+																						setFieldValue(
+																								"approved_id",
+																								selectedValues
+																						);
 																					}}
 																				/>
 																				<ErrorMessage
 																					name={"approved_id"}
 																					component="div"
-																					className="text-danger mt-1"
+																					className="form-error"
 																				/>
-																			</div>
+																			</div> */}
 																		</div>
-																	)}
 
-																	{isEditable && (
-																		<>
-																			<div className="col-md-12">
-																				<div className="row">
-																					<div className="form-group">
-																						<label>
-																							Upload Product Images
-																							<small className="form-text d-inline-flex text-muted ms-2">
-																								( Accepted formats: .jpg, .jpeg, .png, .webp. Maximum size: 2MB. Limit: 8 Images )
-																							</small>
-																						</label>
-																						<Field
-																							id="gallery"
-																							name="gallery"
-																							type="file"
-																							className="file-control"
-																							value={undefined}
-																							multiple
-																							ref={imageUploader}
-																							onChange={handleImageChange}
-																						/>
-																					</div>
+																		{/* {values.approved_id == "o" && (
+																			<div className="col-md-8">
+																				<div className="form-group">
+																					<FormikField
+																						label="Approved name"
+																						isRequired={true}
+																						name="approved_name"
+																						touched={touched}
+																						errors={errors}
+																					/>
 																				</div>
 																			</div>
-																			{/* ... rest of file upload sections ... */}
-																		</>
-																	)}
+																		)} */}
 
-																	<div className="gallery-image-pane d-flex">
-																		{galleryImages &&
-																			galleryImages.length != 0 &&
-																			galleryImages.map((data, index) => {
-																				return (
-																					<div className="image-panel">
-																						<img
-																							key={index}
-																							src={data}
-																							style={{
-																								width: "80px",
-																								height: "80px",
-																								objectFit: "cover",
-																							}}
-																						/>
-																					</div>
-																				);
-																			})}
-																		{images &&
-																			images.length != 0 &&
-																			images.map((data, index) => {
-																				return (
-																					<div className="image-panel">
-																						<img
-																							key={index}
-																							src={URL.createObjectURL(data)}
-																							style={{
-																								width: "80px",
-																								height: "80px",
-																								objectFit: "cover",
-																							}}
-																						/>
-																					</div>
-																				);
-																			})}
-																	</div>
-
-																	{isEditable && (
-																		<>
+																		{/* Vendor Approval Section - Show when product is NOT editable */}
+																		{!isEditable && (
 																			<div className="col-md-12">
-																				<div className="row featured-image">
-																					<div className="form-group">
-																						<label>
-																							Upload Featured Image
-																							<small className="form-text d-inline-flex text-muted ms-2">
-																								( Accepted formats: .jpg, .jpeg, .png, .webp. Maximum size: 2MB. Limit: 1 Image )
-																							</small>
-																						</label>
-																						<Field
-																							id="file"
-																							name="featured"
-																							type="file"
-																							className="file-control"
-																							touched={touched}
-																							errors={errors}
-																							value={undefined}
-																							onChange={(e) => {
-																								const selectFiles = e.target.files[0];
-																								setFieldValue(
-																									"featured",
-																									selectFiles
-																								);
-																								setImage(
-																									URL.createObjectURL(selectFiles)
-																								);
-																								setSelectedFeaturedFiles([
-																									selectFiles,
-																								]);
-																							}}
-																						/>
-																					</div>
-																					{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
-
-																					{productDetailsData.product_images &&
-																						!image &&
-																						productDetailsData.product_images
-																							.length != 0 &&
-																						productDetailsData.product_images.map(
-																							(data, index) => {
-																								return (
-																									data.is_featured == 1 && (
-																										<div className="m-2">
-																											<img
-																												key={index}
-																												ref={uploadedImage}
-																												src={data.product_image_url}
-																												style={{
-																													width: "80px",
-																													height: "80px",
-																													objectFit: "cover",
-																												}}
-																											/>
-																										</div>
-																									)
-																								);
-																							}
+																				<div className="form-group">
+																					<label htmlFor="approved_id">
+																						<strong>Approved Vendors</strong>
+																						<span className="text-danger ml-1">*</span>
+																					</label>
+																					<Select
+																						isMulti
+																						name="approved_id"
+																						options={vendorApprovedList}
+																						placeholder="Select Approved Vendors"
+																						value={vendorApprovedList.filter(
+																							(option) => values?.approved_id?.includes(option.value)
 																						)}
-																					{image && (
-																						<div className="mt-2 mb-2">
+																						styles={{
+																							...customSelectStyles,
+																							control: (base) => ({
+																								...base,
+																								borderColor: touched.approved_id && errors.approved_id ? '#dc3545' : base.borderColor,
+																								'&:hover': {
+																									borderColor: touched.approved_id && errors.approved_id ? '#dc3545' : base.borderColor
+																								}
+																							})
+																						}}
+																						onChange={(selectedOptions) => {
+																							const selectedValues = selectedOptions
+																								? selectedOptions.map((option) => option.value)
+																								: [];
+																							
+																							// Compare with current values to detect changes
+																							const currentValues = values?.approved_id || [];
+																							const hasChanged = 
+																								selectedValues.length !== currentValues.length ||
+																								selectedValues.some(id => !currentValues.includes(id)) ||
+																								currentValues.some(id => !selectedValues.includes(id));
+																							
+																							if (hasChanged) {
+																								setVendorApprovalChanged(true);
+																								// Set the field value
+																								setFieldValue("approved_id", selectedValues);
+																								console.log('Selected vendor approvals:', selectedValues);
+																							}
+																						}}
+																					/>
+																					{vendorApprovalChanged && (
+																						<div className="text-info mt-2">
+																							<small>
+																								<i className="fas fa-info-circle mr-1"></i>
+																								Changes detected in vendor approvals. Click Save to apply changes.
+																							</small>
+																						</div>
+																					)}
+																					<ErrorMessage
+																						name="approved_id"
+																						component="div"
+																						className="text-danger mt-1"
+																					/>
+																				</div>
+																			</div>
+																		)}
+
+																		{isEditable && (
+																			<>
+																				<div className="col-md-12">
+																					<div className="row">
+																						<div className="form-group">
+																							<label>
+																								Upload Product Images
+																								<small className="form-text d-inline-flex text-muted ms-2">
+																									( Accepted formats: .jpg, .jpeg, .png, .webp. Maximum size: 2MB. Limit: 8 Images )
+																								</small>
+																							</label>
+																							<Field
+																								id="gallery"
+																								name="gallery"
+																								type="file"
+																								className="file-control"
+																								value={undefined}
+																								multiple
+																								ref={imageUploader}
+																								onChange={handleImageChange}
+																							/>
+																						</div>
+																					</div>
+																				</div>
+																				{/* ... rest of file upload sections ... */}
+																			</>
+																		)}
+
+																		<div className="gallery-image-pane d-flex">
+																			{galleryImages &&
+																				galleryImages.length != 0 &&
+																				galleryImages.map((data, index) => {
+																					return (
+																						<div className="image-panel">
 																							<img
-																								src={image}
+																								key={index}
+																								src={data}
 																								style={{
 																									width: "80px",
 																									height: "80px",
@@ -818,239 +797,332 @@ const EditProduct = () => {
 																								}}
 																							/>
 																						</div>
-																					)}
-																				</div>
-																			</div>
-																			<div className="col-md-12">
-																				<div className="row qap-file">
-																					<div className="form-group">
-																						<label>
-																							Upload QAP File
-																							<small className="form-text d-inline-flex text-muted ms-2">
-																								( Accepted formats: .pdf. Maximum size: 2MB. Limit: 1 File )
-																							</small>
-																						</label>
-																						<Field
-																							id="qap-file"
-																							name="qap"
-																							accept=".pdf"
-																							type="file"
-																							className="file-control"
-																							touched={touched}
-																							errors={errors}
-																							value={undefined}
-																							onChange={(e) => {
-																								const qap = e.target.files[0];
-																								setFieldValue("qap", qap);
-																								setQapFile(URL.createObjectURL(qap));
-																								setSelectedQapFiles([qap]);
-																							}}
-																						/>
-																					</div>
-																					{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
+																					);
+																				})}
+																			{images &&
+																				images.length != 0 &&
+																				images.map((data, index) => {
+																					return (
+																						<div className="image-panel">
+																							<img
+																								key={index}
+																								src={URL.createObjectURL(data)}
+																								style={{
+																									width: "80px",
+																									height: "80px",
+																									objectFit: "cover",
+																								}}
+																							/>
+																						</div>
+																					);
+																				})}
+																		</div>
 
-																					{productDetailsData?.qap_new_file_name &&
-																						!qapFile && (
-																							<div className="m-2">
-																								<>
-																									<a
-																										href={
-																											productDetailsData?.qap_new_file_name
-																										}
-																										target="_blank"
-																									>
-																										<i class="fa fa-file"></i>
-																									</a>
-																									<a>
-																										{
-																											productDetailsData?.qap_original_file_name
-																										}
-																									</a>
-																								</>
-																							</div>
-																						)}
-																				</div>
-																			</div>
-																			<div className="col-md-12">
-																				<div className="row qap-file">
-																					<div className="form-group">
-																						<label>
-																							Upload TDS File
-																							<small className="form-text d-inline-flex text-muted ms-2">
-																								( Accepted formats: .pdf. Maximum size: 2MB. Limit: 1 File )
-																							</small>
-																						</label>
-																						<Field
-																							id="tds-file"
-																							name="tds"
-																							accept=".pdf"
-																							type="file"
-																							className="file-control"
-																							touched={touched}
-																							errors={errors}
-																							value={undefined}
-																							onChange={(e) => {
-																								const tds = e.target.files[0];
-																								setFieldValue("tds", tds);
-																								setTdsFile(URL.createObjectURL(tds));
-																								setSelectedTdsFiles([tds]);
-																							}}
-																						/>
-																					</div>
-																					{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
+																		{isEditable && (
+																			<>
+																				<div className="col-md-12">
+																					<div className="row featured-image">
+																						<div className="form-group">
+																							<label>
+																								Upload Featured Image
+																								<small className="form-text d-inline-flex text-muted ms-2">
+																									( Accepted formats: .jpg, .jpeg, .png, .webp. Maximum size: 2MB. Limit: 1 Image )
+																								</small>
+																							</label>
+																							<Field
+																								id="file"
+																								name="featured"
+																								type="file"
+																								className="file-control"
+																								touched={touched}
+																								errors={errors}
+																								value={undefined}
+																								onChange={(e) => {
+																									const selectFiles = e.target.files[0];
+																									setFieldValue(
+																										"featured",
+																										selectFiles
+																									);
+																									setImage(
+																										URL.createObjectURL(selectFiles)
+																									);
+																									setSelectedFeaturedFiles([
+																										selectFiles,
+																									]);
+																								}}
+																							/>
+																						</div>
+																						{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
 
-																					{productDetailsData?.tds_new_file_name &&
-																						!tdsFile && (
-																							<div className="m-2">
-																								<>
-																									<a
-																										href={
-																											productDetailsData?.tds_new_file_name
-																										}
-																										target="_blank"
-																									>
-																										<i class="fa fa-file"></i>
-																									</a>
-																									<a>
-																										{
-																											productDetailsData?.tds_original_file_name
-																										}
-																									</a>
-																								</>
-																							</div>
-																						)}
-																				</div>
-																			</div>
-																		</>
-																	)}
-
-																	<div className="prod-spec-sec p-0 pt-3">
-																		<div className="col-md-12">
-																			<div className="form-group specification ">
-																				<label>Product Variants</label>
-																				<FieldArray name="variations">
-																					{({ push, remove }) => (
-																						<>
-																							{variantData &&
-																								values.variations.map(
-																									(field, index) => (
-																										<div
-																											key={index}
-																											className="row"
-																										>
-																											<div className="col-md-3">
-																												<div className="form-group">
-																													<Field
-																														name={`variations.${index}.attribute`}
-																														type="text"
-																														placeholder="Attribute"
-																														disabled={!isEditable}
-																													/>
-																													<div className="form-error">
-																														<ErrorMessage
-																															name={`variations.${index}.attribute`}
-																															className="form-error"
-																														/>
-																													</div>
-																												</div>
+																						{productDetailsData.product_images &&
+																							!image &&
+																							productDetailsData.product_images
+																								.length != 0 &&
+																							productDetailsData.product_images.map(
+																								(data, index) => {
+																									return (
+																										data.is_featured == 1 && (
+																											<div className="m-2">
+																												<img
+																													key={index}
+																													ref={uploadedImage}
+																													src={data.product_image_url}
+																													style={{
+																														width: "80px",
+																														height: "80px",
+																														objectFit: "cover",
+																													}}
+																												/>
 																											</div>
+																										)
+																									);
+																								}
+																							)}
+																						{image && (
+																								<div className="mt-2 mb-2">
+																									<img
+																										src={image}
+																										style={{
+																											width: "80px",
+																											height: "80px",
+																											objectFit: "cover",
+																										}}
+																									/>
+																								</div>
+																						)}
+																					</div>
+																				</div>
+																				<div className="col-md-12">
+																					<div className="row qap-file">
+																						<div className="form-group">
+																							<label>
+																								Upload QAP File
+																								<small className="form-text d-inline-flex text-muted ms-2">
+																									( Accepted formats: .pdf. Maximum size: 2MB. Limit: 1 File )
+																								</small>
+																							</label>
+																							<Field
+																								id="qap-file"
+																								name="qap"
+																								accept=".pdf"
+																								type="file"
+																								className="file-control"
+																								touched={touched}
+																								errors={errors}
+																								value={undefined}
+																								onChange={(e) => {
+																									const qap = e.target.files[0];
+																									setFieldValue("qap", qap);
+																									setQapFile(URL.createObjectURL(qap));
+																									setSelectedQapFiles([qap]);
+																								}}
+																							/>
+																						</div>
+																						{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
 
-																											<div className="col-md-3">
-																												<div className="form-group">
-																													<Field
-																														name={`variations.${index}.attributeValue`}
-																														type="text"
-																														placeholder="Attribute Value"
-																														disabled={!isEditable}
-																													/>
-																													<div className="form-error">
-																														<ErrorMessage
-																															name={`variations.${index}.attributeValue`}
-																															className="form-error"
-																														/>
-																													</div>
-																												</div>
-																											</div>
+																						{productDetailsData?.qap_new_file_name &&
+																								!qapFile && (
+																									<div className="m-2">
+																										<>
+																											<a
+																												href={
+																													productDetailsData?.qap_new_file_name
+																												}
+																												target="_blank"
+																											>
+																												<i class="fa fa-file"></i>
+																											</a>
+																											<a>
+																												{
+																													productDetailsData?.qap_original_file_name
+																												}
+																											</a>
+																										</>
+																	</div>
+																								)}
+																					</div>
+																				</div>
+																				<div className="col-md-12">
+																					<div className="row qap-file">
+																						<div className="form-group">
+																							<label>
+																								Upload TDS File
+																								<small className="form-text d-inline-flex text-muted ms-2">
+																									( Accepted formats: .pdf. Maximum size: 2MB. Limit: 1 File )
+																								</small>
+																							</label>
+																							<Field
+																								id="tds-file"
+																								name="tds"
+																								accept=".pdf"
+																								type="file"
+																								className="file-control"
+																								touched={touched}
+																								errors={errors}
+																								value={undefined}
+																								onChange={(e) => {
+																									const tds = e.target.files[0];
+																									setFieldValue("tds", tds);
+																									setTdsFile(URL.createObjectURL(tds));
+																									setSelectedTdsFiles([tds]);
+																								}}
+																							/>
+																						</div>
+																						{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
 
-																											{isEditable && values.variations
-																												.length > 1 && (
+																						{productDetailsData?.tds_new_file_name &&
+																								!tdsFile && (
+																									<div className="m-2">
+																										<>
+																											<a
+																												href={
+																													productDetailsData?.tds_new_file_name
+																												}
+																												target="_blank"
+																											>
+																												<i class="fa fa-file"></i>
+																											</a>
+																											<a>
+																												{
+																													productDetailsData?.tds_original_file_name
+																												}
+																											</a>
+																										</>
+																	</div>
+																								)}
+																					</div>
+																				</div>
+																			</>
+																		)}
+
+																		<div className="prod-spec-sec p-0 pt-3">
+																			<div className="col-md-12">
+																				<div className="form-group specification ">
+																					<label>Product Variants</label>
+																					<FieldArray name="variations">
+																						{({ push, remove }) => (
+																							<>
+																								{variantData &&
+																										values.variations.map(
+																											(field, index) => (
+																												<div
+																													key={index}
+																													className="row"
+																												>
 																													<div className="col-md-3">
 																														<div className="form-group">
-																															<Link
-																																href="/"
-																																onClick={(
-																																	event
-																																) => {
-																																	event.preventDefault();
-																																	remove(index);
-																																}}
-																																className="btn btn-primary"
-																															>
-																																Remove
-																															</Link>
+																															<Field
+																																name={`variations.${index}.attribute`}
+																																type="text"
+																																placeholder="Attribute"
+																																disabled={!isEditable}
+																															/>
+																															<div className="form-error">
+																																<ErrorMessage
+																																	name={`variations.${index}.attribute`}
+																																	className="form-error"
+																																/>
+																															</div>
 																														</div>
 																													</div>
-																												)}
-																										</div>
-																									)
+
+																													<div className="col-md-3">
+																														<div className="form-group">
+																															<Field
+																																name={`variations.${index}.attributeValue`}
+																																type="text"
+																																placeholder="Attribute Value"
+																																disabled={!isEditable}
+																															/>
+																															<div className="form-error">
+																																<ErrorMessage
+																																	name={`variations.${index}.attributeValue`}
+																																	className="form-error"
+																																/>
+																															</div>
+																														</div>
+																													</div>
+
+																													{isEditable && values.variations
+																														.length > 1 && (
+																															<div className="col-md-3">
+																																<div className="form-group">
+																																	<Link
+																																		href="/"
+																																		onClick={(
+																																			event
+																																		) => {
+																																			event.preventDefault();
+																																			remove(index);
+																																		}}
+																																		className="btn btn-primary"
+																																	>
+																																		Remove
+																																	</Link>
+																																</div>
+																															</div>
+																														)}
+																												</div>
+																											)
+																										)}
+																								{isEditable && (
+																									<button
+																										type="button"
+																										className="btn btn-primary"
+																										onClick={() =>
+																											push({
+																												attribute: "",
+																												attributeValue: "",
+																											})
+																										}
+																									>
+																										Add Field
+																									</button>
 																								)}
-																							{isEditable && (
-																								<button
-																									type="button"
-																									className="btn btn-primary"
-																									onClick={() =>
-																										push({
-																											attribute: "",
-																											attributeValue: "",
-																										})
-																									}
-																								>
-																									Add Field
-																								</button>
-																							)}
-																						</>
-																					)}
-																				</FieldArray>
-																			</div>
-																			<div className="d-flex gap-4 mt-2">
-																				{/* <div className="form-group">
-																					<FormikField
-																						label="Vendor"
-																						type="select"
-																						selectOptions={vendorData}
-																						isRequired={true}
-																						name="vendor"
-																						touched={touched}
-																						errors={errors}
-																					/>
-																				</div> */}
-																				<div className="form-group">
-																					<FormikField
-																						label="Is Featured"
-																						type="select"
-																						selectOptions={isFeaturesArray}
-																						isRequired={true}
-																						name="is_featured"
-																						touched={touched}
-																						errors={errors}
-																					/>
+																							</>
+																								)}
+																					</FieldArray>
+																				</div>
+																				<div className="d-flex gap-4 mt-2">
+																					{/* <div className="form-group">
+																						<FormikField
+																							label="Vendor"
+																							type="select"
+																							selectOptions={vendorData}
+																							isRequired={true}
+																							name="vendor"
+																							touched={touched}
+																							errors={errors}
+																						/>
+																					</div> */}
+																					<div className="form-group">
+																						<FormikField
+																							label="Is Featured"
+																							type="select"
+																							selectOptions={isFeaturesArray}
+																							isRequired={true}
+																							name="is_featured"
+																							touched={touched}
+																							errors={errors}
+																						/>
+																					</div>
 																				</div>
 																			</div>
 																		</div>
 																	</div>
-																</div>
-															)}
+																)}
 
-														{(isEditable || vendorApprovalChanged) && (
-															<button
-																type="submit"
-																className="page-link btn btn-secondary"
-															>
-																Save
-															</button>
-														)}
-													</Form>
-												)}
+															{(isEditable || vendorApprovalChanged) && (
+																<button
+																	type="submit"
+																	className="page-link btn btn-secondary"
+																>
+																	Save
+																</button>
+															)}
+														</Form>
+													)}
+												}
 											</Formik>
 										</div>
 									</div>
