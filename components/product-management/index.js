@@ -86,10 +86,17 @@ const ProductManagement = () => {
 
   const handleFilterChange = (type, selectedOption) => {
     const value = selectedOption && typeof selectedOption === 'object' ? selectedOption.value : selectedOption;
+    
+    // Update filter values
     setFilterValues(prev => ({
       ...prev,
       [type]: value || ""
     }));
+
+    // Update URL parameters immediately
+    updateUrlParams({
+      [type]: value || ""
+    });
   };
 
   const handleSearch = (e) => {
@@ -535,11 +542,8 @@ const ProductManagement = () => {
         // Handle API response
         const productsData = res.data || [];
         
-        // Get the filtered count from the response
-        const filteredTotal = res.filtered_count || productsData.length;
-        
         // Calculate total pages based on filtered count
-        const calculatedTotalPages = Math.ceil(filteredTotal / limit);
+        const calculatedTotalPages = Math.ceil(res.filtered_count / limit);
         
         // If current page is greater than total pages, reset to page 1
         if (page > calculatedTotalPages) {
@@ -893,6 +897,20 @@ const ProductManagement = () => {
     if (urlDateFrom !== undefined) setDateFrom(urlDateFrom);
     if (urlDateTo !== undefined) setDateTo(urlDateTo);
     if (approvalStatus !== undefined) setSelectedApprovalStatus(approvalStatus);
+
+    // Update filterValues state to match URL parameters
+    setFilterValues(prev => ({
+      ...prev,
+      searchString: search || '',
+      approveVendor: approveVendor || '',
+      vendor: vendor || '',
+      featured: featured || '',
+      category: category || '',
+      addedBy: addedBy || '',
+      dateFrom: urlDateFrom || '',
+      dateTo: urlDateTo || '',
+      approvalStatus: approvalStatus || ''
+    }));
   }, [router.query]);
 
   // Initial data loading
@@ -1040,7 +1058,7 @@ const ProductManagement = () => {
                     styles={customSelectStyles}
                     isClearable={true}
                     instanceId="approved-vendor-select"
-                    value={vendorApprovedList.find(opt => opt.value === filterValues.approveVendor) || null}
+                    value={filterValues.approveVendor ? vendorApprovedList.find(opt => opt.value === filterValues.approveVendor) : null}
                     onChange={(selectedOption) => handleFilterChange('approveVendor', selectedOption)}
                   />
                 </div>
@@ -1052,8 +1070,9 @@ const ProductManagement = () => {
                     styles={customSelectStyles}
                     isClearable={true}
                     instanceId="vendor-select"
-                    value={vendorData.find(opt => opt.value === filterValues.vendor) || null}
+                    value={filterValues.vendor ? vendorData.find(opt => opt.value === filterValues.vendor) : null}
                     onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
+                    components={{ Option: CustomSelectOption }}
                   />
                 </div>
                 <div className="col-sm-3 mb-3">
@@ -1064,7 +1083,7 @@ const ProductManagement = () => {
                     styles={customSelectStyles}
                     isClearable={true}
                     instanceId="approval-status-select"
-                    value={approvalStatusOptions.find(opt => opt.value === filterValues.approvalStatus) || null}
+                    value={filterValues.approvalStatus ? approvalStatusOptions.find(opt => opt.value === filterValues.approvalStatus) : null}
                     onChange={(selectedOption) => handleFilterChange('approvalStatus', selectedOption)}
                   />
                 </div>
@@ -1141,7 +1160,7 @@ const ProductManagement = () => {
                     <button
                       type="button"
                       onClick={handleSearchClick}
-                      className="btn btn-primary"
+                      className="btn btn-secondary"
                     >
                       Search
                     </button>
@@ -1288,7 +1307,7 @@ const ProductManagement = () => {
                   <button
                     type="button"
                     className="btn btn-danger mb-3"
-                    onClick={handleCloseRejectModal}
+                    onClick={() => setOpenProductMap(false)}
                   >
                     Close
                   </button>
