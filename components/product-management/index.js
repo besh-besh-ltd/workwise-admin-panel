@@ -55,6 +55,8 @@ const ProductManagement = () => {
   const [selectedProductId, setselectedProductsId] = useState('');
   const [reasonList, setReasonList] = useState([]);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  
+  // Filter states for current active filters
   const [searchString, setSearchString] = useState(router.query.search || '');
   const [selectedApproveVendor, setSelectedApproveVendor] = useState(router.query.approveVendor || "");
   const [vendorData, setVendorData] = useState([]);
@@ -68,6 +70,137 @@ const ProductManagement = () => {
   const [dateFrom, setDateFrom] = useState(router.query.dateFrom || "");
   const [dateTo, setDateTo] = useState(router.query.dateTo || "");
   const [selectedApprovalStatus, setSelectedApprovalStatus] = useState(router.query.approvalStatus || "");
+
+  // Filter values state for pending filters (before search)
+  const [filterValues, setFilterValues] = useState({
+    searchString: router.query.search || '',
+    approveVendor: router.query.approveVendor || "",
+    vendor: router.query.vendor || "",
+    featured: router.query.featured || "",
+    category: router.query.category || "",
+    addedBy: router.query.addedBy || "",
+    dateFrom: router.query.dateFrom || "",
+    dateTo: router.query.dateTo || "",
+    approvalStatus: router.query.approvalStatus || ""
+  });
+
+  const handleFilterChange = (type, selectedOption) => {
+    const value = selectedOption && typeof selectedOption === 'object' ? selectedOption.value : selectedOption;
+    setFilterValues(prev => ({
+      ...prev,
+      [type]: value || ""
+    }));
+  };
+
+  const handleSearch = (e) => {
+    setFilterValues(prev => ({
+      ...prev,
+      searchString: e.target.value
+    }));
+  };
+
+  const handleSearchClick = () => {
+    setPage(1);
+    setPageSearchInput("");
+    
+    // Update all states with filter values
+    setSearchString(filterValues.searchString);
+    setSelectedApproveVendor(filterValues.approveVendor);
+    setSelectedVendor(filterValues.vendor);
+    setSelectedFeatured(filterValues.featured);
+    setSelectedCategory(filterValues.category);
+    setSelectedAddedBy(filterValues.addedBy);
+    setDateFrom(filterValues.dateFrom);
+    setDateTo(filterValues.dateTo);
+    setSelectedApprovalStatus(filterValues.approvalStatus);
+
+    // Update URL with all filter values
+    updateUrlParams({
+      page: 1,
+      search: filterValues.searchString,
+      approveVendor: filterValues.approveVendor,
+      vendor: filterValues.vendor,
+      featured: filterValues.featured,
+      category: filterValues.category,
+      addedBy: filterValues.addedBy,
+      dateFrom: filterValues.dateFrom,
+      dateTo: filterValues.dateTo,
+      approvalStatus: filterValues.approvalStatus
+    });
+  };
+
+  const resetFilters = () => {
+    // Reset filter values
+    setFilterValues({
+      searchString: "",
+      approveVendor: "",
+      vendor: "",
+      featured: "",
+      category: "",
+      addedBy: "",
+      dateFrom: "",
+      dateTo: "",
+      approvalStatus: ""
+    });
+
+    // Reset states
+    setSearchString("");             
+    setSelectedApproveVendor("");    
+    setSelectedVendor("");           
+    setSelectedFeatured("");         
+    setSelectedCategory("");         
+    setSelectedAddedBy("");          
+    setDateFrom("");                 
+    setDateTo("");                   
+    setSelectedApprovalStatus("");
+    setPage(1);                      
+    
+    // Remove all URL query parameters
+    router.push({
+      pathname: router.pathname
+    }, undefined, { shallow: true });
+    
+    setloading(true);
+    
+    getAllProducts(
+      limit,                    
+      1,                        
+      "",                       
+      "",                       
+      "",                       
+      null,                     
+      null,                     
+      "",                       
+      "",                       
+      "",                       
+      null                      
+    )
+      .then((res) => {
+        setloading(false);
+        
+        let productsData = res.data || [];
+        let totalCount = res.total_count || productsData.length;
+        let approveCount = res.approve_count || 0;
+        let disapproveCount = res.disapprove_count || 0;
+        
+        settotalPages(Math.ceil(totalCount / limit));
+        
+        setTotalCount({
+          total_count: totalCount,
+          approve_count: approveCount,
+          disapprove_count: disapproveCount,
+          is_filtered: false
+        });
+        
+        productsData.forEach(item => item.isChecked = false);
+        setproducts(productsData);
+      })
+      .catch((err) => {
+        console.error("Error fetching products:", err);
+        setloading(false);
+        setproducts([]);
+      });
+  };
 
   const [inputValue, setInputValue] = useState("");
   const [selectVal, setSelectValue] = useState("");
@@ -147,19 +280,6 @@ const ProductManagement = () => {
     setselectedProductsId(id)
   }
 
-  const handleSearch = (e) => {
-    const newSearchString = e.target.value;
-    setPage(1);
-    setSearchString(newSearchString);
-    updateUrlParams({ search: newSearchString, page: 1 });
-  }
-
-  const handleCloseRejectModal = () => {
-    setShowRejectModal(false);
-    setselectedProductsId("")
-    setInputValue("")
-    setSelectValue("")
-  }
   const handlePageClick = (e) => {
     if (e.selected === undefined) {
       const isNext = e.nextSelectedPage !== undefined;
@@ -447,10 +567,12 @@ const ProductManagement = () => {
           total_count: res.total_count || 0,
           approve_count: res.approve_count || 0,
           disapprove_count: res.disapprove_count || 0,
-          filtered_count: filteredTotal,
+          filtered_count: res.filtered_count || 0,
           filtered_approve_count: res.filtered_approve_count || 0,
           filtered_disapprove_count: res.filtered_disapprove_count || 0,
-          is_filtered: res.is_filtered || false
+          is_filtered: Boolean(searchString || selectedApproveVendor || selectedVendor || 
+            selectedFeatured || selectedCategory || selectedAddedBy || dateFrom || 
+            dateTo || selectedApprovalStatus)
         });
 
         // Apply the checked property to products
@@ -720,142 +842,6 @@ const ProductManagement = () => {
     }, undefined, { shallow: true });
   };
 
-  /**
-   * Resets all filter states and fetches products with default parameters.
-   * Empty strings are used as default values to clear any existing filters.
-   * 
-   * This function:
-   * - Clears all filter states (search, vendor, category, etc.) to their default values
-   * - Resets pagination to page 1
-   * - Removes URL query parameters
-   * - Fetches products with cleared filters
-   * - Updates the products list and pagination states
-   * 
-   * The getAllProducts call uses empty strings ("") and null values to indicate
-   * no filtering should be applied for those parameters, effectively fetching
-   * all products without any filters.
-   * 
-   * @returns {void} Does not return a value, but updates multiple state variables
-   * @throws {Error} Logs error to console if product fetching fails
-   */
-  const resetFilters = () => {
-    // Clear all filter states to their default values
-    setSearchString("");             
-    setSelectedApproveVendor("");    
-    setSelectedVendor("");           
-    setSelectedFeatured("");         
-    setSelectedCategory("");         
-    setSelectedAddedBy("");          
-    setDateFrom("");                 
-    setDateTo("");                   
-    setSelectedApprovalStatus("");   // Reset approval status
-    setPage(1);                      
-    
-    // Remove all URL query parameters
-    router.push({
-      pathname: router.pathname
-    }, undefined, { shallow: true });
-    
-    setloading(true);
-    
-    getAllProducts(
-      limit,                    
-      1,                        
-      "",                       
-      "",                       
-      "",                       
-      null,                     
-      null,                     
-      "",                       
-      "",                       
-      "",                       
-      null                      // Pass null for approval status when resetting
-    )
-      .then((res) => {
-        setloading(false);
-        
-        let productsData = res.data || [];
-        let totalCount = res.total_count || productsData.length;
-        let approveCount = res.approve_count || 0;
-        let disapproveCount = res.disapprove_count || 0;
-        
-        // Set pagination based on total count
-        settotalPages(Math.ceil(totalCount / limit));
-        
-        // Set the total count state with API values
-        setTotalCount({
-          total_count: totalCount,
-          approve_count: approveCount,
-          disapprove_count: disapproveCount,
-          is_filtered: false
-        });
-        
-        // Set the checked property and update products state
-        productsData.forEach(item => item.isChecked = false);
-        setproducts(productsData);
-      })
-      .catch((err) => {
-        console.error("Error fetching products:", err);
-        setloading(false);
-        setproducts([]);
-      });
-  };
-
-  // Handler for Select components
-  const handleFilterChange = (type, selectedOption) => {
-    // Reset pagination to page 1 and clear page search input
-    setPage(1);
-    setPageSearchInput("");
-    
-    let updateObj = {
-      search: searchString,
-      page: 1,  // Always reset to page 1 when filters change
-      dateFrom: dateFrom,
-      dateTo: dateTo,
-      approvalStatus: selectedApprovalStatus
-    };
-
-    const value = selectedOption && typeof selectedOption === 'object' ? selectedOption.value : selectedOption;
-
-    switch(type) {
-      case 'approveVendor':
-        setSelectedApproveVendor(value || "");
-        updateObj.approveVendor = value;
-        break;
-      case 'vendor':
-        setSelectedVendor(value || "");
-        updateObj.vendor = value;
-        break;
-      case 'featured':
-        setSelectedFeatured(value || "");
-        updateObj.featured = value;
-        break;
-      case 'category':
-        setSelectedCategory(value || "");
-        updateObj.category = value;
-        break;
-      case 'addedBy':
-        setSelectedAddedBy(value || "");
-        updateObj.addedBy = value;
-        break;
-      case 'dateFrom':
-        setDateFrom(value || "");
-        updateObj.dateFrom = value;
-        break;
-      case 'dateTo':
-        setDateTo(value || "");
-        updateObj.dateTo = value;
-        break;
-      case 'approvalStatus':
-        setSelectedApprovalStatus(value || "");
-        updateObj.approvalStatus = value;
-        break;
-    }
-    
-    // Update URL and trigger data fetch
-    updateUrlParams(updateObj);
-  };
-
   // Handle filter changes
   useEffect(() => {
     if (isFirstRender.current) {
@@ -1013,6 +999,13 @@ const ProductManagement = () => {
     );
   };
 
+  const handleCloseRejectModal = () => {
+    setShowRejectModal(false);
+    setselectedProductsId("");
+    setInputValue("");
+    setSelectValue("");
+  };
+
   return (
     <>
       <ToastContainer />
@@ -1035,7 +1028,7 @@ const ProductManagement = () => {
                     type="text"
                     className="form-control"
                     placeholder="Search Products"
-                    value={searchString}
+                    value={filterValues.searchString}
                     onChange={handleSearch}
                   />
                 </div>
@@ -1047,7 +1040,7 @@ const ProductManagement = () => {
                     styles={customSelectStyles}
                     isClearable={true}
                     instanceId="approved-vendor-select"
-                    value={vendorApprovedList.find(opt => opt.value === selectedApproveVendor) || null}
+                    value={vendorApprovedList.find(opt => opt.value === filterValues.approveVendor) || null}
                     onChange={(selectedOption) => handleFilterChange('approveVendor', selectedOption)}
                   />
                 </div>
@@ -1059,7 +1052,7 @@ const ProductManagement = () => {
                     styles={customSelectStyles}
                     isClearable={true}
                     instanceId="vendor-select"
-                    value={vendorData.find(opt => opt.value === selectedVendor) || null}
+                    value={vendorData.find(opt => opt.value === filterValues.vendor) || null}
                     onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
                   />
                 </div>
@@ -1071,7 +1064,7 @@ const ProductManagement = () => {
                     styles={customSelectStyles}
                     isClearable={true}
                     instanceId="approval-status-select"
-                    value={approvalStatusOptions.find(opt => opt.value === selectedApprovalStatus) || null}
+                    value={approvalStatusOptions.find(opt => opt.value === filterValues.approvalStatus) || null}
                     onChange={(selectedOption) => handleFilterChange('approvalStatus', selectedOption)}
                   />
                 </div>
@@ -1080,7 +1073,7 @@ const ProductManagement = () => {
                 <div className="col-sm-3 mb-3">
                   <select
                     className="form-control"
-                    value={selectedCategory}
+                    value={filterValues.category}
                     onChange={(e) => handleFilterChange('category', e.target.value)}
                   >
                     <option value="">Filter by Category</option>
@@ -1094,7 +1087,7 @@ const ProductManagement = () => {
                 <div className="col-sm-3 mb-3">
                   <select
                     className="form-control"
-                    value={selectedAddedBy}
+                    value={filterValues.addedBy}
                     onChange={(e) => handleFilterChange('addedBy', e.target.value)}
                   >
                     <option value="">Filter by Added By</option>
@@ -1119,7 +1112,7 @@ const ProductManagement = () => {
                           e.target.type = 'text'
                         }
                       }}
-                      value={dateFrom}
+                      value={filterValues.dateFrom}
                       onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
                     />
                   </div>
@@ -1136,7 +1129,7 @@ const ProductManagement = () => {
                           e.target.type = 'text'
                         }
                       }}
-                      value={dateTo}
+                      value={filterValues.dateTo}
                       onChange={(e) => handleFilterChange('dateTo', e.target.value)}
                     />
                   </div>
@@ -1147,22 +1140,27 @@ const ProductManagement = () => {
                   <div className="d-flex flex-wrap gap-2">
                     <button
                       type="button"
+                      onClick={handleSearchClick}
+                      className="btn btn-primary"
+                    >
+                      Search
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => router.push("/product-management/add-product")}
                       className="btn btn-primary"
                     >
                       <i className="fa fa-plus"></i> Add Product
                     </button>
-
                     <button
                       type="button"
                       className="btn btn-secondary"
                       onClick={() => {
-                        setOpenProductMap(true)
+                        setOpenProductMap(true);
                       }}
                     >
                       Map Product with Vendor
                     </button>
-
                     {userType != 6 &&
                       <button
                         type="button"
@@ -1290,7 +1288,7 @@ const ProductManagement = () => {
                   <button
                     type="button"
                     className="btn btn-danger mb-3"
-                    onClick={() => setOpenProductMap(false)}
+                    onClick={handleCloseRejectModal}
                   >
                     Close
                   </button>
