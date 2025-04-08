@@ -66,7 +66,7 @@ export const deleteCategory = (id) => {
       );
       resolve(response);
     } catch (error) {
-      reject({ message: error });
+      reject({ error });
     }
   });
 };
@@ -85,42 +85,79 @@ export const productExport = (values) => {
   });
 };
 
-export const getAllProducts = (limit = 10, page = 1, searchString, vendorApprove, vendorId, isFeatured, onlyAddedByAdmin) => {
+export const getAllProducts = (
+  limit = 10, 
+  page = 1, 
+  searchString, 
+  vendorApprove, 
+  vendorId, 
+  isFeatured, 
+  addedBy = null, 
+  categoryId = null, 
+  dateFrom = null,
+  dateTo = null,
+  approvalStatus = null,
+  onlyAddedByAdmin = false
+) => {
   return new Promise(async (resolve, reject) => {
     try {
-      let response;
+      // Construct the URL exactly as the backend expects it
       let url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-list?limit=${limit}&page=${page}`;
-
-      const queryParams = [];
-
+      
+      // Add parameters that the backend controller actually supports
       if(searchString){
-        queryParams.push(`productName=${searchString}`);
+        url += `&productName=${encodeURIComponent(searchString)}`;
       }
       if(vendorApprove){
-        queryParams.push(`vendorApprove=${vendorApprove}`);
+        url += `&vendorApprove=${encodeURIComponent(vendorApprove)}`;
       }
       if(vendorId){
-        queryParams.push(`vendorId=${vendorId}`);
+        url += `&vendorId=${encodeURIComponent(vendorId)}`;
       }
       if(isFeatured){
-        queryParams.push(`isFeatured=${isFeatured}`);
+        url += `&isFeatured=${encodeURIComponent(isFeatured)}`;
       }
       
-      if(onlyAddedByAdmin){
-        queryParams.push(`onlyAddedByAdmin=${onlyAddedByAdmin}`);
+      // Handle added_by filtering
+      if(addedBy){
+        url += `&addedBy=${encodeURIComponent(addedBy)}`;
+      }
+      
+      // Special case for admin-added products
+      if(onlyAddedByAdmin || (addedBy && addedBy === "1")){
+        url += `&onlyAddedByAdmin=true`;
+      }
+      
+      // Handle category filtering
+      if(categoryId){
+        url += `&categoryId=${encodeURIComponent(categoryId)}`;
       }
 
-      if (queryParams.length > 0) {
-        url += `&${queryParams.join('&')}`;
+      // Handle date filtering
+      if(dateFrom){
+        url += `&dateFrom=${encodeURIComponent(dateFrom)}`;
+      }
+      if(dateTo){
+        url += `&dateTo=${encodeURIComponent(dateTo)}`;
       }
 
-      response = await axiosInstance.get(url);
+      // Handle approval status filtering
+      if(approvalStatus !== null && approvalStatus !== ""){
+        url += `&is_approve=${encodeURIComponent(approvalStatus)}`;
+      }
+      
+      // Add a cache-busting parameter to prevent 304 responses
+      const timestamp = Date.now();
+      url += `&_t=${timestamp}`;
+      
+      // Make the request for products
+      const response = await axiosInstance.get(url);
       resolve(response);
     } catch (error) {
-      reject({ error });
+      reject(error);
     }
   });
-}
+};
 
 export const approvedProductList = () => {
   return new Promise(async (resolve, reject) => {
@@ -349,6 +386,19 @@ export const uploadProductImages = (productId, files) => {
       resolve(response);
     } catch (error) {
       reject(error);
+    }
+  });
+};
+
+export const getAdminUsersList = () => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/admin-users-list`
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
     }
   });
 };

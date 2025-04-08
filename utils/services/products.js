@@ -36,7 +36,31 @@ export const handleUpdateProduct = (values, data) => {
 			);
 			resolve(response);
 		} catch (error) {
-			reject({ error });
+			// Extract error message from response if available
+			let errorMessage;
+			
+			if (error.response?.data) {
+				// If there's a specific error message from the backend
+				errorMessage = error.response.data.message || error.response.data.error;
+				
+				// If there are validation errors
+				if (error.response.data.errors) {
+					errorMessage = Object.values(error.response.data.errors)
+						.flat()
+						.join(', ');
+				}
+			}
+			
+			// Fallback error message
+			if (!errorMessage) {
+				errorMessage = "Failed to update product. Please try again.";
+			}
+			
+			reject({
+				message: errorMessage,
+				error: error,
+				response: error.response?.data
+			});
 		}
 	});
 }
