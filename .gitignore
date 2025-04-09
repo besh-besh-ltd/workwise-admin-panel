@@ -9,6 +9,7 @@ package-lock.json
 /coverage
 .env.development
 .env.production
+.env.test
 # next.js
 /.next/
 /out/
