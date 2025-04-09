@@ -524,17 +524,17 @@ const ProductManagement = () => {
     
     // Pass all filters to the API
     getAllProducts(
-      limit, 
-      page, 
-      searchString, 
-      selectedApproveVendor, 
-      selectedVendor, 
-      selectedFeatured,
-      selectedAddedBy,
-      selectedCategory,
-      dateFrom,
-      dateTo,
-      selectedApprovalStatus
+      limit,                    // Number of products to fetch per page
+      1,                        // Page number (starting from 1)
+      "",                       // Search string to filter products by name
+      "",                       // Vendor approval filter
+      "",                       // Vendor ID filter
+      null,                     // Featured products filter (true/false)
+      null,                     // Added by user ID filter
+      "",                       // Category ID filter
+      "",                       // Date from filter (start date)
+      "",                       // Date to filter (end date)
+      null                      // Approval status filter (0/1)
     )
       .then((res) => {
         setloading(false);
