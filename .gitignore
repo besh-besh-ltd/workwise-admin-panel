@@ -8,7 +8,7 @@ package-lock.json
 # testing
 /coverage
 .env.development
-env.production
+.env.production
 # next.js
 /.next/
 /out/
