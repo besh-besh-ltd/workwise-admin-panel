@@ -5,10 +5,10 @@ const config = {
     api: "http://localhost:8002/api/v1"
   },
   staging: {
-    api: "http://localhost:8002/api/v1"
+    api: "http://13.203.194.198:8002/api/v1"
   },
   production: {
-    api: "http://localhost:8002/api/v1"
+    api: "https://api.letsworkwise.com/api/v1"
   }
 }[env];
 
