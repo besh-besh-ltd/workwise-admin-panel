@@ -167,46 +167,8 @@ const ProductManagement = () => {
       pathname: router.pathname
     }, undefined, { shallow: true });
     
-    setloading(true);
-    
-    getAllProducts(
-      limit,                    
-      1,                        
-      "",                       
-      "",                       
-      "",                       
-      null,                     
-      null,                     
-      "",                       
-      "",                       
-      "",                       
-      null                      
-    )
-      .then((res) => {
-        setloading(false);
-        
-        let productsData = res.data || [];
-        let totalCount = res.total_count || productsData.length;
-        let approveCount = res.approve_count || 0;
-        let disapproveCount = res.disapprove_count || 0;
-        
-        settotalPages(Math.ceil(totalCount / limit));
-        
-        setTotalCount({
-          total_count: totalCount,
-          approve_count: approveCount,
-          disapprove_count: disapproveCount,
-          is_filtered: false
-        });
-        
-        productsData.forEach(item => item.isChecked = false);
-        setproducts(productsData);
-      })
-      .catch((err) => {
-        console.error("Error fetching products:", err);
-        setloading(false);
-        setproducts([]);
-      });
+    // Call getProducts to fetch data without filters
+    getProducts();
   };
 
   const [inputValue, setInputValue] = useState("");
@@ -525,16 +487,16 @@ const ProductManagement = () => {
     // Pass all filters to the API
     getAllProducts(
       limit,                    // Number of products to fetch per page
-      1,                        // Page number (starting from 1)
-      "",                       // Search string to filter products by name
-      "",                       // Vendor approval filter
-      "",                       // Vendor ID filter
-      null,                     // Featured products filter (true/false)
-      null,                     // Added by user ID filter
-      "",                       // Category ID filter
-      "",                       // Date from filter (start date)
-      "",                       // Date to filter (end date)
-      null                      // Approval status filter (0/1)
+      page,                     // Use current page instead of hardcoded 1
+      searchString,             // Use actual search string
+      selectedApproveVendor,    // Use selected vendor approval filter
+      selectedVendor,           // Use selected vendor ID filter
+      selectedFeatured,         // Use selected featured filter
+      selectedAddedBy,          // Use selected added by filter
+      selectedCategory,         // Use selected category filter
+      dateFrom,                 // Use selected from date filter
+      dateTo,                   // Use selected to date filter
+      selectedApprovalStatus    // Use selected approval status filter
     )
       .then((res) => {
         setloading(false);
