@@ -12,7 +12,10 @@ import { useRouter } from "next/router";
 import DeleteModal from "../modal/delete-modal";
 import { ToastContainer, toast } from "react-toastify";
 import moment from "moment";
-import ReactHtmlParser from "react-html-parser";
+//import ReactHtmlParser from "react-html-parser";
+import parse from "html-react-parser";
+
+
 
 const FaqManagement = () => {
   const [bannerData, setBannerData] = useState([]);
@@ -197,7 +200,8 @@ const FaqManagement = () => {
                   return (
                     <tr key={item.id}>
                       <td>{item.question}</td>
-                      <td>{ReactHtmlParser(item.description)}</td>
+                      {/* <td>{ReactHtmlParser(item.description)}</td> */}
+                      <td>{parse(item.content || "")}</td>
 
                       <td>{item.status == 0 ? "Inactive" : "Active"}</td>
                       <td>{moment(item.created_at).format("MM/DD/YYYY")}</td>
