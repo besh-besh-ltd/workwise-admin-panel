@@ -283,10 +283,16 @@ const EditProductReview = () => {
     if (file) {
       const reader = new FileReader();
       const { current } = uploadedImage;
-      current.file = file;
+      if(current){
+        current.file = file;
+      }
+      
       reader.onload = (events) => {
-        current.src = events.target.result;
-        setSelectedFile(current.src);
+        
+        if(current){
+          current.src = events.target.result;
+        setSelectedFile(current?.src);
+        }
       };
       reader.readAsDataURL(file);
       setFileType(file.type);
@@ -861,8 +867,8 @@ const EditProductReview = () => {
                                         onChange={(e) => {
                                           const qap = e.target.files[0];
                                           setFieldValue("qap", qap);
-                                          setQapFile(URL.createObjectURL(qap));
-                                          setSelectedQapFiles([qap]);
+                                          // setQapFile(URL.createObjectURL(qap));
+                                          // setSelectedQapFiles([qap]);
                                         }}
                                       />
 
@@ -897,8 +903,8 @@ const EditProductReview = () => {
                                         onChange={(e) => {
                                           const tds = e.target.files[0];
                                           setFieldValue("tds", tds);
-                                          setTdsFile(URL.createObjectURL(tds));
-                                          setSelectedTdsFiles([tds]);
+                                          // setTdsFile(URL.createObjectURL(tds));
+                                          // setSelectedTdsFiles([tds]);
                                         }}
                                       />
 
