@@ -1,4 +1,4 @@
-const env = process.env.ENV ? process.env.ENV : "development";
+const env = process.env.ENV ? process.env.ENV : "production";
 
 const config = {
   development: {
