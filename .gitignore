@@ -5,6 +5,7 @@
 /.pnp
 .pnp.js
 package-lock.json
+utils/axios/config.js
 # testing
 /coverage
 .env.development
