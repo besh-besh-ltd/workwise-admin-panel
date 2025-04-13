@@ -162,7 +162,7 @@ export const getAllProducts = (
 export const approvedProductList = () => {
   return new Promise(async (resolve, reject) => {
     try {
-      let response = await axiosInstance.get(`products/approved-product-list`);
+      let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/products/approved-product-list`);
       resolve(response);
     } catch (error) {
       reject({ message: error });
@@ -173,7 +173,7 @@ export const approvedProductList = () => {
 export const getProductDetailsById = (id) => {
   return new Promise(async (resolve, reject) => {
     try {
-      let response = await axiosInstance.get(`products/vendor-product-details/${id}`);
+      let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/products/vendor-product-details/${id}`);
       resolve(response);
     } catch (error) {
       reject({ message: error });
@@ -273,7 +273,7 @@ export const searchProductsV2 = (values, type = "products") => {
 
     return new Promise(async (resolve, reject) => {
       try {
-        let response = await axiosInstance.post(`/rfq/search-vendor`, payload);
+        let response = await axiosInstance.post(`${process.env.NEXT_PUBLIC_API_WEB_URL}/rfq/search-vendor`, payload);
         resolve(response);
       } catch (error) {
         reject({ message: error });
