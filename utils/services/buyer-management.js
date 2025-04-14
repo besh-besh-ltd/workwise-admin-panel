@@ -7,7 +7,7 @@ export const AddBuyerOnPortalByAdmin = (values) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			let response = await axiosInstance.post(
-				`/users/user-registration`,
+				`${process.env.NEXT_PUBLIC_API_WEB_URL}/users/user-registration`,
 				values
 			);
 			resolve(response);

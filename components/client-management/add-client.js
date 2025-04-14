@@ -175,7 +175,7 @@ const AddBlog = () => {
                             <div className="col-md-12">
                               <div className="row">
                                 <UploadFiles
-                                  accept=".png, .jpg, .jpeg, .gif"
+                                  accept=".png, .jpg, .jpeg, .gif , .pdf"
                                   upload={setSelectedFilesTds}
                                   reset={selectedFilesReset}
                                   label="Datasheet File [.PDF]"

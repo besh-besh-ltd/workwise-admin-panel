@@ -44,7 +44,7 @@ const UpdateVendor = () => {
     image: editDetails?.profile_image || null,
   };
 
-  console.log("edit details", editDetails);
+  
 
   const submitHandler = (values, { resetForm }) => {
     let fullMobile;

@@ -1,11 +1,11 @@
-const env = process.env.ENV ? process.env.ENV : "development";
+const env = process.env.ENV ? process.env.ENV : "production";
 
 const config = {
   development: {
-    api: "https://api.letsworkwise.com/api/v1"
+    api: "http://localhost:8002/api/v1"
   },
   staging: {
-    api: "https://api.letsworkwise.com/api/v1"
+    api: "http://13.203.194.198:8002/api/v1"
   },
   production: {
     api: "https://api.letsworkwise.com/api/v1"

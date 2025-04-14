@@ -122,8 +122,8 @@ const TeamManagement = () => {
                                         <td>{teamMember.role}</td>
                                         <td>
                                             <Image
-                                                src={teamMember.profile_image}
-                                                alt={teamMember.name}
+                                                src={teamMember?.profile_image}
+                                                alt={teamMember?.name}
                                                 width={120}
                                                 height={120}
                                             />
