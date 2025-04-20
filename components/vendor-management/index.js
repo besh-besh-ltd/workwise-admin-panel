@@ -461,7 +461,7 @@ const VendorManagement = () => {
             </Formik>
           </div>
 
-          <div className="card card-body product-table mt-3">
+          <div className="card card-body product-table mt-3 table-responsive">
             <table className="table table-striped table-hover mb-3">
               <thead>
                 <tr>
