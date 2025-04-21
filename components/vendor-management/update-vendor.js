@@ -215,7 +215,7 @@ useEffect(() => {
     email: editDetails?.vendorDetails?.email || "",
     mobile: editDetails?.vendorDetails?.mobile ? editDetails?.vendorDetails?.mobile.replace(/^\+?\d+-/, "") : "",
     organization_name: editDetails?.vendorDetails?.organization_name || "",
-    image: editDetails?.vendorDetails?.new_profile_image || "",
+    image: editDetails?.vendorDetails?.original_profile_image || "",
     logo: editDetails?.logo,
     ptr_track: editDetails?.ptr_track,
     address: editDetails?.vendorDetails?.address || "",
@@ -344,10 +344,10 @@ useEffect(() => {
                   mobile: yup
                     .string()
                     .matches(
-                      /^[\+]?[0-9]{7,15}$/,
-                      "Please enter a valid mobile number (7-15 digits)"
+                      /^[\+]?[0-9]{6,15}$/,
+                      "Please enter a valid mobile number (6-15 digits)"
                     )
-                    .required("mobile is required"),
+                    .required("mobile is required")
                 })}
                 onSubmit={(values, { resetForm }) => {
                   values.country =
@@ -462,7 +462,7 @@ useEffect(() => {
                               setFieldValue("image", files);
                             }}
                           />
-                          {editDetails?.vendorDetails?.new_profile_image !=
+                          {editDetails?.vendorDetails?.original_profile_image !=
                             null && (
                             <div className="mt-3" style={{ display: "flex" }}>
                               <label htmlFor="year">
@@ -474,10 +474,10 @@ useEffect(() => {
                                   height={30}
                                   src={
                                     editDetails?.vendorDetails
-                                      ?.new_profile_image == null
+                                      ?.original_profile_image == null
                                       ? img1
                                       : editDetails?.vendorDetails
-                                          ?.new_profile_image
+                                          ?.original_profile_image
                                   }
                                   unoptimized
                                   className="rounded prof-img"
@@ -565,7 +565,7 @@ useEffect(() => {
                         <div class="col-6">
                           <label htmlFor="about-vendro">Postal Code</label>
                           <Field
-                            type="number"
+                            type="string"
                             name="postal_code"
                             class="form-control"
                             placeholder="Postal code"

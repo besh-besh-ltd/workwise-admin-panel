@@ -209,14 +209,14 @@ const handleCountryChange = (event) => {
                       "please enter valid email address"
                     )
                     .required("email is required"),
-                  mobile: yup
+                    mobile: yup
                     .string()
                     .matches(
-                      /^[\+]?[0-9]{7,15}$/,
-                      "Please enter a valid mobile number (7-15 digits)"
+                      /^[\+]?[0-9]{6,15}$/,
+                      "Please enter a valid mobile number (6-15 digits)"
                     )
-                    .required("mobile is required"),
-                })}
+                    .required("mobile is required")
+                   })}
                 onSubmit={(values, { resetForm }) => {
                   values.country = selectedCountryOption;
                   values.state = selectedStateOption;
@@ -380,7 +380,7 @@ const handleCountryChange = (event) => {
                       <div class="col-6">
                         <label htmlFor="about-vendro">Postal Code</label>
                         <Field
-                          type="number"
+                          type="string"
                           name="postal_code"
                           class="form-control"
                           placeholder="Postal code"
