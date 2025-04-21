@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, getCategories, getAdminUsersList } from "@/utils/services/product-management";
+import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, getCategories, getAdminUsersList, searchProductsV2 } from "@/utils/services/product-management";
 import axiosFormData from "@/utils/axios/form-data";
 import FullLoading from "../loading/FullLoading";
 import { ToastContainer, toast } from "react-toastify";
@@ -83,6 +83,8 @@ const ProductManagement = () => {
     dateTo: router.query.dateTo || "",
     approvalStatus: router.query.approvalStatus || ""
   });
+
+  const [productSearchTerm, setProductSearchTerm] = useState('');
 
   const handleFilterChange = (type, selectedOption) => {
     const value = selectedOption && typeof selectedOption === 'object' ? selectedOption.value : selectedOption;
@@ -687,18 +689,42 @@ const ProductManagement = () => {
 
   // Search Product Function
   const getVendorProductList = useCallback((search_key) => {
+    setProductSearchTerm(search_key);
+    
+    if (search_key.length < 3) {
+      setVendorProductsList([]);
+      setProductLoading(false);
+      return;
+    }
+    
     setProductLoading(true);
-      // Reset only the product field when data is loading
-      setproductMapObj((prevState) => ({
-        ...prevState,
-        product: null,
-      }));
+    // Reset only the product field when data is loading
+    setproductMapObj((prevState) => ({
+      ...prevState,
+      product: null,
+    }));
   
     setVendorProductsList([]); // Clear previous product list
-    getAllProducts(20, 1, search_key)
+    
+    // Use searchProductsV2 which makes a call to rfq/search-product API
+    searchProductsV2({
+      search_key: search_key,
+      cat_id: "",
+      vendor_name: ""
+    }, "products")
       .then((res) => {
-        const product_options = groupBySlug(res.data);
-        setVendorProductsList(product_options);
+        // Format the products to display in the UI
+        const products = res.data || [];
+        const formattedProducts = products.map(item => ({
+          value: item.product_id,
+          label: item.product_name,
+          description: item.description,
+          categories: item.category_name,
+          similarity_score: item.similarity_score,
+          rank: item.rank
+        }));
+        
+        setVendorProductsList(formattedProducts);
       })
       .catch((error) => {
         console.log(error);
@@ -985,6 +1011,44 @@ const ProductManagement = () => {
     setInputValue("");
     setSelectValue("");
   };
+
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .product-search-results {
+        scrollbar-width: thin;
+        scrollbar-color: #007bff #f8f9fa;
+      }
+      
+      .product-search-results::-webkit-scrollbar {
+        width: 6px;
+      }
+      
+      .product-search-results::-webkit-scrollbar-track {
+        background: #f8f9fa;
+      }
+      
+      .product-search-results::-webkit-scrollbar-thumb {
+        background-color: #007bff;
+        border-radius: 6px;
+      }
+      
+      .product-search-results > div {
+        transition: background-color 0.2s ease;
+        padding: 8px;
+        border-radius: 4px;
+      }
+      
+      .product-search-results > div:hover {
+        background-color: #f8f9fa;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   return (
     <>
@@ -1293,19 +1357,36 @@ const ProductManagement = () => {
 
                    <div className="col-6 col-md-4">
                      <label htmlFor="product" className="form-label fw-bold">Product Name *</label>
-                     <input
-                       type="text"
-                       name="product"
-                       className="form-control mb-3"
-                       placeholder="Search Products by name"
-                       onChange={(e) => debounceGetVendorProductList(e.target.value)}
-                     />
+                     <div className="input-group mb-3">
+                       <span className="input-group-text">
+                         <i className="fa fa-search"></i>
+                       </span>
+                       <input
+                         type="text"
+                         name="product"
+                         className="form-control"
+                         placeholder="Type at least 3 characters to search"
+                         onChange={(e) => debounceGetVendorProductList(e.target.value)}
+                         id="productSearchInput"
+                       />
+                     </div>
                  
                      <div className="border rounded p-3">
-                       <h5 className="mt-2 mb-3"> {productLoading ? "Searching Products": "Select Product"} </h5>
+                       <h5 className="mt-2 mb-3"> 
+                         {productLoading ? 
+                           <span>
+                             <i className="fa fa-spinner fa-spin me-2"></i>
+                             Searching Products...
+                           </span> 
+                           : productSearchTerm.length < 3 ? 
+                             "Type at least 3 characters to search" : 
+                             `Search Results (${vendorProductsList.length})`
+                         } 
+                       </h5>
                   
                        {!productLoading && vendorProductsList?.length > 0 ? (
-                         vendorProductsList.map((item, index) => (
+                         <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="product-search-results">
+                         {vendorProductsList.map((item, index) => (
                            <div
                              className="d-flex justify-content-between align-items-center border-bottom py-2"
                              key={item.label + "_" + index}
@@ -1325,9 +1406,16 @@ const ProductManagement = () => {
                                {productMapObj?.product?.value === item.value ? "Remove" : "Select"}
                              </button>
                            </div>
-                         ))
+                         ))}
+                         </div>
                        ) : (
-                         <p className="text-muted">No Product Available</p>
+                         <p className="text-muted">
+                           {productSearchTerm.length < 3 ? 
+                             "Type at least 3 characters to search for products" : 
+                             productLoading ? 
+                               "Searching..." : 
+                               "No products found matching your search criteria"}
+                         </p>
                        )}
                      </div>
                    </div>
