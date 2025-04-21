@@ -39,6 +39,7 @@ const AddLocation = () => {
   const [addState , setAddState] = useState("");
   const [addCountry,setAddCountry] = useState("");
   const [countryData,setCountryData] = useState([]);
+  const [newStateId, setNewStateId] = useState(""); // State for new state ID input
   
 
 
@@ -177,7 +178,12 @@ const AddLocation = () => {
   // Function to handle edit button click
   const handleEditClick = (location) => {
     setSelectedLocation(location); // Set selected location for editing
-    setNewState(location.state_name); // Pre-fill state name
+    const matchingState = statesList.find((state) => state.state_name === location.state_name);
+    if (matchingState) {
+      setNewStateId(matchingState.id.toString()); // Set ID as string (because <select> values are strings)
+    } else {
+      setNewStateId(""); // Or handle no match scenario
+    } // Pre-fill state name
     setNewCity(location.city_name); // Pre-fill city name
     setEditModalVisible(true); // Show the edit modal
   };
@@ -190,8 +196,8 @@ const AddLocation = () => {
     }
     setIsUpdating(true); // Set loading state to true
   
-    const { state_id, city_id } = selectedLocation;
-  
+    const { city_id } = selectedLocation;
+   const state_id = newStateId;
     updateLocation(state_id, newState, city_id, newCity)
       .then((response) => {
         if (response) {
@@ -285,11 +291,11 @@ const handleAddState = () => {
           <select
             className="form-control"
             value={stateFilter}
-            onChange={handleStateFilterChange}
+            onChange={(e) => setNewState(e.target.value)}
           >
             <option value="">All States...</option>
             {statesList.map((state) => (
-              <option key={state.id} value={state.state_name}>
+              <option key={state.id} value={state.id}>
                 {state.state_name}
               </option>
             ))}
@@ -642,12 +648,12 @@ const handleAddState = () => {
                 <select
                   className="form-control"
                   id="state"
-                  value={newState}
-                  onChange={(e) => setNewState(e.target.value)}
+                  value={newStateId}
+                  onChange={(e) => setNewStateId(e.target.value)}
                 >
                   <option value="">Select a state</option>
                   {statesList.map((state) => (
-                    <option key={state.id} value={state.state_name}>
+                    <option key={state.id} value={state.id}>
                       {state.state_name}
                     </option>
                   ))}

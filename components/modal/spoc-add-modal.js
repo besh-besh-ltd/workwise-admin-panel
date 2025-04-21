@@ -17,7 +17,7 @@ const validateSpocSchema = yup.object().shape({
     .nullable()
     .test("is-valid-mobile", "Please enter a valid mobile number", (value) => {
       if (!value) return true;
-      const regex = /^[0-9]{7,15}$/;
+      const regex = /^[0-9]{6,15}$/;
       return regex.test(value);
     }),
 });
