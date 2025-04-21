@@ -1365,7 +1365,7 @@ const ProductManagement = () => {
                          type="text"
                          name="product"
                          className="form-control"
-                         placeholder="Type at least 3 characters to search"
+                         placeholder="Search Products"
                          onChange={(e) => debounceGetVendorProductList(e.target.value)}
                          id="productSearchInput"
                        />
@@ -1411,7 +1411,7 @@ const ProductManagement = () => {
                        ) : (
                          <p className="text-muted">
                            {productSearchTerm.length < 3 ? 
-                             "Type at least 3 characters to search for products" : 
+                             "Type to search for products" : 
                              productLoading ? 
                                "Searching..." : 
                                "No products found matching your search criteria"}
