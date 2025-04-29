@@ -1,26 +1,41 @@
 import React, { useEffect, useState } from "react";
-import { getProducts } from "@/utils/services/products";
+import { getProductDetailsById } from "../../utils/services/product-management";
 import { useRouter } from "next/router";
+import { Tabs, Card } from 'antd';
+import ProductVariantsTab from './ProductVariantsTab';
+
+const { TabPane } = Tabs;
 
 const ProductDetails = () => {
-    const [productData, setProductData] = useState([])
-    const [vendorData, setVendorData] = useState([])
+    const [productData, setProductData] = useState(null);
+    const [vendorData, setVendorData] = useState([]);
+    const [loading, setLoading] = useState(false);
     const router = useRouter();
     const { id } = router.query;
 
     useEffect(() => {
-        getProductDetails()
-    }, [id])
+        if (id) {
+            getProductDetails();
+        }
+    }, [id]);
 
-    const getProductDetails = () => {
-        getProducts(id)
-            .then((response) => {
-                setProductData([response.data])
-                setVendorData(response.vendor_list)
-            })
-            .catch((error) => {
-                console.log(error)
-            });
+    const getProductDetails = async () => {
+        setLoading(true);
+        try {
+            const response = await getProductDetailsById(id);
+            if (response?.data?.data) {
+                setProductData(response.data.data);
+                setVendorData(response.data.vendor_list || []);
+            }
+        } catch (error) {
+            console.error("Error fetching product details:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!productData) {
+        return <div className="p-4">Loading product details...</div>;
     }
 
     return (
@@ -33,162 +48,121 @@ const ProductDetails = () => {
                 </div>
             </div>
 
-            {productData &&
-                productData.length != 0 &&
-                productData?.map((dt) => {
-                    return (
-                        <section className="product-content">
-                            <div className="container-fluid">
-                                <div className="row">
-                                    <div className="card col-12">
-                                        <div className="card-body mt-3">
-                                            <div className="d-flex">
-                                                <div className="text-center">
-                                                    <h3></h3>
-                                                </div>
-                                                <div className="ml-2">
-                                                    <p>Product Name- <span className="text-bold">{dt.name}</span></p>
-                                                    <p>Manufacturer- <span className="text-bold">{dt.manufacturer}</span></p>
-                                                    <p>Vendor Name- <span className="text-bold">{dt.vendor_name}</span></p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="card col-md-12">
-                                        <div className="card-header">Gallery Images</div>
+            <div className="container-fluid">
+                <Card>
+                    <div className="product-info mb-4">
+                        <h2>{productData.name}</h2>
+                        <p><strong>Manufacturer:</strong> {productData.manufacturer}</p>
+                        <p><strong>Vendor:</strong> {productData.vendor_name}</p>
+                    </div>
+
+                    <Tabs defaultActiveKey="1">
+                        <TabPane tab="Basic Details" key="1">
+                            <div className="row">
+                                <div className="col-md-12">
+                                    <Card title="Gallery Images" className="mb-4">
                                         <div className="gallery-panel">
-                                            {dt.product_images &&
-                                                dt.product_images.length != 0 &&
-                                                dt.product_images.map((image) => {
-                                                    return (
-                                                        (image.is_featured == 0 &&
-                                                            <div className="gallery-image-panel">
-                                                                <img
-                                                                    src={image.product_image_url}
-                                                                    alt="image"
-                                                                />
-                                                            </div>
-                                                        )
-                                                    )
-                                                })
-                                            }
-                                        </div>
-                                    </div>
-                                    <div className="card col-md-6">
-                                        <div className="card-header">Featured Image</div>
-                                        <div className="featured-panel">
-                                            <div className="gallery-panel">
-                                                {dt.product_images &&
-                                                    dt.product_images.length != 0 &&
-                                                    dt.product_images.map((image) => {
-                                                        return (
-                                                            (image.is_featured == 1 &&
-                                                                <div className="featured-image-panel">
-                                                                    <img
-                                                                        src={image.product_image_url}
-                                                                        alt="image"
-                                                                    />
-                                                                </div>
-                                                            )
-                                                        )
-                                                    })
-                                                }
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="card col-md-6">
-                                        <div className="card-header">Product Categories</div>
-                                        <div className="product-categories-panel">
-                                            {dt.product_categories &&
-                                                dt.product_categories.length != 0 &&
-                                                dt.product_categories.map((data) => {
-                                                    return (
-                                                        <div className="product-categories">
-                                                            <ul>
-                                                                <li>{data.category_name}</li>
-                                                            </ul>
+                                            {productData.product_images &&
+                                                productData.product_images.length > 0 &&
+                                                productData.product_images
+                                                    .filter(image => image.is_featured === 0)
+                                                    .map((image, index) => (
+                                                        <div className="gallery-image-panel" key={index}>
+                                                            <img
+                                                                src={image.product_image_url}
+                                                                alt="Gallery Image"
+                                                            />
                                                         </div>
-                                                    )
-                                                })
+                                                    ))
                                             }
                                         </div>
-                                    </div>
-                                    <div className="card col-md-12">
-                                        <div className="card-header">Product Variants</div>
-                                        <div className="product-variants">
-                                            <table className="table table-striped table-hover mb-3">
-                                                <thead>
-                                                    <tr>
-                                                        <th scope="col">Sl. No.</th>
-                                                        <th scope="col">Variant Name</th>
-                                                        <th scope="col">Variant Value</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {dt.product_variants &&
-                                                        dt.product_variants.length != 0 &&
-                                                        dt.product_variants.map((item, index) => {
-                                                            return (
-                                                                <tr key={item.id}>
-                                                                    <td>{index + 1}</td>
-                                                                    <td>{item.variant_name}</td>
-                                                                    <td>{item.variant_value}</td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                </tbody>
-                                            </table>
+                                    </Card>
+                                </div>
+
+                                <div className="col-md-6">
+                                    <Card title="Featured Image" className="mb-4">
+                                        <div className="featured-panel">
+                                            {productData.product_images &&
+                                                productData.product_images.length > 0 &&
+                                                productData.product_images
+                                                    .filter(image => image.is_featured === 1)
+                                                    .map((image, index) => (
+                                                        <div className="featured-image-panel" key={index}>
+                                                            <img
+                                                                src={image.product_image_url}
+                                                                alt="Featured Image"
+                                                            />
+                                                        </div>
+                                                    ))
+                                            }
                                         </div>
-                                    </div>
+                                    </Card>
+                                </div>
+
+                                <div className="col-md-6">
+                                    <Card title="Product Categories" className="mb-4">
+                                        <div className="product-categories-panel">
+                                            {productData.product_categories &&
+                                                productData.product_categories.length > 0 &&
+                                                productData.product_categories.map((data, index) => (
+                                                    <div className="product-categories" key={index}>
+                                                        <ul>
+                                                            <li>{data.category_name}</li>
+                                                        </ul>
+                                                    </div>
+                                                ))
+                                            }
+                                        </div>
+                                    </Card>
+                                </div>
+
+                                <div className="col-md-12">
+                                    <Card title="Vendor List" className="mb-4">
+                                        <table className="table table-striped table-hover mb-3">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">Sl. No.</th>
+                                                    <th scope="col">Name</th>
+                                                    <th scope="col">Approved By</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {vendorData.length > 0 ? (
+                                                    vendorData.map((item, index) => (
+                                                        <tr key={item.id || index}>
+                                                            <td>{index + 1}</td>
+                                                            <td>{item.vendor_name}</td>
+                                                            <td className="d-flex">
+                                                                {item.vendor_approved_by &&
+                                                                item.vendor_approved_by.length > 0 &&
+                                                                item.vendor_approved_by.map((data, i) => (
+                                                                    <div key={i}>
+                                                                        {data.name}
+                                                                        {i !== item.vendor_approved_by.length - 1 && <span>,&nbsp;</span>}
+                                                                    </div>
+                                                                ))}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan="3" className="text-center">No vendors available</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </Card>
                                 </div>
                             </div>
-                        </section>
-                    )
-                })
-            }
-            <section className="product-content">
-                <div className="container-fluid">
-                    <div className="row">
-                        <div className="card col-md-12">
-                            <div className="card-header">Vendor List</div>
-                            <div className="product-variants">
-                                <table className="table table-striped table-hover mb-3">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">Sl. No.</th>
-                                            <th scope="col">Name</th>
-                                            <th scope="col">Approved By</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {vendorData &&
-                                            vendorData.length != 0 &&
-                                            vendorData.map((item, index) => {
-                                                return (
-                                                    <tr key={item.id}>
-                                                        <td>{index + 1}</td>
-                                                        <td>{item.vendor_name}</td>
-                                                        <td className="d-flex">{item.vendor_approved_by &&
-                                                            item.vendor_approved_by.length != 0 &&
-                                                            item.vendor_approved_by.map((data, index) => {
-                                                                return (
-                                                                    <div key={index}>
-                                                                        {data.name}{data !== item.vendor_approved_by[item.vendor_approved_by.length - 1] && <span>,&nbsp;</span>}
-                                                                    </div>
-                                                                )
-                                                            })}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                        </TabPane>
+                        <TabPane tab="Variants" key="2">
+                            <ProductVariantsTab product={productData} />
+                        </TabPane>
+                    </Tabs>
+                </Card>
+            </div>
         </>
-    )
-}
+    );
+};
 
-export default ProductDetails
+export default ProductDetails;

@@ -241,7 +241,6 @@ export const mapVendorWithProduct = (values) => {
   });
 };
 
-
 export const searchProductsV2 = (values, type = "products") => {
   if (type == "products") {
     let payload = {
@@ -350,7 +349,6 @@ export const getOneProductDescription = (id) => {
   });
 };
 
-
 export const addProductTechSpec =  (productId, techSpec ) => {
   return new Promise (async (resolve , reject) => {
     try {
@@ -399,6 +397,75 @@ export const getAdminUsersList = () => {
       resolve(response);
     } catch (error) {
       reject({ error });
+    }
+  });
+};
+
+// Product variant services
+export const addProductVariant = (values) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant`,
+        values
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
+
+export const getProductVariants = (productId) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${productId}`
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
+
+export const updateProductVariant = (variantId, values) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.put(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${variantId}`,
+        values
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
+
+export const deleteProductVariant = (variantId) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.delete(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${variantId}`
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
+
+export const mapVariantWithVendor = (values) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/map-variant-with-vendor`,
+        values
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
     }
   });
 };
