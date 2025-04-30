@@ -1401,9 +1401,8 @@ const ProductManagement = () => {
                     </button>
                     <button
                       type="button"
-                      className="btn btn-primary me-2"
+                      className="btn btn-secondary me-2"
                       onClick={() => setShowAddVariantModal(true)}
-                      style={{ backgroundColor: '#0046ad', borderColor: '#0046ad' }}
                     >
                       Add Variant
                     </button>
