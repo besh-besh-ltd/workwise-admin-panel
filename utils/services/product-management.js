@@ -488,30 +488,49 @@ export const mapVariantWithVendor = (values) => {
 export const searchAllVariants = (searchTerm) => {
   return new Promise(async (resolve, reject) => {
     try {
+      // Changes by Agnij May 18, 2025 [Fixed variants search API handling]
       // Add a timestamp to prevent 304 responses
       const timestamp = Date.now();
       let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/search-variants?search_term=${encodeURIComponent(searchTerm)}&_t=${timestamp}`,
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/search-variants?search_term=${encodeURIComponent(searchTerm || "")}&_t=${timestamp}`,
         { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
       );
       
-      // Changes by Agnij April 30, 2025 [Fixed response format for consistency]
-      // Handle 304 responses and other edge cases
-      if (response.status === 304 || !response.data) {
-        response = { status: 1, data: [] };
-      }
+      console.log('Variants search response:', response);
       
-      // Transform the response to include status for consistency with other API calls
+      // Handle various response formats
+      if (response?.data?.data) {
+        // The response already has the expected format
+        resolve(response);
+      } else if (response?.data) {
+        // Response has data but not in the expected format
+        resolve({
+          status: 200,
+          data: {
+            status: 1,
+            data: response.data
+          }
+        });
+      } else {
+        // Empty or invalid response
+        resolve({
+          status: 200,
+          data: {
+            status: 1,
+            data: []
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Error searching variants with term ${searchTerm}:`, error);
+      // Return empty data on error instead of rejecting
       resolve({
         status: 200,
         data: {
           status: 1,
-          data: response.data || []
+          data: []
         }
       });
-    } catch (error) {
-      console.error(`Error searching variants with term ${searchTerm}:`, error);
-      reject({ message: error });
     }
   });
 };

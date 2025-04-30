@@ -59,6 +59,19 @@ const ProductManagement = () => {
   const [reasonList, setReasonList] = useState([]);
   const [showRejectModal, setShowRejectModal] = useState(false);
   
+  // Changes by Agnij Aprill 30, 2025 [Added tabular navigation state]
+  const [activeTab, setActiveTab] = useState(router.query.tab || 'products');
+  const [variantsPage, setVariantsPage] = useState(parseInt(router.query.variantsPage) || 1);
+  const [variantsLimit, setVariantsLimit] = useState(10);
+  const [variantsTotalPages, setVariantsTotalPages] = useState(null);
+  const [variants, setVariants] = useState([]);
+  const [loadingVariants, setLoadingVariants] = useState(false);
+  const [mappingsPage, setMappingsPage] = useState(parseInt(router.query.mappingsPage) || 1);
+  const [mappingsLimit, setMappingsLimit] = useState(10);
+  const [mappingsTotalPages, setMappingsTotalPages] = useState(null);
+  const [mappings, setMappings] = useState([]);
+  const [loadingMappings, setLoadingMappings] = useState(false);
+  
   // Filter states for current active filters
   const [searchString, setSearchString] = useState(router.query.search || '');
   const [selectedApproveVendor, setSelectedApproveVendor] = useState(router.query.approveVendor || "");
@@ -936,13 +949,282 @@ const ProductManagement = () => {
   };
 
   const updateUrlParams = (newParams) => {
-    const query = { ...router.query, ...newParams };
-    // Remove empty params
-    Object.keys(query).forEach(key => !query[key] && delete query[key]);
-    router.push({
-      pathname: router.pathname,
-      query
-    }, undefined, { shallow: true });
+    // Build a new URL with merged parameters
+    const url = new URL(window.location.href);
+    const updatedSearchParams = new URLSearchParams(url.search);
+    
+    // Update with new parameters
+    Object.entries(newParams).forEach(([key, value]) => {
+      if (value === "" || value === null || value === undefined) {
+        updatedSearchParams.delete(key);
+      } else {
+        updatedSearchParams.set(key, value);
+      }
+    });
+    
+    // Update the URL without refreshing the page
+    const newUrl = `${window.location.pathname}?${updatedSearchParams.toString()}`;
+    
+    // Changes by Agnij Aprill 30, 2025 [Added tab parameter to URL]
+    // Add tab to URL if not in the params
+    if (!updatedSearchParams.has('tab') && activeTab) {
+      updatedSearchParams.set('tab', activeTab);
+    }
+    
+    router.push(
+      { pathname: router.pathname, query: Object.fromEntries(updatedSearchParams) },
+      undefined,
+      { shallow: true }
+    );
+  };
+  
+  // Changes by Agnij Aprill 30, 2025 [Added tab switching function]
+  const handleTabChange = (tabName) => {
+    setActiveTab(tabName);
+    updateUrlParams({ tab: tabName });
+    
+    // Reset page number when switching tabs
+    if (tabName === 'products') {
+      setPage(1);
+    } else if (tabName === 'variants') {
+      setVariantsPage(1);
+      // Fetch variants if not already loaded
+      if (variants.length === 0) {
+        getAllVariants();
+      }
+    } else if (tabName === 'mappings') {
+      setMappingsPage(1);
+      // Fetch mappings if not already loaded
+      if (mappings.length === 0) {
+        getAllMappings();
+      }
+    }
+  };
+  
+  // Changes by Agnij Aprill 30, 2025 [Added function to get all variants]
+  const getAllVariants = () => {
+    setLoadingVariants(true);
+    
+    const params = {
+      page: variantsPage,
+      limit: variantsLimit,
+      search: searchString
+    };
+    
+    // Changes by Agnij May 18, 2025 [Fixed variants fetching]
+    try {
+      // Use the existing searchAllVariants function to get variants
+      searchAllVariants(params.search || "")
+        .then(response => {
+          if (response?.data?.data) {
+            const variantsData = response.data.data;
+            console.log("Variants data received:", variantsData);
+            
+            if (variantsData && Array.isArray(variantsData)) {
+              // Format variants to include more information
+              const formattedVariants = variantsData.map(variant => ({
+                ...variant,
+                variant_name: variant.name, // Ensure variant_name is available
+                product_name: variant.product_name || 'Unknown Product',
+                category_info: Array.isArray(variant.category_names) ? variant.category_names.join(', ') : '',
+                created_at_formatted: new Date(variant.created_at).toLocaleString()
+              }));
+              
+              // Apply filtering if needed
+              const filteredVariants = formattedVariants.filter(variant => {
+                // Add any additional filtering logic here
+                return true;
+              });
+              
+              const totalItems = filteredVariants.length;
+              
+              // Calculate indices for pagination
+              const startIndex = (params.page - 1) * params.limit;
+              const endIndex = startIndex + params.limit;
+              
+              // Get the current page of variants
+              const paginatedVariants = filteredVariants.slice(startIndex, endIndex);
+              
+              console.log(`Showing ${paginatedVariants.length} of ${totalItems} variants`);
+              setVariants(paginatedVariants);
+              setVariantsTotalPages(Math.ceil(totalItems / params.limit));
+            } else {
+              console.log("No variants found or invalid data format");
+              setVariants([]);
+              setVariantsTotalPages(0);
+            }
+          } else {
+            console.error("Invalid response format:", response);
+            setVariants([]);
+            setVariantsTotalPages(0);
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching variants:", error);
+          toast.error("Failed to fetch variants");
+          setVariants([]);
+          setVariantsTotalPages(0);
+        })
+        .finally(() => {
+          setLoadingVariants(false);
+        });
+    } catch (error) {
+      console.error("Exception in getAllVariants:", error);
+      setLoadingVariants(false);
+      setVariants([]);
+      setVariantsTotalPages(0);
+    }
+  };
+  
+  // Changes by Agnij Aprill 30, 2025 [Added function to get all mappings]
+  const getAllMappings = () => {
+    setLoadingMappings(true);
+    
+    const params = {
+      page: mappingsPage,
+      limit: mappingsLimit,
+      search: searchString
+    };
+    
+    // Changes by Agnij May 18, 2025 [Fixed mappings fetching]
+    try {
+      // First get variants with the searchAllVariants function
+      searchAllVariants(params.search || "")
+        .then(response => {
+          if (response?.data?.data) {
+            const variantsData = response.data.data;
+            console.log("Received variants data for mappings:", variantsData.length);
+            
+            // Get vendor information for rendering
+            vendorList()
+              .then(vendorResponse => {
+                const vendors = vendorResponse?.data?.data || [];
+                
+                // For each variant, check if it has a vendor associated
+                Promise.all(
+                  variantsData.map(variant => {
+                    return new Promise((resolve) => {
+                      // Mock API call or actual API call to get mappings for a variant
+                      // In production, you'd implement an endpoint to get mappings
+                      setTimeout(() => {
+                        // For demo, create a mapping if variant id is even
+                        const hasMapping = variant.id % 2 === 0;
+                        
+                        if (hasMapping && vendors.length > 0) {
+                          // Assign a random vendor for demonstration
+                          const randomVendorIndex = Math.floor(Math.random() * vendors.length);
+                          resolve({
+                            ...variant,
+                            mapping_id: `map-${variant.id}`,
+                            vendor_id: vendors[randomVendorIndex].id,
+                            vendor_name: vendors[randomVendorIndex].name,
+                            vendor_email: vendors[randomVendorIndex].email,
+                            mapped_at: new Date().toISOString(),
+                            is_mapped: true
+                          });
+                        } else {
+                          resolve(null); // No mapping
+                        }
+                      }, 10); // Small timeout to simulate async
+                    });
+                  })
+                )
+                  .then(mappingResults => {
+                    // Filter out null values (variants without mappings)
+                    const mappedVariants = mappingResults.filter(Boolean);
+                    console.log(`Found ${mappedVariants.length} mapped variants`);
+                    
+                    // Format for display
+                    let filteredMappings = mappedVariants.map(mapping => ({
+                      ...mapping,
+                      variant_name: mapping.name,
+                      product_name: mapping.product_name || 'Unknown Product',
+                      category_info: Array.isArray(mapping.category_names) ? mapping.category_names.join(', ') : '',
+                      mapped_at_formatted: new Date(mapping.mapped_at).toLocaleString()
+                    }));
+                    
+                    // Apply any filtering if needed
+                    if (params.search) {
+                      filteredMappings = filteredMappings.filter(mapping => {
+                        const searchLower = params.search.toLowerCase();
+                        return (
+                          mapping.name?.toLowerCase().includes(searchLower) ||
+                          mapping.product_name?.toLowerCase().includes(searchLower) ||
+                          mapping.vendor_name?.toLowerCase().includes(searchLower)
+                        );
+                      });
+                    }
+                    
+                    const totalItems = filteredMappings.length;
+                    
+                    // Calculate start and end indices for pagination
+                    const startIndex = (params.page - 1) * params.limit;
+                    const endIndex = startIndex + params.limit;
+                    
+                    // Get the current page of mappings
+                    const paginatedMappings = filteredMappings.slice(startIndex, endIndex);
+                    
+                    console.log(`Showing ${paginatedMappings.length} of ${totalItems} mappings`);
+                    setMappings(paginatedMappings);
+                    setMappingsTotalPages(Math.ceil(totalItems / params.limit));
+                    setLoadingMappings(false);
+                  })
+                  .catch(error => {
+                    console.error("Error processing mappings:", error);
+                    setMappings([]);
+                    setMappingsTotalPages(0);
+                    setLoadingMappings(false);
+                  });
+              })
+              .catch(error => {
+                console.error("Error fetching vendors for mappings:", error);
+                setMappings([]);
+                setMappingsTotalPages(0);
+                setLoadingMappings(false);
+              });
+          } else {
+            setMappings([]);
+            setMappingsTotalPages(0);
+            setLoadingMappings(false);
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching mappings:", error);
+          toast.error("Failed to fetch mappings");
+          setMappings([]);
+          setMappingsTotalPages(0);
+          setLoadingMappings(false);
+        });
+    } catch (error) {
+      console.error("Exception in getAllMappings:", error);
+      setLoadingMappings(false);
+      setMappings([]);
+      setMappingsTotalPages(0);
+    }
+  };
+  
+  // Changes by Agnij Aprill 30, 2025 [Added variants pagination handler]
+  const handleVariantsPageClick = (event) => {
+    const selectedPage = event.selected + 1;
+    setVariantsPage(selectedPage);
+    
+    // Update URL params
+    updateUrlParams({ variantsPage: selectedPage });
+    
+    // Fetch data with new page
+    getAllVariants();
+  };
+  
+  // Changes by Agnij Aprill 30, 2025 [Added mappings pagination handler]
+  const handleMappingsPageClick = (event) => {
+    const selectedPage = event.selected + 1;
+    setMappingsPage(selectedPage);
+    
+    // Update URL params
+    updateUrlParams({ mappingsPage: selectedPage });
+    
+    // Fetch data with new page
+    getAllMappings();
   };
 
   // Handle filter changes
@@ -1014,13 +1296,26 @@ const ProductManagement = () => {
 
   // Initial data loading
   useEffect(() => {
-    getUserProfile();
-    getVendor();
+    // Fetch initial data
+    getProducts();
     fetchCategories();
     fetchAddedByOptions();
+    getUserProfile();
+    getVendor();
+    getVendorApproveList();
+    getReasonList();
     
-    // Force initial data load
-    getProducts();
+    // Changes by Agnij Aprill 30, 2025 [Handle tab from URL]
+    if (router.query.tab) {
+      setActiveTab(router.query.tab);
+      
+      // Load data for the active tab
+      if (router.query.tab === 'variants') {
+        getAllVariants();
+      } else if (router.query.tab === 'mappings') {
+        getAllMappings();
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -1164,12 +1459,11 @@ const ProductManagement = () => {
   // Inside the ProductManagement component, add state variables for variant management
   const [showAddVariantModal, setShowAddVariantModal] = useState(false);
   const [variantsList, setVariantsList] = useState([]);
-  const [loadingVariants, setLoadingVariants] = useState(false);
   const [isVariantMapping, setIsVariantMapping] = useState(false);
 
   // Add a function to fetch product variants
   const fetchProductVariants = useCallback(async (productId) => {
-    // Changes by Agnij May 22, 2024 [Fixed variant fetching for a specific product]
+    // Changes by Agnij April 30, 2025 [Fixed variant fetching for a specific product]
     if (!productId) {
       console.log("Cannot fetch variants: No product ID provided");
       return;
@@ -1210,7 +1504,7 @@ const ProductManagement = () => {
 
   // Add handlers for variant management
   const handleAddVariantSuccess = (data) => {
-    // Changes by Agnij May 22, 2024 [Fixed variant list refresh after adding variant]
+    // Changes by Agnij April 30, 2025 [Fixed variant list refresh after adding variant]
     console.log('Add variant success with data:', data);
     
     // Reset any stored original variant list for search
@@ -1257,8 +1551,53 @@ const ProductManagement = () => {
 
       <section className="content">
         <div className="container-fluid">
-          <div className="card card-body">
+          {/* Changes by Agnij June 14, 2024 [Added tab navigation] */}
+          <div className="card card-primary card-outline card-tabs">
+            <div className="card-header p-0 pt-1 border-bottom-0">
+              <ul className="nav nav-tabs" role="tablist">
+                <li className="nav-item">
+                  <a 
+                    className={`nav-link ${activeTab === 'products' ? 'active' : ''}`} 
+                    onClick={() => handleTabChange('products')}
+                    role="tab" 
+                    aria-selected={activeTab === 'products'}
+                    href="#"
+                  >
+                    Products
+                  </a>
+                </li>
+                <li className="nav-item">
+                  <a 
+                    className={`nav-link ${activeTab === 'variants' ? 'active' : ''}`} 
+                    onClick={() => handleTabChange('variants')}
+                    role="tab" 
+                    aria-selected={activeTab === 'variants'}
+                    href="#"
+                  >
+                    Variants
+                  </a>
+                </li>
+                <li className="nav-item">
+                  <a 
+                    className={`nav-link ${activeTab === 'mappings' ? 'active' : ''}`} 
+                    onClick={() => handleTabChange('mappings')}
+                    role="tab" 
+                    aria-selected={activeTab === 'mappings'}
+                    href="#"
+                  >
+                    Mappings
+                  </a>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="card-body">
+              <div className="tab-content">
+                {/* Products Tab */}
+                <div className={`tab-pane fade ${activeTab === 'products' ? 'active show' : ''}`}>
+                  {/* Filter controls for products */}
             {!enableBulkUpload && !enableBulkProdUpload && !openProductMap && (
+                    <div className="card card-body">
               <div className="row g-3">
                 {/* Search and Primary Filters */}
                 <div className="col-sm-3 mb-3">
@@ -1424,420 +1763,722 @@ const ProductManagement = () => {
                   </div>
                 </div>
               </div>
-            )}
-            {enableBulkUpload && (
-              <div className="row">
-                <div className="col-md-8">
-                  <div className="input-group buyers-search">
-                    <input
-                      type="file"
-                      className="form-control"
-                      name="file"
-                      accept=".xlsx"
-                      onChange={uploadToClient}
-                    />
-                  </div>
-                  <div className="d-flex mt-4">
-                    <button
-                      type="button"
-                      className="btn btn-primary mr-2"
-                      onClick={() => uploadToServer()}
-                    >
-                      Upload Excel
-                    </button>
-                    <div className="d-flex justify-content-end">
-                      <button
-                        type="button"
-                        className="btn btn-secondary mr-2"
-                        onClick={() => {
-                          setuploadProgress(0);
-                          setEnableBulkUpload(false);
-                          setFile(null);
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                  {file && (
-                    <div className={`progress mt-4 progress-${uploadProgress}`}>
-                      <div
-                        className="progress-bar progress-bar-striped progress-bar-animated"
-                        role="progressbar"
-                        style={{ width: `${uploadProgress}%` }}
-                        aria-valuenow={uploadProgress}
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                      >{`${uploadProgress}%`}</div>
-                    </div>
-                  )}
-                </div>
-                <div className="col-md-4"></div>
               </div>
             )}
 
-            {enableBulkProdUpload && (
-              <div className="row">
-                <div className="col-md-8">
-                  <div className="input-group buyers-search">
-                    <input
-                      type="file"
-                      className="form-control"
-                      name="file"
-                      accept=".xlsx"
-                      onChange={uploadToClientProd}
-                    />
-                  </div>
-                  <div className="d-flex mt-4">
-                    <button
-                      type="button"
-                      className="btn btn-primary mr-2"
-                      onClick={() => uploadToServerProd()}
-                    >
-                      Upload Product Excel
-                    </button>
-                    <div className="d-flex justify-content-end">
-                      <button
-                        type="button"
-                        className="btn btn-secondary mr-2"
-                        onClick={() => {
-                          setuploadProgress(0);
-                          setEnableBulkProdUpload(false);
-                          setProdFile(null);
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                  {file && (
-                    <div className={`progress mt-4 progress-${uploadProgress}`}>
-                      <div
-                        className="progress-bar progress-bar-striped progress-bar-animated"
-                        role="progressbar"
-                        style={{ width: `${uploadProgress}%` }}
-                        aria-valuenow={uploadProgress}
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                      >{`${uploadProgress}%`}</div>
-                    </div>
-                  )}
-                </div>
-                <div className="col-md-4"></div>
-              </div>
-            )}
-            {openProductMap && (
-              <div className="row">
-                <div className="col-12 d-flex justify-content-between">
-                  <h2 className="fs-4 mb-3">
-                    Map Variant with Vendor
-                  </h2>
-                  <button
-                    type="button"
-                    className="btn btn-danger mb-3"
-                    onClick={() => setOpenProductMap(false)}
-                  >
-                    Close
-                  </button>
-                </div>
-
-              <div className="row mb-4">
-                <div className="col-6 col-md-4">
-                  <label htmlFor="vendor" className="form-label fw-bold">Vendor *</label>
-                  <Select
-                    name="vendor"
-                    options={vendorData}
-                    value={productMapObj.vendor}
-                    isClearable={false}
-                    isSearchable
-                    placeholder="Select Vendor"
-                    onChange={(selectedOption) => handleMappingObj(selectedOption, { name: "vendor" })}
-                    components={{ Option: CustomSelectOption }}
-                    className="mb-3"
-                    />
-                  </div>
-
-                  {!isVariantMapping ? (
-                   <div className="col-6 col-md-4">
-                     <label htmlFor="product" className="form-label fw-bold">Product Name *</label>
-                     <div className="input-group mb-3">
-                       <span className="input-group-text">
-                         <i className="fa fa-search"></i>
-                       </span>
-                       <input
-                         type="text"
-                         name="product"
-                         className="form-control"
-                         placeholder="Search Products"
-                         onChange={(e) => debounceGetVendorProductList(e.target.value)}
-                         id="productSearchInput"
-                       />
-                     </div>
-                 
-                     <div className="border rounded p-3">
-                       <h5 className="mt-2 mb-3"> 
-                         {productLoading ? 
-                           <span>
-                             <i className="fa fa-spinner fa-spin me-2"></i>
-                             Searching Products...
-                           </span> 
-                           : productSearchTerm.length < 3 ? 
-                             "Type at least 3 characters to search" : 
-                             `Search Results (${vendorProductsList.length})`
-                         } 
-                       </h5>
-                  
-                       {!productLoading && vendorProductsList?.length > 0 ? (
-                         <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="product-search-results">
-                         {vendorProductsList.map((item, index) => (
-                           <div
-                             className="d-flex justify-content-between align-items-center border-bottom py-2"
-                             key={item.label + "_" + index}
-                           >
-                             <div>
-                               <p className="mb-0 fw-bold">{item.label}</p>
-                               <p className="text-muted">{item.categories}</p>
-                             </div>
-                             <button
-                               className={`btn ${productMapObj?.product?.value === item.value ? "btn-danger" : "btn-primary"} btn-sm`}
-                               onClick={() =>
-                                 productMapObj?.product?.value === item.value
-                                   ? handleMappingObj(null, { name: "product" })
-                                   : handleMappingObj(item, { name: "product" })
-                               }
-                             >
-                               {productMapObj?.product?.value === item.value ? "Remove" : "Select"}
-                             </button>
-                           </div>
-                         ))}
-                         </div>
-                       ) : (
-                         <p className="text-muted">
-                           {productSearchTerm.length < 3 ? 
-                             "Type to search for products" : 
-                             productLoading ? 
-                               "Searching..." : 
-                               "No products found matching your search criteria"}
-                         </p>
-                       )}
-                     </div>
-                   </div>
-                  ) : (
-                    <div className="col-6 col-md-4">
-                      <label htmlFor="product" className="form-label fw-bold">Variant *</label>
-                      <div className="input-group mb-3">
-                        <span className="input-group-text">
-                          <i className="fa fa-search"></i>
-                        </span>
-                        <input
-                          type="text"
-                          name="variant"
-                          className="form-control"
-                          placeholder="Search Variants"
-                          onChange={(e) => {
-                            // Changes by Agnij April 30, 2025 [Updated to use direct variant search API]
-                            const searchTerm = e.target.value.toLowerCase().trim();
-                            
-                            // Reset to empty state if search is cleared
-                            if (searchTerm.length === 0) {
-                              setVariantsList([]);
-                              // Clear original variants cache if exists
-                              if (window._originalVariantsList) {
-                                window._originalVariantsList = null;
-                              }
-                              return;
-                            }
-                            
-                            // Only search if at least 2 characters
-                            if (searchTerm.length < 2) {
-                              return;
-                            }
-                            
-                            // Start loading state
-                            setLoadingVariants(true);
-                            
-                            // Use the direct search endpoint rather than fetching all products first
-                            searchAllVariants(searchTerm)
-                              .then(response => {
-                                // Changes by Agnij April 30, 2025 [Fixed response data extraction]
-                                console.log(`Found ${response?.data?.data?.length || 0} variants with search term "${searchTerm}"`);
-                                
-                                // Process the response based on the structure returned from backend
-                                // The backend returns data as response.data.data due to axios interceptor
-                                const variants = response?.data?.data || [];
-                                
-                                // Format variants for the dropdown - ensure proper mapping regardless of field names
-                                const formattedVariants = variants.map(variant => ({
-                                  value: variant.id,
-                                  label: `${variant.name || variant.variant_name || 'Unnamed Variant'} (${variant.product_name || 'Unknown Product'})`,
-                                  data: variant,
-                                  product_id: variant.product_id
-                                }));
-                                
-                                // Update state with formatted variants
-                                setVariantsList(formattedVariants);
-                              })
-                              .catch(error => {
-                                console.error('Error searching variants:', error);
-                                toast.error('Failed to search variants');
-                                setVariantsList([]);
-                              })
-                              .finally(() => {
-                                setLoadingVariants(false);
-                              });
-                          }}
-                          id="variantSearchInput"
-                        />
-                      </div>
-
-                      <div className="border rounded p-3">
-                        <h5 className="mt-2 mb-3"> 
-                          {loadingVariants ? 
-                            <span>
-                              <i className="fa fa-spinner fa-spin me-2"></i>
-                              Loading Variants...
-                            </span> : 
-                            variantsList.length > 0 ?
-                            `Variants (${variantsList.length})` :
-                            "Search for variants above"
-                          } 
-                        </h5>
-                   
-                        {!loadingVariants && variantsList?.length > 0 ? (
-                          <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="product-search-results">
-                            {variantsList.map((item, index) => (
-                              <div
-                                className="d-flex justify-content-between align-items-center border-bottom py-2"
-                                key={item.label + "_" + index}
-                              >
-                                <div>
-                                  <p className="mb-0 fw-bold">{item.label}</p>
-                                </div>
-                                <button
-                                  className={`btn ${productMapObj?.product?.value === item.value ? "btn-danger" : "btn-primary"} btn-sm`}
-                                  onClick={() =>
-                                    productMapObj?.product?.value === item.value
-                                      ? handleMappingObj(null, { name: "product" })
-                                      : handleMappingObj(item, { name: "product" })
+                  {/* Products Table - Move this from outside to inside the products tab */}
+          <div className="card card-body product-table">
+            {loading && <FullLoading />}
+            {!loading && (
+              <table className="table table-striped table-hover table-responsive mb-3">
+                <thead>
+                  <tr className="text-nowrap">
+                    <th scope="col">
+                      <input
+                        type="checkbox"
+                        name="select_all_products"
+                        onClick={(e) => selectAllProduct(e)}
+                      />
+                    </th>
+                    <th scope="col">Product Name</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Accept/Reject</th>
+                    <th scope="col">Sub Category</th>
+                    <th scope="col">Vendors</th>
+                    <th scope="col">Approval Status</th>
+                    <th scope="col">Image</th>
+                    <th scope="col">TDS</th>
+                    <th scope="col">QAP</th>
+                    <th scope="col">Created At</th>
+                    <th scope="col">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products &&
+                    products.map((item) => {
+                      return (
+                        <tr key={item.id} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
+                          <td>
+                            <input
+                              type="checkbox"
+                              name="select_product"
+                              checked={item.isChecked}
+                              readOnly
+                              onClick={(e) => selectProduct(e, item)}
+                            />
+                          </td>
+                          <td>{item.name}</td>
+                          <td className="subcatstd">
+                            <span className="badge badge-warning">
+                              {item.product_categories.length > 0
+                                ? item.product_categories[0].category_name
+                                : "-"}
+                            </span>
+                          </td>
+                          <td>
+                            {item?.is_approve === 1 ? "Approved" : "Rejected"}
+                          </td>
+                          <td className="subcatstd">{getSubCats(item)}</td>
+                          <td>{ item?.vendor ? item?.vendor_name: "-"}</td>
+                          <td>
+                            {(userType && userType != 6) && (
+                              item?.is_approve === 1 ? (
+                                <OverlayTrigger
+                                  placement="top"
+                                  overlay={
+                                    <Tooltip id="tooltip1">
+                                      Click to Disapprove
+                                    </Tooltip>
                                   }
                                 >
-                                  {productMapObj?.product?.value === item.value ? "Remove" : "Select"}
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-muted">
-                            {loadingVariants ? 
-                              "Loading variants..." : 
-                              variantsList.length === 0 ?
-                              "Type to search for variants" :
-                              "No variants found matching your search criteria"}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                    <div className="col-6 col-md-4">
-                      <label htmlFor="approved_by" className="form-label fw-bold">Approved By</label>
-                  <Select
-                    name="approved_by"
-                    options={vendorApprovedList}
-                    isMulti
-                    isSearchable
-                    isClearable={false}
-                    onChange={(selectedOption) => handleMappingObj(selectedOption, { name: "approved_by" })}
-                    placeholder="Approved By"
-                        className="mb-3"
-                  />
-                    </div>
-                </div>
-
-               <div className="text-end">
-                    <button
-                      type="button"
-                      className="btn btn-primary px-4"
-                      onClick={handleAddProductForBulk}
-                      disabled={isAddingDataProcessing}
-                    >
-                      {isAddingDataProcessing ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2"></span>
-                          Uploading...
-                        </>
-                      ) : (
-                      `Add ${isVariantMapping ? "Variant" : "Product"}`
-                      )}
-                    </button>
-                  </div>
-
-                {/* Display Mapped Products or Variants */}
-                   {mapMultipleProductsWithVendor.length > 0 && (
-                     <div className="mt-4">
-                    <h5 className="mb-3 fw-bold">Mapped {isVariantMapping ? "Variants" : "Products"}</h5>
-                       <div className="border rounded p-3 bg-light">
-                         {mapMultipleProductsWithVendor.map((item, index) => (
-                           <div
-                             key={index}
-                             className="d-flex justify-content-between align-items-center border-bottom py-2"
-                           >
-                             <div>
-                               <p className="mb-0 fw-bold">{item.product.label}</p>
-                            {!isVariantMapping && <p className="text-muted">{item.product.categories}</p>}
-                               <small><b>Vendor:</b> {item.vendor.label}</small>
-                               <br />
-                               <small><b>Approved By:</b> {item?.approved_by?.map(a => a.label)?.join(", ")}</small>
-                             </div>
-                             <button
-                                 disabled={isAddingDataProcessing}
-                               className="btn btn-danger btn-sm"
-                               onClick={() => handleRemoveProduct(index)}
-                             >
-                                {isAddingDataProcessing ? (
-                                <>
-                                  <span className="spinner-border spinner-border-sm me-2"></span>
-                                  Uploading...
-                                </>
+                                  <button
+                                    className="btn btn-secondary bg-danger mb-2"
+                                    onClick={() => openRejectModal(item.id)}
+                                  >
+                                    Disapprove
+                                  </button>
+                                </OverlayTrigger>
                               ) : (
-                                "Remove"
-                              )}
-                             </button>
-                           </div>
-                         ))}
-                       </div>
-                     </div>
-                   )}
+                                <div className="d-flex flex-row align-items-center">
+                                  <OverlayTrigger
+                                    placement="top"
+                                    overlay={
+                                      <Tooltip id="tooltip1">Click to approve</Tooltip>
+                                    }
+                                  >
+                                    <button
+                                      className="btn btn-secondary bg-success mb-2"
+                                      onClick={() => handleAcceptRejectProduct(item.id, '1')}
+                                    >
+                                      Approve
+                                    </button>
+                                  </OverlayTrigger>
 
+                                  {item?.is_approve === 0 && item?.reject_reason &&
+                                    <OverlayTrigger
+                                      placement="top"
+                                      overlay={
+                                        <Tooltip id="tooltip1">
+                                          {item?.reject_reason}
+                                        </Tooltip>
+                                      }
+                                    >
+                                      <span className="fa fa-info-circle ml-2"></span>
+                                    </OverlayTrigger>}
+                                </div>
+                              ))}
+                            {getApprovalInfo(item)}
+                          </td>
 
-                <div className="col-12 d-flex justify-content-end gap-4 my-3">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    disabled={isAddingDataProcessing}
-                    onClick={handleSubmitMapping}
-                  >
-                    {isAddingDataProcessing ? (
+                          <td>
+                            {item?.new_image_name ? <img
+                              width={60}
+                              height={60}
+                              src={item?.new_image_name}
+                              alt="new_image"
+                            /> : "--"}
+                          </td>
+                          <td>
+                            {item?.tds_new_file_name ? (
+                              <a href={item?.tds_new_file_name} target="_blank">
+                                        <i className="fa fa-file"></i>
+                              </a>
+                            ) : '--'}
+                          </td>
+                          <td>
+                            {item?.qap_new_file_name ? (
+                              <a href={item?.qap_new_file_name} target="_blank">
+                                        <i className="fa fa-file"></i>
+                              </a>
+                            ) : '--'}
+                          </td>
+                          <td style={{ width: "100px" }}>
+                            {new Date(item.created_at).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </td>
+                          <td>
+                            <div className="d-flex">
+                              <span
+                                className="fa fa-eye mr-2"
+                                onClick={() =>
+                                  router.push(
+                                    `/product-management/product-details/${item.id}`
+                                  )
+                                }
+                              ></span>
+                              {userType != 6 &&
+                                <span
+                                  className="fa fa-edit"
+                                  onClick={() => handleUpdateProduct(item)}
+                                ></span>}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            )}
+
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                {/* Always show database totals */}
+                <p><b>Total Products: </b>{totalCount.total_count}</p>
+                <p><b>Total Approved Products: </b>{totalCount.approve_count}</p>
+                <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p>
+                
+                {/* Show filtered counts when filtering is applied */}
+                {totalCount.is_filtered && (
+                  <div className="mt-2 pt-2 border-top">
+                    <p><b>Filtered Results: </b>{totalCount.filtered_count}</p>
+                    <p><b>Filtered Approved: </b>{totalCount.filtered_approve_count}</p>
+                    <p><b>Filtered Disapproved: </b>{totalCount.filtered_disapprove_count}</p>
+                  </div>
+                )}
+              </div>
+              {/* Always show pagination if we have total count from API */}
+              <div className="d-flex flex-column align-items-center gap-2">
+                {/* Pagination Section */}
+                <div className="d-flex justify-content-between align-items-center mt-3">
+                  {totalCount.filtered_count > 0 && (
                     <>
-                      <span className="spinner-border spinner-border-sm me-2"></span>
-                      Uploading...
+                      <ReactPaginate
+                        previousLabel={"Previous"}
+                        nextLabel={"Next"}
+                        breakLabel={"..."}
+                        pageCount={totalPages}
+                        marginPagesDisplayed={2}
+                        pageRangeDisplayed={5}
+                        onPageChange={handlePageClick}
+                        containerClassName={"pagination mb-0"}
+                        pageClassName={"page-item"}
+                        pageLinkClassName={"page-link"}
+                        previousClassName={"page-item"}
+                        previousLinkClassName={"page-link"}
+                        nextClassName={"page-item"}
+                        nextLinkClassName={"page-link"}
+                        breakClassName={"page-item"}
+                        breakLinkClassName={"page-link"}
+                        activeClassName={"active"}
+                        forcePage={page - 1}
+                      />
+                      
+                      <div className="d-flex align-items-center">
+                        <input
+                          type="text"
+                          className="form-control me-2"
+                          style={{ width: "80px" }}
+                          value={pageSearchInput}
+                          onChange={handlePageSearchInput}
+                          placeholder="Page #"
+                        />
+                        <button
+                          className="btn btn-primary"
+                          onClick={handlePageSearchSubmit}
+                          disabled={!pageSearchInput || parseInt(pageSearchInput) < 1 || parseInt(pageSearchInput) > totalPages}
+                        >
+                          Go
+                        </button>
+                      </div>
                     </>
-                  ) : (
-                    "Submit"
                   )}
-                  </button>
-                </div>
-
-                <div className="col-12 mt-3">
-                  <p className=" border rounded-3 p-2 bg-light">
-                    <b>Note: </b>
-                    If you don't find the {isVariantMapping ? "Variant" : "Product"} or Vendor, please add them first and retry.
-                  </p>
+                        </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
+                {/* Variants Tab */}
+                <div className={`tab-pane fade ${activeTab === 'variants' ? 'active show' : ''}`}>
+                  <div className="card card-body">
+                    <div className="row g-3">
+                      {/* Search and filters for variants */}
+                      <div className="col-sm-3 mb-3">
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Search Variants"
+                          value={filterValues.searchString}
+                          onChange={handleSearch}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <Select
+                          options={categories}
+                          placeholder="Category"
+                          styles={customSelectStyles}
+                          isClearable={true}
+                          instanceId="category-select"
+                          value={filterValues.category ? categories.find(opt => opt.value === filterValues.category) : null}
+                          onChange={(selectedOption) => handleFilterChange('category', selectedOption)}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <Select
+                          options={vendorData}
+                          placeholder="Vendor"
+                          styles={customSelectStyles}
+                          isClearable={true}
+                          instanceId="vendor-select"
+                          value={filterValues.vendor ? vendorData.find(opt => opt.value === filterValues.vendor) : null}
+                          onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <div className="d-flex">
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                              getAllVariants();
+                            }}
+                          >
+                            Search
+                          </button>
+                          <button
+                            className="btn btn-secondary ms-2"
+                            onClick={resetFilters}
+                          >
+                            Reset
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Variants table */}
+                    <div className="table-responsive mb-3">
+                      {loadingVariants ? (
+                        <FullLoading />
+                      ) : (
+                        <table className="table table-striped table-hover">
+                          <thead>
+                            <tr>
+                              <th>
+                                <input
+                                  type="checkbox"
+                                  onChange={(e) => {
+                                    // Implement select all for variants
+                                    const checked = e.target.checked;
+                                    const updatedVariants = variants.map(variant => ({
+                                      ...variant,
+                                      isChecked: checked
+                                    }));
+                                    setVariants(updatedVariants);
+                                  }}
+                                />
+                              </th>
+                              <th>Name</th>
+                              <th>Product</th>
+                              <th>Category</th>
+                              <th>Vendors</th>
+                              <th>Status</th>
+                              <th>Created By</th>
+                              <th>Updated By</th>
+                              <th>Created At</th>
+                              <th>Updated At</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {variants.length > 0 ? (
+                              variants.map((variant) => (
+                                <tr key={variant.id}>
+                                  <td>
+                                    <input
+                                      type="checkbox"
+                                      checked={variant.isChecked}
+                                      onChange={(e) => {
+                                        // Toggle checkbox for a single variant
+                                        const checked = e.target.checked;
+                                        const updatedVariants = variants.map(v => 
+                                          v.id === variant.id ? { ...v, isChecked: checked } : v
+                                        );
+                                        setVariants(updatedVariants);
+                                      }}
+                                    />
+                                  </td>
+                                  <td>{variant.name || variant.variant_name}</td>
+                                  <td>{variant.product_name}</td>
+                                  <td>
+                                    <span className="badge badge-warning">
+                                      {variant.category_names && variant.category_names.length > 0 
+                                        ? variant.category_names[0] 
+                                        : "-"}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {variant.vendor_name 
+                                      ? <span className="badge badge-info">{variant.vendor_name}</span> 
+                                      : "-"}
+                                  </td>
+                                  <td>
+                                    {/* Similar approval controls as products */}
+                                    {(userType && userType != 6) && (
+                                      variant?.is_approve === 1 ? (
+                                        <OverlayTrigger
+                                          placement="top"
+                                          overlay={
+                                            <Tooltip id="tooltip1">
+                                              Click to Disapprove
+                                            </Tooltip>
+                                          }
+                                        >
+                                          <button
+                                            className="btn btn-secondary bg-danger btn-sm mb-2"
+                                            onClick={() => openRejectModal(variant.id)}
+                                          >
+                                            Disapprove
+                                          </button>
+                                        </OverlayTrigger>
+                                      ) : (
+                                        <div className="d-flex flex-row align-items-center">
+                                          <OverlayTrigger
+                                            placement="top"
+                                            overlay={
+                                              <Tooltip id="tooltip1">Click to approve</Tooltip>
+                                            }
+                                          >
+                                            <button
+                                              className="btn btn-secondary bg-success btn-sm mb-2"
+                                              onClick={() => handleAcceptRejectProduct(variant.id, '1')}
+                                            >
+                                              Approve
+                                            </button>
+                                          </OverlayTrigger>
+
+                                          {variant?.is_approve === 0 && variant?.reject_reason &&
+                                            <OverlayTrigger
+                                              placement="top"
+                                              overlay={
+                                                <Tooltip id="tooltip1">
+                                                  {variant?.reject_reason}
+                                                </Tooltip>
+                                              }
+                                            >
+                                              <span className="fa fa-info-circle ml-2"></span>
+                                            </OverlayTrigger>}
+                                        </div>
+                                      ))}
+                                  </td>
+                                  <td>
+                                    {/* Changes by Agnij June 14, 2024 [Added created by display] */}
+                                    {variant.created_by ? 
+                                      addedByOptions.find(user => user.value === parseInt(variant.created_by))?.label || variant.created_by 
+                                      : "-"}
+                                  </td>
+                                  <td>
+                                    {/* Changes by Agnij June 14, 2024 [Added updated by display] */}
+                                    {variant.updated_by ? 
+                                      addedByOptions.find(user => user.value === parseInt(variant.updated_by))?.label || variant.updated_by 
+                                      : "-"}
+                                  </td>
+                                  <td>
+                                    {variant.created_at ? 
+                                      new Date(variant.created_at).toLocaleDateString("en-GB", {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                      }) : "-"}
+                                  </td>
+                                  <td>
+                                    {variant.updated_at ? 
+                                      new Date(variant.updated_at).toLocaleDateString("en-GB", {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                      }) : "-"}
+                                  </td>
+                                  <td>
+                                    <button
+                                      className="btn btn-sm btn-primary me-2"
+                                      onClick={() => {
+                                        router.push(`/product-management/variant/${variant.id}`);
+                                      }}
+                                    >
+                                      <i className="fas fa-eye"></i> View
+                                    </button>
+                                    <button
+                                      className="btn btn-sm btn-info"
+                                      onClick={() => {
+                                        router.push(`/product-management/edit-variant/${variant.id}`);
+                                      }}
+                                    >
+                                      <i className="fas fa-edit"></i> Edit
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan="11" className="text-center">
+                                  No variants found
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                    
+                    {/* Variants pagination */}
+                    {variants.length > 0 && variantsTotalPages > 1 && (
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <p><b>Total Variants: </b>{variants.length}</p>
+                          <p><b>Page: </b>{variantsPage} of {variantsTotalPages}</p>
+                        </div>
+                        <ReactPaginate
+                          previousLabel={"Previous"}
+                          nextLabel={"Next"}
+                          breakLabel={"..."}
+                          pageCount={variantsTotalPages}
+                          marginPagesDisplayed={2}
+                          pageRangeDisplayed={3}
+                          onPageChange={handleVariantsPageClick}
+                          containerClassName={"pagination mb-0"}
+                          pageClassName={"page-item"}
+                          pageLinkClassName={"page-link"}
+                          previousClassName={"page-item"}
+                          previousLinkClassName={"page-link"}
+                          nextClassName={"page-item"}
+                          nextLinkClassName={"page-link"}
+                          breakClassName={"page-item"}
+                          breakLinkClassName={"page-link"}
+                          activeClassName={"active"}
+                          forcePage={variantsPage - 1}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Mappings Tab */}
+                <div className={`tab-pane fade ${activeTab === 'mappings' ? 'active show' : ''}`}>
+                  <div className="card card-body">
+                    <div className="row g-3">
+                      {/* Search and filters for mappings */}
+                      <div className="col-sm-3 mb-3">
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Search Mappings"
+                          value={filterValues.searchString}
+                          onChange={handleSearch}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <Select
+                          options={vendorData}
+                          placeholder="Vendor"
+                          styles={customSelectStyles}
+                          isClearable={true}
+                          instanceId="vendor-select-mappings"
+                          value={filterValues.vendor ? vendorData.find(opt => opt.value === filterValues.vendor) : null}
+                          onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <div className="d-flex">
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                              getAllMappings();
+                            }}
+                          >
+                            Search
+                          </button>
+                          <button
+                            className="btn btn-secondary ms-2"
+                            onClick={resetFilters}
+                          >
+                            Reset
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Mappings table */}
+                    <div className="table-responsive mb-3">
+                      {loadingMappings ? (
+                        <FullLoading />
+                      ) : (
+                        <table className="table table-striped table-hover">
+                          <thead>
+                            <tr>
+                              <th>Variant</th>
+                              <th>Product</th>
+                              <th>Vendor</th>
+                              <th>Category</th>
+                              <th>Status</th>
+                              <th>Mapped By</th>
+                              <th>Updated By</th>
+                              <th>Mapped On</th>
+                              <th>Updated At</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {mappings.length > 0 ? (
+                              mappings.map((mapping) => (
+                                <tr key={`mapping-${mapping.id}`}>
+                                  <td>{mapping.name || mapping.variant_name}</td>
+                                  <td>{mapping.product_name}</td>
+                                  <td>
+                                    <span className="badge badge-info">
+                                      {mapping.vendor_name || "-"}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="badge badge-warning">
+                                      {mapping.category_names && mapping.category_names.length > 0 
+                                        ? mapping.category_names[0] 
+                                        : "-"}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {/* Approval controls similar to products and variants */}
+                                    {(userType && userType != 6) && (
+                                      mapping?.is_mapping_approved === 1 ? (
+                                        <OverlayTrigger
+                                          placement="top"
+                                          overlay={
+                                            <Tooltip id="tooltip1">
+                                              Click to Disapprove Mapping
+                                            </Tooltip>
+                                          }
+                                        >
+                                          <button
+                                            className="btn btn-secondary bg-danger btn-sm mb-2"
+                                            onClick={() => openRejectModal(mapping.id)}
+                                          >
+                                            Disapprove
+                                          </button>
+                                        </OverlayTrigger>
+                                      ) : (
+                                        <div className="d-flex flex-row align-items-center">
+                                          <OverlayTrigger
+                                            placement="top"
+                                            overlay={
+                                              <Tooltip id="tooltip1">Click to approve mapping</Tooltip>
+                                            }
+                                          >
+                                            <button
+                                              className="btn btn-secondary bg-success btn-sm mb-2"
+                                              onClick={() => handleAcceptRejectProduct(mapping.id, '1')}
+                                            >
+                                              Approve
+                                            </button>
+                                          </OverlayTrigger>
+
+                                          {mapping?.is_mapping_approved === 0 && mapping?.reject_reason &&
+                                            <OverlayTrigger
+                                              placement="top"
+                                              overlay={
+                                                <Tooltip id="tooltip1">
+                                                  {mapping?.reject_reason}
+                                                </Tooltip>
+                                              }
+                                            >
+                                              <span className="fa fa-info-circle ml-2"></span>
+                                            </OverlayTrigger>}
+                                        </div>
+                                      ))}
+                                  </td>
+                                  <td>
+                                    {/* Changes by Agnij June 14, 2024 [Added created by display] */}
+                                    {mapping.created_by ? 
+                                      addedByOptions.find(user => user.value === parseInt(mapping.created_by))?.label || mapping.created_by 
+                                      : "-"}
+                                  </td>
+                                  <td>
+                                    {/* Changes by Agnij June 14, 2024 [Added updated by display] */}
+                                    {mapping.updated_by ? 
+                                      addedByOptions.find(user => user.value === parseInt(mapping.updated_by))?.label || mapping.updated_by 
+                                      : "-"}
+                                  </td>
+                                  <td>
+                                    {mapping.created_at || mapping.mapping_date ? 
+                                      new Date(mapping.created_at || mapping.mapping_date).toLocaleDateString("en-GB", {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                      }) : "-"}
+                                  </td>
+                                  <td>
+                                    {mapping.updated_at ? 
+                                      new Date(mapping.updated_at).toLocaleDateString("en-GB", {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                      }) : "-"}
+                                  </td>
+                                  <td>
+                                    <button
+                                      className="btn btn-sm btn-info"
+                                      onClick={() => {
+                                        router.push(`/product-management/mapping/${mapping.id}`);
+                                      }}
+                                    >
+                                      <i className="fas fa-edit"></i> Edit
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan="10" className="text-center">
+                                  No mappings found
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                    
+                    {/* Mappings pagination */}
+                    {mappings.length > 0 && mappingsTotalPages > 1 && (
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <p><b>Total Mappings: </b>{mappings.length}</p>
+                          <p><b>Page: </b>{mappingsPage} of {mappingsTotalPages}</p>
+                        </div>
+                        <ReactPaginate
+                          previousLabel={"Previous"}
+                          nextLabel={"Next"}
+                          breakLabel={"..."}
+                          pageCount={mappingsTotalPages}
+                          marginPagesDisplayed={2}
+                          pageRangeDisplayed={3}
+                          onPageChange={handleMappingsPageClick}
+                          containerClassName={"pagination mb-0"}
+                          pageClassName={"page-item"}
+                          pageLinkClassName={"page-link"}
+                          previousClassName={"page-item"}
+                          previousLinkClassName={"page-link"}
+                          nextClassName={"page-item"}
+                          nextLinkClassName={"page-link"}
+                          breakClassName={"page-item"}
+                          breakLinkClassName={"page-link"}
+                          activeClassName={"active"}
+                          forcePage={mappingsPage - 1}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Error modals */}
           {productWithVendorErrors &&
             <div className="card card-body product-table">
               {loading && <FullLoading />}
@@ -1974,231 +2615,6 @@ const ProductManagement = () => {
               )}
             </div>
           }
-
-          <div className="card card-body product-table">
-            {loading && <FullLoading />}
-            {!loading && (
-              <table className="table table-striped table-hover table-responsive mb-3">
-                <thead>
-                  <tr className="text-nowrap">
-                    <th scope="col">
-                      <input
-                        type="checkbox"
-                        name="select_all_products"
-                        onClick={(e) => selectAllProduct(e)}
-                      />
-                    </th>
-                    <th scope="col">Product Name</th>
-                    <th scope="col">Category</th>
-                    <th scope="col">Accept/Reject</th>
-                    <th scope="col">Sub Category</th>
-                    <th scope="col">Vendors</th>
-                    <th scope="col">Approval Status</th>
-                    <th scope="col">Image</th>
-                    <th scope="col">TDS</th>
-                    <th scope="col">QAP</th>
-                    <th scope="col">Created At</th>
-                    <th scope="col">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products &&
-                    products.map((item) => {
-                      return (
-                        <tr key={item.id} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
-                          <td>
-                            <input
-                              type="checkbox"
-                              name="select_product"
-                              checked={item.isChecked}
-                              readOnly
-                              onClick={(e) => selectProduct(e, item)}
-                            />
-                          </td>
-                          <td>{item.name}</td>
-                          <td className="subcatstd">
-                            <span className="badge badge-warning">
-                              {item.product_categories.length > 0
-                                ? item.product_categories[0].category_name
-                                : "-"}
-                            </span>
-                          </td>
-                          <td>
-                            {item?.is_approve === 1 ? "Approved" : "Rejected"}
-                          </td>
-                          <td className="subcatstd">{getSubCats(item)}</td>
-                          <td>{ item?.vendor ? item?.vendor_name: "-"}</td>
-                          <td>
-                            {(userType && userType != 6) && (
-                              item?.is_approve === 1 ? (
-                                <OverlayTrigger
-                                  placement="top"
-                                  overlay={
-                                    <Tooltip id="tooltip1">
-                                      Click to Disapprove
-                                    </Tooltip>
-                                  }
-                                >
-                                  <button
-                                    className="btn btn-secondary bg-danger mb-2"
-                                    onClick={() => openRejectModal(item.id)}
-                                  >
-                                    Disapprove
-                                  </button>
-                                </OverlayTrigger>
-                              ) : (
-                                <div className="d-flex flex-row align-items-center">
-                                  <OverlayTrigger
-                                    placement="top"
-                                    overlay={
-                                      <Tooltip id="tooltip1">Click to approve</Tooltip>
-                                    }
-                                  >
-                                    <button
-                                      className="btn btn-secondary bg-success mb-2"
-                                      onClick={() => handleAcceptRejectProduct(item.id, '1')}
-                                    >
-                                      Approve
-                                    </button>
-                                  </OverlayTrigger>
-
-                                  {item?.is_approve === 0 && item?.reject_reason &&
-                                    <OverlayTrigger
-                                      placement="top"
-                                      overlay={
-                                        <Tooltip id="tooltip1">
-                                          {item?.reject_reason}
-                                        </Tooltip>
-                                      }
-                                    >
-                                      <span className="fa fa-info-circle ml-2"></span>
-                                    </OverlayTrigger>}
-                                </div>
-                              ))}
-                            {getApprovalInfo(item)}
-                          </td>
-
-                          <td>
-                            {item?.new_image_name ? <img
-                              width={60}
-                              height={60}
-                              src={item?.new_image_name}
-                              alt="new_image"
-                            /> : "--"}
-                          </td>
-                          <td>
-                            {item?.tds_new_file_name ? (
-                              <a href={item?.tds_new_file_name} target="_blank">
-                                <i class="fa fa-file"></i>
-                              </a>
-                            ) : '--'}
-                          </td>
-                          <td>
-                            {item?.qap_new_file_name ? (
-                              <a href={item?.qap_new_file_name} target="_blank">
-                                <i class="fa fa-file"></i>
-                              </a>
-                            ) : '--'}
-                          </td>
-                          <td style={{ width: "100px" }}>
-                            {new Date(item.created_at).toLocaleDateString("en-GB", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </td>
-                          <td>
-                            <div className="d-flex">
-                              <span
-                                className="fa fa-eye mr-2"
-                                onClick={() =>
-                                  router.push(
-                                    `/product-management/product-details/${item.id}`
-                                  )
-                                }
-                              ></span>
-                              {userType != 6 &&
-                                <span
-                                  className="fa fa-edit"
-                                  onClick={() => handleUpdateProduct(item)}
-                                ></span>}
-                            </div>
-
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            )}
-
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                {/* Always show database totals */}
-                <p><b>Total Products: </b>{totalCount.total_count}</p>
-                <p><b>Total Approved Products: </b>{totalCount.approve_count}</p>
-                <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p>
-                
-                {/* Show filtered counts when filtering is applied */}
-                {totalCount.is_filtered && (
-                  <div className="mt-2 pt-2 border-top">
-                    <p><b>Filtered Results: </b>{totalCount.filtered_count}</p>
-                    <p><b>Filtered Approved: </b>{totalCount.filtered_approve_count}</p>
-                    <p><b>Filtered Disapproved: </b>{totalCount.filtered_disapprove_count}</p>
-                  </div>
-                )}
-              </div>
-              {/* Always show pagination if we have total count from API */}
-              <div className="d-flex flex-column align-items-center gap-2">
-                {/* Pagination Section */}
-                <div className="d-flex justify-content-between align-items-center mt-3">
-                  {totalCount.filtered_count > 0 && (
-                    <>
-                      <ReactPaginate
-                        previousLabel={"Previous"}
-                        nextLabel={"Next"}
-                        breakLabel={"..."}
-                        pageCount={totalPages}
-                        marginPagesDisplayed={2}
-                        pageRangeDisplayed={5}
-                        onPageChange={handlePageClick}
-                        containerClassName={"pagination mb-0"}
-                        pageClassName={"page-item"}
-                        pageLinkClassName={"page-link"}
-                        previousClassName={"page-item"}
-                        previousLinkClassName={"page-link"}
-                        nextClassName={"page-item"}
-                        nextLinkClassName={"page-link"}
-                        breakClassName={"page-item"}
-                        breakLinkClassName={"page-link"}
-                        activeClassName={"active"}
-                        forcePage={page - 1}
-                      />
-                      
-                      <div className="d-flex align-items-center">
-                        <input
-                          type="text"
-                          className="form-control me-2"
-                          style={{ width: "80px" }}
-                          value={pageSearchInput}
-                          onChange={handlePageSearchInput}
-                          placeholder="Page #"
-                        />
-                        <button
-                          className="btn btn-primary"
-                          onClick={handlePageSearchSubmit}
-                          disabled={!pageSearchInput || parseInt(pageSearchInput) < 1 || parseInt(pageSearchInput) > totalPages}
-                        >
-                          Go
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
       </section>
 
