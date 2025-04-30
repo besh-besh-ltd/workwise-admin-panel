@@ -48,7 +48,7 @@ const ProductDetails = () => {
                 </div>
             </div>
 
-            <div className="container-fluid">
+                            <div className="container-fluid">
                 <Card>
                     <div className="product-info mb-4">
                         <h2>{productData.name}</h2>
@@ -58,7 +58,7 @@ const ProductDetails = () => {
 
                     <Tabs defaultActiveKey="1">
                         <TabPane tab="Basic Details" key="1">
-                            <div className="row">
+                                <div className="row">
                                 <div className="col-md-12">
                                     <Card title="Gallery Images" className="mb-4">
                                         <div className="gallery-panel">
@@ -68,16 +68,16 @@ const ProductDetails = () => {
                                                     .filter(image => image.is_featured === 0)
                                                     .map((image, index) => (
                                                         <div className="gallery-image-panel" key={index}>
-                                                            <img
-                                                                src={image.product_image_url}
+                                                                <img
+                                                                    src={image.product_image_url}
                                                                 alt="Gallery Image"
-                                                            />
-                                                        </div>
+                                                                />
+                                                            </div>
                                                     ))
                                             }
                                         </div>
                                     </Card>
-                                </div>
+                                    </div>
 
                                 <div className="col-md-6">
                                     <Card title="Featured Image" className="mb-4">
@@ -88,16 +88,16 @@ const ProductDetails = () => {
                                                     .filter(image => image.is_featured === 1)
                                                     .map((image, index) => (
                                                         <div className="featured-image-panel" key={index}>
-                                                            <img
-                                                                src={image.product_image_url}
+                                                                    <img
+                                                                        src={image.product_image_url}
                                                                 alt="Featured Image"
-                                                            />
-                                                        </div>
+                                                                    />
+                                                                </div>
                                                     ))
-                                            }
+                                                }
                                         </div>
                                     </Card>
-                                </div>
+                                    </div>
 
                                 <div className="col-md-6">
                                     <Card title="Product Categories" className="mb-4">
@@ -106,10 +106,10 @@ const ProductDetails = () => {
                                                 productData.product_categories.length > 0 &&
                                                 productData.product_categories.map((data, index) => (
                                                     <div className="product-categories" key={index}>
-                                                        <ul>
-                                                            <li>{data.category_name}</li>
-                                                        </ul>
-                                                    </div>
+                                                            <ul>
+                                                                <li>{data.category_name}</li>
+                                                            </ul>
+                                                        </div>
                                                 ))
                                             }
                                         </div>
@@ -118,20 +118,20 @@ const ProductDetails = () => {
 
                                 <div className="col-md-12">
                                     <Card title="Vendor List" className="mb-4">
-                                        <table className="table table-striped table-hover mb-3">
-                                            <thead>
-                                                <tr>
-                                                    <th scope="col">Sl. No.</th>
-                                                    <th scope="col">Name</th>
-                                                    <th scope="col">Approved By</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
+                                <table className="table table-striped table-hover mb-3">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Sl. No.</th>
+                                            <th scope="col">Name</th>
+                                            <th scope="col">Approved By</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
                                                 {vendorData.length > 0 ? (
                                                     vendorData.map((item, index) => (
                                                         <tr key={item.id || index}>
-                                                            <td>{index + 1}</td>
-                                                            <td>{item.vendor_name}</td>
+                                                        <td>{index + 1}</td>
+                                                        <td>{item.vendor_name}</td>
                                                             <td className="d-flex">
                                                                 {item.vendor_approved_by &&
                                                                 item.vendor_approved_by.length > 0 &&
@@ -149,8 +149,8 @@ const ProductDetails = () => {
                                                         <td colSpan="3" className="text-center">No vendors available</td>
                                                     </tr>
                                                 )}
-                                            </tbody>
-                                        </table>
+                                    </tbody>
+                                </table>
                                     </Card>
                                 </div>
                             </div>
@@ -160,7 +160,7 @@ const ProductDetails = () => {
                         </TabPane>
                     </Tabs>
                 </Card>
-            </div>
+                </div>
         </>
     );
 };

@@ -815,19 +815,19 @@ const ProductManagement = () => {
     if(!mapMultipleProductsWithVendor || mapMultipleProductsWithVendor?.length <= 0) {
       toast.error("Select products and vendors to add");
       return 0;
-    }
-
-    setIsAddingDataProcessing(true);
-
-    for (const productMap of mapMultipleProductsWithVendor) {
-      const { product, vendor, approved_by } = productMap;
-      
-      if (!product || !vendor) {
-        toast.error("Product and Vendor fields are required.");
-        return;
       }
 
-      try {
+      setIsAddingDataProcessing(true);
+
+    for (const productMap of mapMultipleProductsWithVendor) {
+    const { product, vendor, approved_by } = productMap;
+    
+    if (!product || !vendor) {
+      toast.error("Product and Vendor fields are required.");
+      return;
+    }
+
+    try {
         // Different API call based on if mapping a product or variant
         if (isVariantMapping) {
           const payload = {
@@ -839,30 +839,30 @@ const ProductManagement = () => {
           const res = await mapVariantWithVendor(payload);
           toast.success(res.message || "Variant mapped successfully");
         } else {
-          const payload = {
-            product_id: product.value,
-            vendor_id: vendor.value,
-            approved_by: approved_by?.map((item) => item.value) || null
+      const payload = {
+        product_id: product.value,
+        vendor_id: vendor.value,
+        approved_by: approved_by?.map((item) => item.value) || null
           };
           
-          const res = await mapVendorWithProduct(payload);
+      const res = await mapVendorWithProduct(payload);
           toast.success(res.message);
         }
-      } catch (error) {
+    } catch (error) {
         console.log(error);
         toast.error(error.message?.response?.data?.message || "An error occurred");
-      }
     }
+  }
 
     // Reset form state
-    setproductMapObj({
-      product: null,
-      vendor: null,
-      approved_by: null
-    });
+  setproductMapObj({
+    product: null,
+    vendor: null,
+    approved_by: null
+  });
 
     setMapMultipleProductsWithVendor([]);
-    setIsAddingDataProcessing(false);
+  setIsAddingDataProcessing(false);
     setOpenProductMap(false);
     getProducts();
   };
@@ -1448,87 +1448,87 @@ const ProductManagement = () => {
                   </button>
                 </div>
 
-                <div className="row mb-4">
-                  <div className="col-6 col-md-4">
-                    <label htmlFor="vendor" className="form-label fw-bold">Vendor *</label>
-                    <Select
-                      name="vendor"
-                      options={vendorData}
-                      value={productMapObj.vendor}
-                      isClearable={false}
-                      isSearchable
-                      placeholder="Select Vendor"
-                      onChange={(selectedOption) => handleMappingObj(selectedOption, { name: "vendor" })}
-                      components={{ Option: CustomSelectOption }}
-                      className="mb-3"
+              <div className="row mb-4">
+                <div className="col-6 col-md-4">
+                  <label htmlFor="vendor" className="form-label fw-bold">Vendor *</label>
+                  <Select
+                    name="vendor"
+                    options={vendorData}
+                    value={productMapObj.vendor}
+                    isClearable={false}
+                    isSearchable
+                    placeholder="Select Vendor"
+                    onChange={(selectedOption) => handleMappingObj(selectedOption, { name: "vendor" })}
+                    components={{ Option: CustomSelectOption }}
+                    className="mb-3"
                     />
                   </div>
 
                   {!isVariantMapping ? (
-                    <div className="col-6 col-md-4">
-                      <label htmlFor="product" className="form-label fw-bold">Product Name *</label>
-                      <div className="input-group mb-3">
-                        <span className="input-group-text">
-                          <i className="fa fa-search"></i>
-                        </span>
-                        <input
-                          type="text"
-                          name="product"
-                          className="form-control"
-                          placeholder="Search Products"
-                          onChange={(e) => debounceGetVendorProductList(e.target.value)}
-                          id="productSearchInput"
-                        />
-                      </div>
+                   <div className="col-6 col-md-4">
+                     <label htmlFor="product" className="form-label fw-bold">Product Name *</label>
+                     <div className="input-group mb-3">
+                       <span className="input-group-text">
+                         <i className="fa fa-search"></i>
+                       </span>
+                       <input
+                         type="text"
+                         name="product"
+                         className="form-control"
+                         placeholder="Search Products"
+                         onChange={(e) => debounceGetVendorProductList(e.target.value)}
+                         id="productSearchInput"
+                       />
+                     </div>
+                 
+                     <div className="border rounded p-3">
+                       <h5 className="mt-2 mb-3"> 
+                         {productLoading ? 
+                           <span>
+                             <i className="fa fa-spinner fa-spin me-2"></i>
+                             Searching Products...
+                           </span> 
+                           : productSearchTerm.length < 3 ? 
+                             "Type at least 3 characters to search" : 
+                             `Search Results (${vendorProductsList.length})`
+                         } 
+                       </h5>
                   
-                      <div className="border rounded p-3">
-                        <h5 className="mt-2 mb-3"> 
-                          {productLoading ? 
-                            <span>
-                              <i className="fa fa-spinner fa-spin me-2"></i>
-                              Searching Products...
-                            </span> 
-                            : productSearchTerm.length < 3 ? 
-                              "Type at least 3 characters to search" : 
-                              `Search Results (${vendorProductsList.length})`
-                          } 
-                        </h5>
-                   
-                        {!productLoading && vendorProductsList?.length > 0 ? (
-                          <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="product-search-results">
-                          {vendorProductsList.map((item, index) => (
-                            <div
-                              className="d-flex justify-content-between align-items-center border-bottom py-2"
-                              key={item.label + "_" + index}
-                            >
-                              <div>
-                                <p className="mb-0 fw-bold">{item.label}</p>
-                                <p className="text-muted">{item.categories}</p>
-                              </div>
-                              <button
-                                className={`btn ${productMapObj?.product?.value === item.value ? "btn-danger" : "btn-primary"} btn-sm`}
-                                onClick={() =>
-                                  productMapObj?.product?.value === item.value
-                                    ? handleMappingObj(null, { name: "product" })
-                                    : handleMappingObj(item, { name: "product" })
-                                }
-                              >
-                                {productMapObj?.product?.value === item.value ? "Remove" : "Select"}
-                              </button>
-                            </div>
-                          ))}
-                          </div>
-                        ) : (
-                          <p className="text-muted">
-                            {productSearchTerm.length < 3 ? 
-                              "Type to search for products" : 
-                              productLoading ? 
-                                "Searching..." : 
-                                "No products found matching your search criteria"}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                       {!productLoading && vendorProductsList?.length > 0 ? (
+                         <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="product-search-results">
+                         {vendorProductsList.map((item, index) => (
+                           <div
+                             className="d-flex justify-content-between align-items-center border-bottom py-2"
+                             key={item.label + "_" + index}
+                           >
+                             <div>
+                               <p className="mb-0 fw-bold">{item.label}</p>
+                               <p className="text-muted">{item.categories}</p>
+                             </div>
+                             <button
+                               className={`btn ${productMapObj?.product?.value === item.value ? "btn-danger" : "btn-primary"} btn-sm`}
+                               onClick={() =>
+                                 productMapObj?.product?.value === item.value
+                                   ? handleMappingObj(null, { name: "product" })
+                                   : handleMappingObj(item, { name: "product" })
+                               }
+                             >
+                               {productMapObj?.product?.value === item.value ? "Remove" : "Select"}
+                             </button>
+                           </div>
+                         ))}
+                         </div>
+                       ) : (
+                         <p className="text-muted">
+                           {productSearchTerm.length < 3 ? 
+                             "Type to search for products" : 
+                             productLoading ? 
+                               "Searching..." : 
+                               "No products found matching your search criteria"}
+                         </p>
+                       )}
+                     </div>
+                   </div>
                   ) : (
                     <div className="col-6 col-md-4">
                       <label htmlFor="product" className="form-label fw-bold">Variant *</label>
@@ -1611,75 +1611,75 @@ const ProductManagement = () => {
                     </div>
                   )}
 
-                  <div className="col-6 col-md-4">
-                    <label htmlFor="approved_by" className="form-label fw-bold">Approved By</label>
-                    <Select
-                      name="approved_by"
-                      options={vendorApprovedList}
-                      isMulti
-                      isSearchable
-                      isClearable={false}
-                      onChange={(selectedOption) => handleMappingObj(selectedOption, { name: "approved_by" })}
-                      placeholder="Approved By"
-                      className="mb-3"
-                    />
-                  </div>
+                    <div className="col-6 col-md-4">
+                      <label htmlFor="approved_by" className="form-label fw-bold">Approved By</label>
+                  <Select
+                    name="approved_by"
+                    options={vendorApprovedList}
+                    isMulti
+                    isSearchable
+                    isClearable={false}
+                    onChange={(selectedOption) => handleMappingObj(selectedOption, { name: "approved_by" })}
+                    placeholder="Approved By"
+                        className="mb-3"
+                  />
+                    </div>
                 </div>
 
-                <div className="text-end">
-                  <button
-                    type="button"
-                    className="btn btn-primary px-4"
-                    onClick={handleAddProductForBulk}
-                    disabled={isAddingDataProcessing}
-                  >
-                    {isAddingDataProcessing ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2"></span>
-                        Uploading...
-                      </>
-                    ) : (
+               <div className="text-end">
+                    <button
+                      type="button"
+                      className="btn btn-primary px-4"
+                      onClick={handleAddProductForBulk}
+                      disabled={isAddingDataProcessing}
+                    >
+                      {isAddingDataProcessing ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          Uploading...
+                        </>
+                      ) : (
                       `Add ${isVariantMapping ? "Variant" : "Product"}`
-                    )}
-                  </button>
-                </div>
+                      )}
+                    </button>
+                  </div>
 
                 {/* Display Mapped Products or Variants */}
-                {mapMultipleProductsWithVendor.length > 0 && (
-                  <div className="mt-4">
+                   {mapMultipleProductsWithVendor.length > 0 && (
+                     <div className="mt-4">
                     <h5 className="mb-3 fw-bold">Mapped {isVariantMapping ? "Variants" : "Products"}</h5>
-                    <div className="border rounded p-3 bg-light">
-                      {mapMultipleProductsWithVendor.map((item, index) => (
-                        <div
-                          key={index}
-                          className="d-flex justify-content-between align-items-center border-bottom py-2"
-                        >
-                          <div>
-                            <p className="mb-0 fw-bold">{item.product.label}</p>
+                       <div className="border rounded p-3 bg-light">
+                         {mapMultipleProductsWithVendor.map((item, index) => (
+                           <div
+                             key={index}
+                             className="d-flex justify-content-between align-items-center border-bottom py-2"
+                           >
+                             <div>
+                               <p className="mb-0 fw-bold">{item.product.label}</p>
                             {!isVariantMapping && <p className="text-muted">{item.product.categories}</p>}
-                            <small><b>Vendor:</b> {item.vendor.label}</small>
-                            <br />
-                            <small><b>Approved By:</b> {item?.approved_by?.map(a => a.label)?.join(", ")}</small>
-                          </div>
-                          <button
-                              disabled={isAddingDataProcessing}
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleRemoveProduct(index)}
-                          >
-                             {isAddingDataProcessing ? (
-                               <>
-                                 <span className="spinner-border spinner-border-sm me-2"></span>
-                                 Uploading...
-                               </>
-                             ) : (
-                               "Remove"
-                             )}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                               <small><b>Vendor:</b> {item.vendor.label}</small>
+                               <br />
+                               <small><b>Approved By:</b> {item?.approved_by?.map(a => a.label)?.join(", ")}</small>
+                             </div>
+                             <button
+                                 disabled={isAddingDataProcessing}
+                               className="btn btn-danger btn-sm"
+                               onClick={() => handleRemoveProduct(index)}
+                             >
+                                {isAddingDataProcessing ? (
+                                <>
+                                  <span className="spinner-border spinner-border-sm me-2"></span>
+                                  Uploading...
+                                </>
+                              ) : (
+                                "Remove"
+                              )}
+                             </button>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
 
 
                 <div className="col-12 d-flex justify-content-end gap-4 my-3">
@@ -1690,13 +1690,13 @@ const ProductManagement = () => {
                     onClick={handleSubmitMapping}
                   >
                     {isAddingDataProcessing ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2"></span>
-                        Uploading...
-                      </>
-                    ) : (
-                      "Submit"
-                    )}
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Uploading...
+                    </>
+                  ) : (
+                    "Submit"
+                  )}
                   </button>
                 </div>
 
