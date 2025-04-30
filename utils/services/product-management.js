@@ -534,3 +534,53 @@ export const searchAllVariants = (searchTerm) => {
     }
   });
 };
+
+// Changes by Agnij May 18, 2025 [Added function to get variant-vendor mappings]
+export const getVariantMappings = (searchTerm) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Add a timestamp to prevent 304 responses
+      const timestamp = Date.now();
+      let response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-mappings?search_term=${encodeURIComponent(searchTerm || "")}&_t=${timestamp}`,
+        { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
+      );
+      
+      console.log('Variant mappings response:', response);
+      
+      // Handle various response formats
+      if (response?.data?.data) {
+        // The response already has the expected format
+        resolve(response);
+      } else if (response?.data) {
+        // Response has data but not in the expected format
+        resolve({
+          status: 200,
+          data: {
+            status: 1,
+            data: response.data
+          }
+        });
+      } else {
+        // Empty or invalid response
+        resolve({
+          status: 200,
+          data: {
+            status: 1,
+            data: []
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Error getting variant mappings with term ${searchTerm}:`, error);
+      // Return empty data on error instead of rejecting
+      resolve({
+        status: 200,
+        data: {
+          status: 1,
+          data: []
+        }
+      });
+    }
+  });
+};

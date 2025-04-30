@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Table, Space, Popconfirm, message, Empty } from 'antd';
 import { PlusOutlined, DeleteOutlined, LinkOutlined } from '@ant-design/icons';
-import { getProductVariants, deleteProductVariant } from '../../utils/services/product-management';
+import { 
+  getProductVariants, 
+  deleteProductVariant, 
+  mapVariantWithVendor,
+  getVariantMappings
+} from "@/utils/services/product-management";
 import AddProductVariantModal from './AddProductVariantModal';
 import MapVariantVendorModal from '../modal/MapVariantVendorModal';
 

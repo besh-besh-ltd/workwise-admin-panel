@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants } from "@/utils/services/product-management";
+import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants, getVariantMappings } from "@/utils/services/product-management";
 import axiosFormData from "@/utils/axios/form-data";
 import FullLoading from "../loading/FullLoading";
 import { ToastContainer, toast } from "react-toastify";
@@ -1013,11 +1013,11 @@ const ProductManagement = () => {
     
     // Changes by Agnij May 18, 2025 [Fixed variants fetching]
     try {
-      // Use the existing searchAllVariants function to get variants
-      searchAllVariants(params.search || "")
+    // Use the existing searchAllVariants function to get variants
+    searchAllVariants(params.search || "")
         .then(response => {
-          if (response?.data?.data) {
-            const variantsData = response.data.data;
+        if (response?.data?.data) {
+          const variantsData = response.data.data;
             console.log("Variants data received:", variantsData);
             
             if (variantsData && Array.isArray(variantsData)) {
@@ -1033,41 +1033,41 @@ const ProductManagement = () => {
               // Apply filtering if needed
               const filteredVariants = formattedVariants.filter(variant => {
                 // Add any additional filtering logic here
-                return true;
-              });
-              
-              const totalItems = filteredVariants.length;
+            return true;
+          });
+          
+          const totalItems = filteredVariants.length;
               
               // Calculate indices for pagination
-              const startIndex = (params.page - 1) * params.limit;
-              const endIndex = startIndex + params.limit;
-              
-              // Get the current page of variants
-              const paginatedVariants = filteredVariants.slice(startIndex, endIndex);
-              
+          const startIndex = (params.page - 1) * params.limit;
+          const endIndex = startIndex + params.limit;
+          
+          // Get the current page of variants
+          const paginatedVariants = filteredVariants.slice(startIndex, endIndex);
+          
               console.log(`Showing ${paginatedVariants.length} of ${totalItems} variants`);
-              setVariants(paginatedVariants);
-              setVariantsTotalPages(Math.ceil(totalItems / params.limit));
-            } else {
+          setVariants(paginatedVariants);
+          setVariantsTotalPages(Math.ceil(totalItems / params.limit));
+        } else {
               console.log("No variants found or invalid data format");
               setVariants([]);
               setVariantsTotalPages(0);
             }
           } else {
             console.error("Invalid response format:", response);
-            setVariants([]);
-            setVariantsTotalPages(0);
-          }
-        })
-        .catch(error => {
-          console.error("Error fetching variants:", error);
-          toast.error("Failed to fetch variants");
           setVariants([]);
           setVariantsTotalPages(0);
-        })
-        .finally(() => {
-          setLoadingVariants(false);
-        });
+        }
+      })
+        .catch(error => {
+        console.error("Error fetching variants:", error);
+        toast.error("Failed to fetch variants");
+        setVariants([]);
+          setVariantsTotalPages(0);
+      })
+      .finally(() => {
+        setLoadingVariants(false);
+      });
     } catch (error) {
       console.error("Exception in getAllVariants:", error);
       setLoadingVariants(false);
@@ -1086,106 +1086,51 @@ const ProductManagement = () => {
       search: searchString
     };
     
-    // Changes by Agnij May 18, 2025 [Fixed mappings fetching]
+    // Changes by Agnij May 19, 2025 [Updated to handle simplified mapping data]
+    // Changes by Agnij May 19, 2025 [Improved vendor name display]
     try {
-      // First get variants with the searchAllVariants function
-      searchAllVariants(params.search || "")
+      // Use the real variant mappings API instead of mock data
+      getVariantMappings(params.search || "")
         .then(response => {
           if (response?.data?.data) {
-            const variantsData = response.data.data;
-            console.log("Received variants data for mappings:", variantsData.length);
+            const mappingsData = response.data.data;
+            console.log(`Received ${mappingsData.length} variant-vendor mappings`);
             
-            // Get vendor information for rendering
-            vendorList()
-              .then(vendorResponse => {
-                const vendors = vendorResponse?.data?.data || [];
-                
-                // For each variant, check if it has a vendor associated
-                Promise.all(
-                  variantsData.map(variant => {
-                    return new Promise((resolve) => {
-                      // Mock API call or actual API call to get mappings for a variant
-                      // In production, you'd implement an endpoint to get mappings
-                      setTimeout(() => {
-                        // For demo, create a mapping if variant id is even
-                        const hasMapping = variant.id % 2 === 0;
-                        
-                        if (hasMapping && vendors.length > 0) {
-                          // Assign a random vendor for demonstration
-                          const randomVendorIndex = Math.floor(Math.random() * vendors.length);
-                          resolve({
-                            ...variant,
-                            mapping_id: `map-${variant.id}`,
-                            vendor_id: vendors[randomVendorIndex].id,
-                            vendor_name: vendors[randomVendorIndex].name,
-                            vendor_email: vendors[randomVendorIndex].email,
-                            mapped_at: new Date().toISOString(),
-                            is_mapped: true
-                          });
-                        } else {
-                          resolve(null); // No mapping
-                        }
-                      }, 10); // Small timeout to simulate async
-                    });
-                  })
-                )
-                  .then(mappingResults => {
-                    // Filter out null values (variants without mappings)
-                    const mappedVariants = mappingResults.filter(Boolean);
-                    console.log(`Found ${mappedVariants.length} mapped variants`);
-                    
-                    // Format for display
-                    let filteredMappings = mappedVariants.map(mapping => ({
-                      ...mapping,
-                      variant_name: mapping.name,
-                      product_name: mapping.product_name || 'Unknown Product',
-                      category_info: Array.isArray(mapping.category_names) ? mapping.category_names.join(', ') : '',
-                      mapped_at_formatted: new Date(mapping.mapped_at).toLocaleString()
-                    }));
-                    
-                    // Apply any filtering if needed
-                    if (params.search) {
-                      filteredMappings = filteredMappings.filter(mapping => {
-                        const searchLower = params.search.toLowerCase();
-                        return (
-                          mapping.name?.toLowerCase().includes(searchLower) ||
-                          mapping.product_name?.toLowerCase().includes(searchLower) ||
-                          mapping.vendor_name?.toLowerCase().includes(searchLower)
-                        );
-                      });
-                    }
-                    
-                    const totalItems = filteredMappings.length;
-                    
-                    // Calculate start and end indices for pagination
-                    const startIndex = (params.page - 1) * params.limit;
-                    const endIndex = startIndex + params.limit;
-                    
-                    // Get the current page of mappings
-                    const paginatedMappings = filteredMappings.slice(startIndex, endIndex);
-                    
-                    console.log(`Showing ${paginatedMappings.length} of ${totalItems} mappings`);
-                    setMappings(paginatedMappings);
-                    setMappingsTotalPages(Math.ceil(totalItems / params.limit));
-                    setLoadingMappings(false);
-                  })
-                  .catch(error => {
-                    console.error("Error processing mappings:", error);
-                    setMappings([]);
-                    setMappingsTotalPages(0);
-                    setLoadingMappings(false);
-                  });
-              })
-              .catch(error => {
-                console.error("Error fetching vendors for mappings:", error);
-                setMappings([]);
-                setMappingsTotalPages(0);
-                setLoadingMappings(false);
-              });
+            // Format mappings for display
+            let formattedMappings = mappingsData.map(mapping => {
+              // Ensure we have a fallback for vendor name
+              const vendorName = mapping.vendor_name || 'Unknown Vendor';
+              
+              return {
+                id: mapping.variant_id,
+                mapping_id: mapping.mapping_id,
+                name: mapping.variant_name || `Variant ID: ${mapping.variant_id}`,
+                product_name: mapping.product_name || 'Unknown Product',
+                category_info: '',  // No category info in simplified query
+                vendor_id: mapping.vendor_id,
+                vendor_name: vendorName,
+                vendor_email: 'N/A',  // Email not available in simplified query
+                mapped_at: mapping.mapped_at,
+                mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 'Unknown',
+                is_mapped: true
+              };
+            });
+            
+            // Calculate pagination values
+            const totalItems = formattedMappings.length;
+            const startIndex = (params.page - 1) * params.limit;
+            const endIndex = startIndex + params.limit;
+            
+            // Get the current page of mappings
+            const paginatedMappings = formattedMappings.slice(startIndex, endIndex);
+            
+            console.log(`Showing ${paginatedMappings.length} of ${totalItems} mappings`);
+            setMappings(paginatedMappings);
+            setMappingsTotalPages(Math.ceil(totalItems / params.limit));
           } else {
+            console.log("No mappings found or invalid data format");
             setMappings([]);
             setMappingsTotalPages(0);
-            setLoadingMappings(false);
           }
         })
         .catch(error => {
@@ -1193,6 +1138,8 @@ const ProductManagement = () => {
           toast.error("Failed to fetch mappings");
           setMappings([]);
           setMappingsTotalPages(0);
+        })
+        .finally(() => {
           setLoadingMappings(false);
         });
     } catch (error) {
