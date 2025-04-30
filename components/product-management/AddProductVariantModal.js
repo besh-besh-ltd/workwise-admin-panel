@@ -18,23 +18,40 @@ const AddProductVariantModal = ({ isVisible, onCancel, productId, productName, o
       const values = await form.validateFields();
       setLoading(true);
 
-      // Add product ID to the form values
-      values.product_id = productId;
+      // Changes by Agnij May 22, 2024 [Fixed variant payload to match backend requirements]
+      // Format the request payload with the correct field names
+      const payload = {
+        product_id: productId,
+        variant_name: values.variant_name.trim() // This is what the form collects, ensure it's trimmed
+      };
+      
+      console.log('Submitting variant:', payload);
 
-      const response = await addProductVariant(values);
+      const response = await addProductVariant(payload);
+      console.log('Variant response:', response);
       
       if (response?.data?.status === 1) {
         message.success('Product variant added successfully');
         form.resetFields();
-        onSuccess && onSuccess(response.data.data);
+        // Make sure we have the data needed for onSuccess
+        const successData = {
+          ...response.data.data,
+          product_id: productId,
+          variant_name: payload.variant_name // Include variant_name in success data
+        };
+        console.log('Calling onSuccess with:', successData);
+        onSuccess && onSuccess(successData);
         onCancel();
       } else {
+        console.error('Failed response:', response);
         message.error(response?.data?.message || 'Failed to add product variant');
       }
     } catch (error) {
       console.error('Error adding product variant:', error);
       if (error.response?.data?.message) {
         message.error(error.response.data.message);
+      } else if (error.message) {
+        message.error(error.message);
       } else {
         message.error('Failed to add product variant');
       }

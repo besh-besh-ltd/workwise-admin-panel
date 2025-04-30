@@ -111,22 +111,28 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
     setIsSubmitting(true);
     
     try {
+      // Changes by Agnij May 22, 2024 [Fixed variant payload to match backend requirements]
+      // Ensure the payload uses the expected field names
       const payload = {
         product_id: formData.product.value,
-        variant_name: formData.variant_name,
+        variant_name: formData.variant_name.trim(),
       };
+      
+      console.log('Submitting variant with payload:', payload);
       
       const response = await addProductVariant(payload);
       
-      if (response.data.status === 1) {
+      if (response.data && response.data.status === 1) {
         toast.success(response.data.message || 'Variant added successfully');
         onSuccess(response.data.data);
         resetForm();
       } else {
-        toast.error(response.data.message || 'Failed to add variant');
+        console.error('Error response from API:', response.data);
+        toast.error(response.data?.message || 'Failed to add variant');
       }
     } catch (error) {
-      toast.error(error.message?.data?.message || 'An error occurred');
+      console.error('Error adding variant:', error);
+      toast.error(error.response?.data?.message || 'An error occurred while adding variant');
     } finally {
       setIsSubmitting(false);
     }

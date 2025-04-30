@@ -777,34 +777,58 @@ const ProductManagement = () => {
   };
 
   const fetchAllProductVariants = useCallback(async () => {
+    // Changes by Agnij May 22, 2024 [Fixed variant loading in product mapping]
     setLoadingVariants(true);
+    console.log("Starting fetchAllProductVariants");
+    
     try {
-      // Get all products first to find their variants
+      // Get all products
       const products = productData || [];
-      const allVariants = [];
+      console.log(`Found ${products.length} products to check for variants`);
       
-      // Fetch variants for each product
-      for (const product of products) {
-        try {
-          const response = await getProductVariants(product.id);
-          if (response.data.status === 1 && response.data.data && response.data.data.length > 0) {
-            // Format variants for select component
-            const formattedVariants = response.data.data.map(variant => ({
-              value: variant.id,
-              label: `${variant.variant_name} (${product.name || 'Unknown Product'})`,
-              data: variant,
-              product_id: product.id
-            }));
-            allVariants.push(...formattedVariants);
-          }
-        } catch (error) {
-          console.error(`Error fetching variants for product ${product.id}:`, error);
-        }
+      let allVariants = [];
+      
+      // If no products, finish early
+      if (products.length === 0) {
+        console.log("No products found, can't fetch variants");
+        setVariantsList([]);
+        setLoadingVariants(false);
+        return;
       }
       
+      // First approach: get variants for each product individually
+      const variantPromises = products.map(product => 
+        getProductVariants(product.id)
+          .then(response => {
+            if (response?.data?.status === 1 && response?.data?.data?.length > 0) {
+              // Format variants for select component
+              return response.data.data.map(variant => ({
+                value: variant.id,
+                label: `${variant.variant_name || variant.name} (${product.name || 'Unknown Product'})`,
+                data: variant,
+                product_id: product.id
+              }));
+            }
+            return [];
+          })
+          .catch(error => {
+            console.error(`Error fetching variants for product ${product.id}:`, error);
+            return [];
+          })
+      );
+      
+      // Wait for all promises to resolve
+      const variantResults = await Promise.all(variantPromises);
+      
+      // Combine all results
+      allVariants = variantResults.flat();
+      
+      console.log(`Found a total of ${allVariants.length} variants`);
+      
+      // Update state with all variants
       setVariantsList(allVariants);
     } catch (error) {
-      console.error('Error fetching all variants:', error);
+      console.error('Error in fetchAllProductVariants:', error);
       toast.error('An error occurred while fetching variants');
     } finally {
       setLoadingVariants(false);
@@ -1119,20 +1143,35 @@ const ProductManagement = () => {
 
   // Add a function to fetch product variants
   const fetchProductVariants = useCallback(async (productId) => {
-    if (!productId) return;
+    // Changes by Agnij May 22, 2024 [Fixed variant fetching for a specific product]
+    if (!productId) {
+      console.log("Cannot fetch variants: No product ID provided");
+      return;
+    }
     
+    console.log(`Fetching variants for product ID: ${productId}`);
     setLoadingVariants(true);
+    
     try {
       const response = await getProductVariants(productId);
-      if (response.data.status === 1) {
-        // Format variants for select component
-        const formattedVariants = response.data.data.map(variant => ({
+      
+      if (response?.data?.status === 1) {
+        const variants = response.data.data || [];
+        console.log(`Found ${variants.length} variants for product ${productId}`);
+        
+        // Format variants for select component, handling both name and variant_name fields
+        const formattedVariants = variants.map(variant => ({
           value: variant.id,
-          label: `${variant.variant_name} (${variant.product_name || 'Unknown Product'})`,
+          label: `${variant.variant_name || variant.name} (${variant.product_name || 'Unknown Product'})`,
           data: variant
         }));
+        
         setVariantsList(formattedVariants);
+        
+        // Reset the original list for search functionality
+        window._originalVariantsList = [...formattedVariants];
       } else {
+        console.error(`Error response from API: ${response?.data?.message || 'Unknown error'}`);
         toast.error('Failed to fetch variants');
       }
     } catch (error) {
@@ -1145,8 +1184,37 @@ const ProductManagement = () => {
 
   // Add handlers for variant management
   const handleAddVariantSuccess = (data) => {
-    // Refresh variants list after successful addition
-    fetchProductVariants(data.product_id);
+    // Changes by Agnij May 22, 2024 [Fixed variant list refresh after adding variant]
+    console.log('Add variant success with data:', data);
+    
+    // Reset any stored original variant list for search
+    if (window._originalVariantsList) {
+      window._originalVariantsList = null;
+    }
+    
+    // Determine which product ID to refresh variants for
+    let refreshProductId = null;
+    
+    if (data && data.product_id) {
+      // Use the product_id from the response
+      refreshProductId = data.product_id;
+      console.log(`Using product_id from response: ${refreshProductId}`);
+    } else {
+      // Fallback to the last selected product
+      refreshProductId = selectedProduct?.id;
+      console.log(`No product_id in response, using selected product: ${refreshProductId}`);
+    }
+    
+    // Only refresh if we have a valid product ID
+    if (refreshProductId) {
+      console.log(`Refreshing variants for product ${refreshProductId}`);
+      fetchProductVariants(refreshProductId);
+    } else {
+      console.error('Cannot refresh variants: No product ID available');
+      toast.warning('Added variant, but could not refresh variant list');
+    }
+    
+    // Close the modal
     setShowAddVariantModal(false);
   };
 
@@ -1542,25 +1610,45 @@ const ProductManagement = () => {
                           className="form-control"
                           placeholder="Search Variants"
                           onChange={(e) => {
-                            const searchTerm = e.target.value.toLowerCase();
+                            // Changes by Agnij May 22, 2024 [Improved variant search functionality]
+                            const searchTerm = e.target.value.toLowerCase().trim();
+                            
+                            // Always store original variants list if not already stored
+                            if (!window._originalVariantsList) {
+                              window._originalVariantsList = [...variantsList];
+                              console.log("Stored original variants list:", window._originalVariantsList.length);
+                            }
+                            
+                            // If search term is empty, restore the original list
+                            if (searchTerm.length === 0) {
+                              console.log("Empty search term, restoring original list");
+                              if (window._originalVariantsList && window._originalVariantsList.length > 0) {
+                                setVariantsList(window._originalVariantsList);
+                              } else {
+                                // As fallback, refetch all variants
+                                fetchAllProductVariants();
+                              }
+                              return;
+                            }
+                            
+                            // Only filter if we have at least 2 characters
                             if (searchTerm.length < 2) {
                               return;
                             }
                             
-                            // Filter variants based on search
-                            const filteredVariants = variantsList.filter(variant => 
-                              variant.label.toLowerCase().includes(searchTerm)
-                            );
+                            // Use original list for filtering
+                            const sourceList = window._originalVariantsList || variantsList;
                             
-                            // Display filtered variants
-                            setVariantsList(prevList => {
-                              // If search is cleared, fetch all variants again
-                              if (!searchTerm) {
-                                fetchAllProductVariants();
-                                return prevList;
-                              }
-                              return filteredVariants;
+                            // Filter variants based on search, more flexible matching
+                            const filteredVariants = sourceList.filter(variant => {
+                              const label = variant.label?.toLowerCase() || '';
+                              return label.includes(searchTerm);
                             });
+                            
+                            console.log(`Filtered variants from ${sourceList.length} to ${filteredVariants.length} with search term "${searchTerm}"`);
+                            
+                            // Update the displayed variants
+                            setVariantsList(filteredVariants);
                           }}
                           id="variantSearchInput"
                         />
