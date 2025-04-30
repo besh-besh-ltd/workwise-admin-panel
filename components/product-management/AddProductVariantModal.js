@@ -18,7 +18,7 @@ const AddProductVariantModal = ({ isVisible, onCancel, productId, productName, o
       const values = await form.validateFields();
       setLoading(true);
 
-      // Changes by Agnij May 22, 2024 [Fixed variant payload to match backend requirements]
+      // Changes by Agnij April 30, 2025 [Fixed variant payload to match backend requirements]
       // Format the request payload with the correct field names
       const payload = {
         product_id: productId,
@@ -81,7 +81,7 @@ const AddProductVariantModal = ({ isVisible, onCancel, productId, productName, o
     >
       <div className="mb-4">
         <p className="mb-1 font-medium">Product:</p>
-        <p>{productName}</p>
+        <p>{productName || 'N/A'}</p>
       </div>
 
       <Form
@@ -96,7 +96,8 @@ const AddProductVariantModal = ({ isVisible, onCancel, productId, productName, o
           label="Variant Name"
           rules={[
             { required: true, message: 'Please enter variant name' },
-            { max: 100, message: 'Variant name can be at most 100 characters' }
+            { max: 100, message: 'Variant name can be at most 100 characters' },
+            { whitespace: true, message: 'Variant name cannot be empty' }
           ]}
         >
           <Input placeholder="Enter variant name" />
