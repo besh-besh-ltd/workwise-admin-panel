@@ -409,9 +409,14 @@ export const addProductVariant = (values) => {
         `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant`,
         values
       );
-      resolve(response);
+      
+      resolve({
+        status: 201,
+        data: response
+      });
     } catch (error) {
-      reject({ message: error });
+      console.error('Error in addProductVariant service:', error);
+      reject(error?.response?.data || { message: 'Network or server error' });
     }
   });
 };
@@ -420,10 +425,19 @@ export const getProductVariants = (productId) => {
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${productId}`
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${productId}`,
+        { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
       );
+      
+      if (response.status === 304 && !response.data) {
+        response.data = { status: 1, data: [] };
+      } else if (!response.data) {
+        response.data = { status: 1, data: [] };
+      }
+      
       resolve(response);
     } catch (error) {
+      console.error(`Error fetching variants for product ${productId}:`, error);
       reject({ message: error });
     }
   });
@@ -465,6 +479,38 @@ export const mapVariantWithVendor = (values) => {
       );
       resolve(response);
     } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
+
+// Changes by Agnij April 30, 2025 [Added direct variant search function]
+export const searchAllVariants = (searchTerm) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Add a timestamp to prevent 304 responses
+      const timestamp = Date.now();
+      let response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/search-variants?search_term=${encodeURIComponent(searchTerm)}&_t=${timestamp}`,
+        { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
+      );
+      
+      // Changes by Agnij April 30, 2025 [Fixed response format for consistency]
+      // Handle 304 responses and other edge cases
+      if (response.status === 304 || !response.data) {
+        response = { status: 1, data: [] };
+      }
+      
+      // Transform the response to include status for consistency with other API calls
+      resolve({
+        status: 200,
+        data: {
+          status: 1,
+          data: response.data || []
+        }
+      });
+    } catch (error) {
+      console.error(`Error searching variants with term ${searchTerm}:`, error);
       reject({ message: error });
     }
   });

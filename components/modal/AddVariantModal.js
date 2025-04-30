@@ -111,8 +111,7 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
     setIsSubmitting(true);
     
     try {
-      // Changes by Agnij May 22, 2024 [Fixed variant payload to match backend requirements]
-      // Ensure the payload uses the expected field names
+      // Changes by Agnij April 30, 2025 [Fixed response handling for variant creation]
       const payload = {
         product_id: formData.product.value,
         variant_name: formData.variant_name.trim(),
@@ -122,9 +121,10 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
       
       const response = await addProductVariant(payload);
       
-      if (response.data && response.data.status === 1) {
-        toast.success(response.data.message || 'Variant added successfully');
-        onSuccess(response.data.data);
+      // Check for response status code instead of response.data.status
+      if (response.status >= 200 && response.status < 300) {
+        toast.success(response.data?.message || 'Variant added successfully');
+        onSuccess(response.data?.data || response.data);
         resetForm();
       } else {
         console.error('Error response from API:', response.data);

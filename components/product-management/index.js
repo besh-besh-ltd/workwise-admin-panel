@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, getCategories, getAdminUsersList, searchProductsV2 } from "@/utils/services/product-management";
+import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants } from "@/utils/services/product-management";
 import axiosFormData from "@/utils/axios/form-data";
 import FullLoading from "../loading/FullLoading";
 import { ToastContainer, toast } from "react-toastify";
@@ -772,23 +772,26 @@ const ProductManagement = () => {
 
     setMapMultipleProductsWithVendor([]);
     
-    // Load all product variants for the dropdown
-    fetchAllProductVariants();
+    // Changes by Agnij April 30, 2025 [Removed automatic variant loading to match product search behavior]
+    // Don't load variants until search is performed
+    setVariantsList([]);
+    setLoadingVariants(false);
   };
 
-  const fetchAllProductVariants = useCallback(async () => {
-    // Changes by Agnij May 22, 2024 [Fixed variant loading in product mapping]
+  const fetchAllProductVariants = useCallback(async (searchTerm = null) => {
+    // Changes by Agnij April 30, 2025 [Updated to support searching variants]
     setLoadingVariants(true);
-    console.log("Starting fetchAllProductVariants");
+    
+    if (searchTerm) {
+      console.log(`Searching for variants with term: ${searchTerm}`);
+    } else {
+      console.log("Loading all variants");
+    }
     
     try {
       // Get all products
       const products = productData || [];
-      console.log(`Found ${products.length} products to check for variants`);
       
-      let allVariants = [];
-      
-      // If no products, finish early
       if (products.length === 0) {
         console.log("No products found, can't fetch variants");
         setVariantsList([]);
@@ -800,9 +803,25 @@ const ProductManagement = () => {
       const variantPromises = products.map(product => 
         getProductVariants(product.id)
           .then(response => {
-            if (response?.data?.status === 1 && response?.data?.data?.length > 0) {
-              // Format variants for select component
-              return response.data.data.map(variant => ({
+            let variantData = [];
+            
+            // Try to extract data carefully to avoid undefined errors
+            if (response?.data) {
+              if (Array.isArray(response.data)) {
+                // Direct array response
+                variantData = response.data;
+              } else if (response.data.data && Array.isArray(response.data.data)) {
+                // Nested data object
+                variantData = response.data.data;
+              } else if (response.data.status === 1 && !response.data.data) {
+                // Empty data with success status
+                variantData = [];
+              }
+            }
+            
+            // Only map if we have variants
+            if (variantData.length > 0) {
+              return variantData.map(variant => ({
                 value: variant.id,
                 label: `${variant.variant_name || variant.name} (${product.name || 'Unknown Product'})`,
                 data: variant,
@@ -820,12 +839,19 @@ const ProductManagement = () => {
       // Wait for all promises to resolve
       const variantResults = await Promise.all(variantPromises);
       
-      // Combine all results
-      allVariants = variantResults.flat();
+      // Combine all results and filter out any undefined or null values
+      let allVariants = variantResults.flat().filter(Boolean);
       
-      console.log(`Found a total of ${allVariants.length} variants`);
+      // If we have a search term, filter the variants
+      if (searchTerm && searchTerm.length >= 2) {
+        const filteredVariants = allVariants.filter(variant => {
+          return variant.label.toLowerCase().includes(searchTerm.toLowerCase());
+        });
+        console.log(`Found ${filteredVariants.length} variants matching "${searchTerm}" out of ${allVariants.length} total variants`);
+        allVariants = filteredVariants;
+      }
       
-      // Update state with all variants
+      // Update state with filtered variants
       setVariantsList(allVariants);
     } catch (error) {
       console.error('Error in fetchAllProductVariants:', error);
@@ -1094,7 +1120,7 @@ const ProductManagement = () => {
     setShowRejectModal(false);
     setselectedProductsId("");
     setInputValue("");
-    setSelectValue("");
+    setSelectVal("");
   };
 
   useEffect(() => {
@@ -1610,45 +1636,56 @@ const ProductManagement = () => {
                           className="form-control"
                           placeholder="Search Variants"
                           onChange={(e) => {
-                            // Changes by Agnij May 22, 2024 [Improved variant search functionality]
+                            // Changes by Agnij April 30, 2025 [Updated to use direct variant search API]
                             const searchTerm = e.target.value.toLowerCase().trim();
                             
-                            // Always store original variants list if not already stored
-                            if (!window._originalVariantsList) {
-                              window._originalVariantsList = [...variantsList];
-                              console.log("Stored original variants list:", window._originalVariantsList.length);
-                            }
-                            
-                            // If search term is empty, restore the original list
+                            // Reset to empty state if search is cleared
                             if (searchTerm.length === 0) {
-                              console.log("Empty search term, restoring original list");
-                              if (window._originalVariantsList && window._originalVariantsList.length > 0) {
-                                setVariantsList(window._originalVariantsList);
-                              } else {
-                                // As fallback, refetch all variants
-                                fetchAllProductVariants();
+                              setVariantsList([]);
+                              // Clear original variants cache if exists
+                              if (window._originalVariantsList) {
+                                window._originalVariantsList = null;
                               }
                               return;
                             }
                             
-                            // Only filter if we have at least 2 characters
+                            // Only search if at least 2 characters
                             if (searchTerm.length < 2) {
                               return;
                             }
                             
-                            // Use original list for filtering
-                            const sourceList = window._originalVariantsList || variantsList;
+                            // Start loading state
+                            setLoadingVariants(true);
                             
-                            // Filter variants based on search, more flexible matching
-                            const filteredVariants = sourceList.filter(variant => {
-                              const label = variant.label?.toLowerCase() || '';
-                              return label.includes(searchTerm);
-                            });
-                            
-                            console.log(`Filtered variants from ${sourceList.length} to ${filteredVariants.length} with search term "${searchTerm}"`);
-                            
-                            // Update the displayed variants
-                            setVariantsList(filteredVariants);
+                            // Use the direct search endpoint rather than fetching all products first
+                            searchAllVariants(searchTerm)
+                              .then(response => {
+                                // Changes by Agnij April 30, 2025 [Fixed response data extraction]
+                                console.log(`Found ${response?.data?.data?.length || 0} variants with search term "${searchTerm}"`);
+                                
+                                // Process the response based on the structure returned from backend
+                                // The backend returns data as response.data.data due to axios interceptor
+                                const variants = response?.data?.data || [];
+                                
+                                // Format variants for the dropdown - ensure proper mapping regardless of field names
+                                const formattedVariants = variants.map(variant => ({
+                                  value: variant.id,
+                                  label: `${variant.name || variant.variant_name || 'Unnamed Variant'} (${variant.product_name || 'Unknown Product'})`,
+                                  data: variant,
+                                  product_id: variant.product_id
+                                }));
+                                
+                                // Update state with formatted variants
+                                setVariantsList(formattedVariants);
+                              })
+                              .catch(error => {
+                                console.error('Error searching variants:', error);
+                                toast.error('Failed to search variants');
+                                setVariantsList([]);
+                              })
+                              .finally(() => {
+                                setLoadingVariants(false);
+                              });
                           }}
                           id="variantSearchInput"
                         />
@@ -1661,7 +1698,9 @@ const ProductManagement = () => {
                               <i className="fa fa-spinner fa-spin me-2"></i>
                               Loading Variants...
                             </span> : 
-                            `Variants (${variantsList.length})`
+                            variantsList.length > 0 ?
+                            `Variants (${variantsList.length})` :
+                            "Search for variants above"
                           } 
                         </h5>
                    
@@ -1692,7 +1731,9 @@ const ProductManagement = () => {
                           <p className="text-muted">
                             {loadingVariants ? 
                               "Loading variants..." : 
-                              "No variants found. Please add variants to products first."}
+                              variantsList.length === 0 ?
+                              "Type to search for variants" :
+                              "No variants found matching your search criteria"}
                           </p>
                         )}
                       </div>
@@ -1891,9 +1932,6 @@ const ProductManagement = () => {
                       <thead>
                         <tr>
                           <th scope="col">Row No.</th>
-                          {/* <th scope="col">Product Name</th>
-                        <th scope="col">Vendor Name</th>
-                        <th scope="col">Vendor Email</th> */}
                           <th scope="col">Errors</th>
                         </tr>
                       </thead>
@@ -1903,9 +1941,6 @@ const ProductManagement = () => {
                             return (
                               <tr key={`err_item_${item.Row}`}>
                                 <td>{item.Row || "---"}</td>
-                                {/* <td>{item.productName || "---"}</td>
-                              <td>{item.vendorName || "---"}</td>
-                              <td>{item.vendorEmail || "---"}</td> */}
                                 <td>
                                   {typeof item.error === 'string' ?
                                     item.error
@@ -1982,7 +2017,6 @@ const ProductManagement = () => {
                             />
                           </td>
                           <td>{item.name}</td>
-                          {/* <td>{item.status == 1 ? "Active" : "Inactive"}</td> */}
                           <td className="subcatstd">
                             <span className="badge badge-warning">
                               {item.product_categories.length > 0
@@ -2089,10 +2123,6 @@ const ProductManagement = () => {
                                   className="fa fa-edit"
                                   onClick={() => handleUpdateProduct(item)}
                                 ></span>}
-                              {/* <span
-                                onClick={() => handleDeleteProduct(item.id)}
-                                class="fa fa-trash ml-2">
-                              </span> */}
                             </div>
 
                           </td>
