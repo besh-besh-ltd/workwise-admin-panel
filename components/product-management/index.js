@@ -1046,14 +1046,16 @@ const ProductManagement = () => {
       search: searchString
     };
     
-    // Changes by Agnij May 18, 2025 [Fixed variants fetching]
+    // Changes by Agnij May 30, 2025 [Improved variant loading with proper pagination]
+    console.log(`Fetching variants for page ${params.page}, limit ${params.limit}`);
+    
     try {
-    // Use the existing searchAllVariants function to get variants
-    searchAllVariants(params.search || "")
+      // Use the existing searchAllVariants function to get variants
+      searchAllVariants(params.search || "")
         .then(response => {
-        if (response?.data?.data) {
-          const variantsData = response.data.data;
-            console.log("Variants data received:", variantsData);
+          if (response?.data?.data) {
+            const variantsData = response.data.data;
+            console.log(`Received ${variantsData.length} variants from API`);
             
             if (variantsData && Array.isArray(variantsData)) {
               // Format variants to include more information
@@ -1065,44 +1067,39 @@ const ProductManagement = () => {
                 created_at_formatted: new Date(variant.created_at).toLocaleString()
               }));
               
-              // Apply filtering if needed
-              const filteredVariants = formattedVariants.filter(variant => {
-                // Add any additional filtering logic here
-            return true;
-          });
-          
-          const totalItems = filteredVariants.length;
+              // Calculate total pages using original unfiltered data
+              const totalItems = formattedVariants.length;
               
               // Calculate indices for pagination
-          const startIndex = (params.page - 1) * params.limit;
-          const endIndex = startIndex + params.limit;
-          
-          // Get the current page of variants
-          const paginatedVariants = filteredVariants.slice(startIndex, endIndex);
-          
-              console.log(`Showing ${paginatedVariants.length} of ${totalItems} variants`);
-          setVariants(paginatedVariants);
-          setVariantsTotalPages(Math.ceil(totalItems / params.limit));
-        } else {
+              const startIndex = (params.page - 1) * params.limit;
+              const endIndex = Math.min(startIndex + params.limit, totalItems);
+              
+              // Get the current page of variants
+              const paginatedVariants = formattedVariants.slice(startIndex, endIndex);
+              
+              console.log(`Displaying variants ${startIndex+1}-${endIndex} of ${totalItems}`);
+              setVariants(paginatedVariants);
+              setVariantsTotalPages(Math.ceil(totalItems / params.limit));
+            } else {
               console.log("No variants found or invalid data format");
               setVariants([]);
               setVariantsTotalPages(0);
             }
           } else {
             console.error("Invalid response format:", response);
+            setVariants([]);
+            setVariantsTotalPages(0);
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching variants:", error);
+          toast.error("Failed to fetch variants");
           setVariants([]);
           setVariantsTotalPages(0);
-        }
-      })
-        .catch(error => {
-        console.error("Error fetching variants:", error);
-        toast.error("Failed to fetch variants");
-        setVariants([]);
-          setVariantsTotalPages(0);
-      })
-      .finally(() => {
-        setLoadingVariants(false);
-      });
+        })
+        .finally(() => {
+          setLoadingVariants(false);
+        });
     } catch (error) {
       console.error("Exception in getAllVariants:", error);
       setLoadingVariants(false);
@@ -1121,48 +1118,58 @@ const ProductManagement = () => {
       search: searchString
     };
     
-    // Changes by Agnij May 30, 2025 [Updated to properly display vendor details]
+    // Changes by Agnij May 30, 2025 [Improved mappings loading with proper pagination]
+    console.log(`Fetching mappings for page ${params.page}, limit ${params.limit}`);
+    
     try {
-      // Use the real variant mappings API instead of mock data
+      // Use the variant mappings API
       getVariantMappings(params.search || "")
         .then(response => {
           if (response?.data?.data) {
             const mappingsData = response.data.data;
             console.log(`Received ${mappingsData.length} variant-vendor mappings`);
           
-            // Format mappings for display
-            let formattedMappings = mappingsData.map(mapping => {
-              // Use the vendor_display_name which combines organization name and name
-              const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
+            if (mappingsData && Array.isArray(mappingsData)) {
+              // Format mappings for display
+              let formattedMappings = mappingsData.map(mapping => {
+                // Use the vendor_display_name which combines organization name and name
+                const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
+                
+                return {
+                  id: mapping.variant_id,
+                  mapping_id: mapping.mapping_id,
+                  name: mapping.variant_name || `Variant ID: ${mapping.variant_id}`,
+                  product_name: mapping.product_name || 'Unknown Product',
+                  category_info: '',  // No category info in simplified query
+                  vendor_id: mapping.vendor_id,
+                  vendor_name: vendorName,
+                  vendor_email: mapping.vendor_email || 'N/A',
+                  mapped_at: mapping.mapped_at,
+                  mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 'Unknown',
+                  is_mapped: true
+                };
+              });
               
-              return {
-                id: mapping.variant_id,
-                mapping_id: mapping.mapping_id,
-                name: mapping.variant_name || `Variant ID: ${mapping.variant_id}`,
-                product_name: mapping.product_name || 'Unknown Product',
-                category_info: '',  // No category info in simplified query
-                vendor_id: mapping.vendor_id,
-                vendor_name: vendorName,
-                vendor_email: mapping.vendor_email || 'N/A',
-                mapped_at: mapping.mapped_at,
-                mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 'Unknown',
-                is_mapped: true
-              };
-            });
-          
-            // Calculate pagination values
-            const totalItems = formattedMappings.length;
-            const startIndex = (params.page - 1) * params.limit;
-            const endIndex = startIndex + params.limit;
-          
-            // Get the current page of mappings
-            const paginatedMappings = formattedMappings.slice(startIndex, endIndex);
-          
-            console.log(`Showing ${paginatedMappings.length} of ${totalItems} mappings`);
-            setMappings(paginatedMappings);
-            setMappingsTotalPages(Math.ceil(totalItems / params.limit));
+              // Calculate total items from original unfiltered data
+              const totalItems = formattedMappings.length;
+              
+              // Calculate indices for pagination
+              const startIndex = (params.page - 1) * params.limit;
+              const endIndex = Math.min(startIndex + params.limit, totalItems);
+              
+              // Get the current page of mappings
+              const paginatedMappings = formattedMappings.slice(startIndex, endIndex);
+              
+              console.log(`Displaying mappings ${startIndex+1}-${endIndex} of ${totalItems}`);
+              setMappings(paginatedMappings);
+              setMappingsTotalPages(Math.ceil(totalItems / params.limit));
+            } else {
+              console.log("No mappings found or invalid data format");
+              setMappings([]);
+              setMappingsTotalPages(0);
+            }
           } else {
-            console.log("No mappings found or invalid data format");
+            console.log("No mappings data in response");
             setMappings([]);
             setMappingsTotalPages(0);
           }
@@ -1184,7 +1191,7 @@ const ProductManagement = () => {
     }
   };
   
-  // Changes by Agnij Aprill 30, 2025 [Added variants pagination handler]
+  // Changes by Agnij May 30, 2025 [Fixed variants pagination to use server-side pagination]
   const handleVariantsPageClick = (event) => {
     const selectedPage = event.selected + 1;
     setVariantsPage(selectedPage);
@@ -1192,11 +1199,55 @@ const ProductManagement = () => {
     // Update URL params
     updateUrlParams({ variantsPage: selectedPage });
     
-    // Fetch data with new page
-    getAllVariants();
+    // Fetch data with new page - use true server-side pagination
+    setLoadingVariants(true);
+    
+    const params = {
+      page: selectedPage,
+      limit: variantsLimit,
+      search: searchString || ""
+    };
+    
+    searchAllVariants(params.search)
+      .then(response => {
+        if (response?.data?.data) {
+          const variantsData = response.data.data;
+          
+          if (variantsData && Array.isArray(variantsData)) {
+            // Format variants to include more information
+            const formattedVariants = variantsData.map(variant => ({
+              ...variant,
+              variant_name: variant.name, // Ensure variant_name is available
+              product_name: variant.product_name || 'Unknown Product',
+              category_info: Array.isArray(variant.category_names) ? variant.category_names.join(', ') : '',
+              created_at_formatted: new Date(variant.created_at).toLocaleString()
+            }));
+            
+            // Calculate total items (might need to be provided by API)
+            const totalItems = formattedVariants.length;
+            
+            // Calculate indices for pagination
+            const startIndex = (params.page - 1) * params.limit;
+            const endIndex = Math.min(startIndex + params.limit, totalItems);
+            
+            // Get the current page of variants
+            const paginatedVariants = formattedVariants.slice(startIndex, endIndex);
+            
+            setVariants(paginatedVariants);
+            setVariantsTotalPages(Math.ceil(totalItems / params.limit));
+          }
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching variants:", error);
+        toast.error("Failed to fetch variants");
+      })
+      .finally(() => {
+        setLoadingVariants(false);
+      });
   };
   
-  // Changes by Agnij Aprill 30, 2025 [Added mappings pagination handler]
+  // Changes by Agnij May 30, 2025 [Fixed mappings pagination to use server-side pagination]
   const handleMappingsPageClick = (event) => {
     const selectedPage = event.selected + 1;
     setMappingsPage(selectedPage);
@@ -1204,8 +1255,63 @@ const ProductManagement = () => {
     // Update URL params
     updateUrlParams({ mappingsPage: selectedPage });
     
-    // Fetch data with new page
-    getAllMappings();
+    // Fetch data with new page - use true server-side pagination
+    setLoadingMappings(true);
+    
+    const params = {
+      page: selectedPage,
+      limit: mappingsLimit,
+      search: searchString || ""
+    };
+    
+    getVariantMappings(params.search)
+      .then(response => {
+        if (response?.data?.data) {
+          const mappingsData = response.data.data;
+          
+          if (mappingsData && Array.isArray(mappingsData)) {
+            // Format mappings for display
+            let formattedMappings = mappingsData.map(mapping => {
+              // Use the vendor_display_name which combines organization name and name
+              const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
+              
+              return {
+                id: mapping.variant_id,
+                mapping_id: mapping.mapping_id,
+                name: mapping.variant_name || `Variant ID: ${mapping.variant_id}`,
+                product_name: mapping.product_name || 'Unknown Product',
+                category_info: '',  // No category info in simplified query
+                vendor_id: mapping.vendor_id,
+                vendor_name: vendorName,
+                vendor_email: mapping.vendor_email || 'N/A',
+                mapped_at: mapping.mapped_at,
+                mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 'Unknown',
+                is_mapped: true
+              };
+            });
+            
+            // Calculate total items (might need to be provided by API)
+            const totalItems = formattedMappings.length;
+            
+            // Calculate indices for pagination
+            const startIndex = (params.page - 1) * params.limit;
+            const endIndex = Math.min(startIndex + params.limit, totalItems);
+            
+            // Get the current page of mappings
+            const paginatedMappings = formattedMappings.slice(startIndex, endIndex);
+            
+            setMappings(paginatedMappings);
+            setMappingsTotalPages(Math.ceil(totalItems / params.limit));
+          }
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching mappings:", error);
+        toast.error("Failed to fetch mappings");
+      })
+      .finally(() => {
+        setLoadingMappings(false);
+      });
   };
 
   // Handle filter changes

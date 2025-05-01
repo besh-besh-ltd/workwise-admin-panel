@@ -39,7 +39,6 @@ export const createCategory = (values) => {
   });
 };
 export const updateCategory = (values, id) => {
-  console.log("");
   let payload = {};
   payload.title = values.title;
   payload.parent_id = "" + values?.parent_id;
@@ -195,12 +194,16 @@ export const deleteProduct = (id) => {
 }
 
 export const acceptProduct = (id, status) => {
+  // Changes by Agnij May 01, 2025 [Fixed payload format for product approval]
   let payload = {};
-  if (status === '1') {
-    payload.status = status;
-  } else {
+  if (typeof status === 'object') {
+    // If status is already an object (for rejection with reason)
     payload = status;
+  } else {
+    // Make sure status is a string and is in the payload object
+    payload = { status: status.toString() };
   }
+  
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.put(
@@ -496,8 +499,6 @@ export const searchAllVariants = (searchTerm) => {
         { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
       );
       
-      console.log('Variants search response:', response);
-      
       // Handle various response formats
       if (response?.data?.data) {
         // The response already has the expected format
@@ -522,7 +523,6 @@ export const searchAllVariants = (searchTerm) => {
         });
       }
     } catch (error) {
-      console.error(`Error searching variants with term ${searchTerm}:`, error);
       // Return empty data on error instead of rejecting
       resolve({
         status: 200,
@@ -546,8 +546,6 @@ export const getVariantMappings = (searchTerm) => {
         { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
       );
       
-      console.log('Variant mappings response:', response);
-      
       // Handle various response formats
       if (response?.data?.data) {
         // The response already has the expected format
@@ -572,7 +570,6 @@ export const getVariantMappings = (searchTerm) => {
       });
       }
     } catch (error) {
-      console.error(`Error getting variant mappings with term ${searchTerm}:`, error);
       // Return empty data on error instead of rejecting
       resolve({
         status: 200,
