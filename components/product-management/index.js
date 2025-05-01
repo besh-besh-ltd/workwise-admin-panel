@@ -785,10 +785,38 @@ const ProductManagement = () => {
 
     setMapMultipleProductsWithVendor([]);
     
-    // Changes by Agnij April 30, 2025 [Removed automatic variant loading to match product search behavior]
-    // Don't load variants until search is performed
-    setVariantsList([]);
-    setLoadingVariants(false);
+    // Changes by Agnij May 30, 2025 [Load all variants to populate the dropdown]
+    setLoadingVariants(true);
+    console.log("Loading variants for mapping modal");
+    
+    // Use the searchAllVariants function to get all available variants
+    searchAllVariants("")
+      .then(response => {
+        if (response?.data?.data) {
+          const variants = response.data.data || [];
+          console.log(`Found ${variants.length} variants for mapping`);
+          
+          // Format variants for select component
+          const formattedVariants = variants.map(variant => ({
+            value: variant.id,
+            label: `${variant.variant_name || variant.name} (${variant.product_name || 'Unknown Product'})`,
+            data: variant
+          }));
+          
+          setVariantsList(formattedVariants);
+        } else {
+          console.log("No variants found or invalid data format");
+          setVariantsList([]);
+        }
+      })
+      .catch(error => {
+        console.error("Error loading variants:", error);
+        toast.error("Failed to load variants");
+        setVariantsList([]);
+      })
+      .finally(() => {
+        setLoadingVariants(false);
+      });
   };
 
   const fetchAllProductVariants = useCallback(async (searchTerm = null) => {
@@ -878,9 +906,9 @@ const ProductManagement = () => {
     if(!mapMultipleProductsWithVendor || mapMultipleProductsWithVendor?.length <= 0) {
       toast.error("Select products and vendors to add");
       return 0;
-      }
+    }
 
-      setIsAddingDataProcessing(true);
+    setIsAddingDataProcessing(true);
 
     for (const productMap of mapMultipleProductsWithVendor) {
     const { product, vendor, approved_by } = productMap;
@@ -893,12 +921,14 @@ const ProductManagement = () => {
     try {
         // Different API call based on if mapping a product or variant
         if (isVariantMapping) {
+          // Changes by Agnij May 30, 2025 [Fixed parameter name from variant_id to product_variant_id]
           const payload = {
-            variant_id: product.value,
+            product_variant_id: product.value,
             vendor_id: vendor.value,
             approved_by: approved_by?.map((item) => item.value) || null
           };
           
+          console.log("Mapping variant with vendor using payload:", payload);
           const res = await mapVariantWithVendor(payload);
           toast.success(res.message || "Variant mapped successfully");
         } else {
@@ -928,6 +958,11 @@ const ProductManagement = () => {
   setIsAddingDataProcessing(false);
     setOpenProductMap(false);
     getProducts();
+    
+    // Changes by Agnij May 30, 2025 [Refresh mappings tab data after adding new mappings]
+    if (activeTab === 'mappings') {
+      getAllMappings();
+    }
   };
 
   const handleAddProductForBulk = async () => {
@@ -1086,8 +1121,7 @@ const ProductManagement = () => {
       search: searchString
     };
     
-    // Changes by Agnij May 19, 2025 [Updated to handle simplified mapping data]
-    // Changes by Agnij May 19, 2025 [Improved vendor name display]
+    // Changes by Agnij May 30, 2025 [Updated to properly display vendor details]
     try {
       // Use the real variant mappings API instead of mock data
       getVariantMappings(params.search || "")
@@ -1095,11 +1129,11 @@ const ProductManagement = () => {
           if (response?.data?.data) {
             const mappingsData = response.data.data;
             console.log(`Received ${mappingsData.length} variant-vendor mappings`);
-            
+          
             // Format mappings for display
             let formattedMappings = mappingsData.map(mapping => {
-              // Ensure we have a fallback for vendor name
-              const vendorName = mapping.vendor_name || 'Unknown Vendor';
+              // Use the vendor_display_name which combines organization name and name
+              const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
               
               return {
                 id: mapping.variant_id,
@@ -1109,21 +1143,21 @@ const ProductManagement = () => {
                 category_info: '',  // No category info in simplified query
                 vendor_id: mapping.vendor_id,
                 vendor_name: vendorName,
-                vendor_email: 'N/A',  // Email not available in simplified query
+                vendor_email: mapping.vendor_email || 'N/A',
                 mapped_at: mapping.mapped_at,
                 mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 'Unknown',
                 is_mapped: true
               };
             });
-            
+          
             // Calculate pagination values
             const totalItems = formattedMappings.length;
             const startIndex = (params.page - 1) * params.limit;
             const endIndex = startIndex + params.limit;
-            
+          
             // Get the current page of mappings
             const paginatedMappings = formattedMappings.slice(startIndex, endIndex);
-            
+          
             console.log(`Showing ${paginatedMappings.length} of ${totalItems} mappings`);
             setMappings(paginatedMappings);
             setMappingsTotalPages(Math.ceil(totalItems / params.limit));
@@ -1362,7 +1396,7 @@ const ProductManagement = () => {
     setShowRejectModal(false);
     setselectedProductsId("");
     setInputValue("");
-    setSelectVal("");
+    setSelectValue("");
   };
 
   useEffect(() => {
@@ -2262,12 +2296,10 @@ const ProductManagement = () => {
                               <th>Variant</th>
                               <th>Product</th>
                               <th>Vendor</th>
+                              <th>Vendor Email</th>
                               <th>Category</th>
                               <th>Status</th>
-                              <th>Mapped By</th>
-                              <th>Updated By</th>
                               <th>Mapped On</th>
-                              <th>Updated At</th>
                               <th>Actions</th>
                             </tr>
                           </thead>
@@ -2282,6 +2314,7 @@ const ProductManagement = () => {
                                       {mapping.vendor_name || "-"}
                                     </span>
                                   </td>
+                                  <td>{mapping.vendor_email || "-"}</td>
                                   <td>
                                     <span className="badge badge-warning">
                                       {mapping.category_names && mapping.category_names.length > 0 
@@ -2291,80 +2324,14 @@ const ProductManagement = () => {
                                   </td>
                                   <td>
                                     {/* Approval controls similar to products and variants */}
-                                    {(userType && userType != 6) && (
-                                      mapping?.is_mapping_approved === 1 ? (
-                                        <OverlayTrigger
-                                          placement="top"
-                                          overlay={
-                                            <Tooltip id="tooltip1">
-                                              Click to Disapprove Mapping
-                                            </Tooltip>
-                                          }
-                                        >
-                                          <button
-                                            className="btn btn-secondary bg-danger btn-sm mb-2"
-                                            onClick={() => openRejectModal(mapping.id)}
-                                          >
-                                            Disapprove
-                                          </button>
-                                        </OverlayTrigger>
-                                      ) : (
-                                        <div className="d-flex flex-row align-items-center">
-                                          <OverlayTrigger
-                                            placement="top"
-                                            overlay={
-                                              <Tooltip id="tooltip1">Click to approve mapping</Tooltip>
-                                            }
-                                          >
-                                            <button
-                                              className="btn btn-secondary bg-success btn-sm mb-2"
-                                              onClick={() => handleAcceptRejectProduct(mapping.id, '1')}
-                                            >
-                                              Approve
-                                            </button>
-                                          </OverlayTrigger>
-
-                                          {mapping?.is_mapping_approved === 0 && mapping?.reject_reason &&
-                                            <OverlayTrigger
-                                              placement="top"
-                                              overlay={
-                                                <Tooltip id="tooltip1">
-                                                  {mapping?.reject_reason}
-                                                </Tooltip>
-                                              }
-                                            >
-                                              <span className="fa fa-info-circle ml-2"></span>
-                                            </OverlayTrigger>}
-                                        </div>
-                                      ))}
+                                    {mapping.is_mapped ? (
+                                      <span className="badge badge-success">Mapped</span>
+                                    ) : (
+                                      <span className="badge badge-danger">Not Mapped</span>
+                                    )}
                                   </td>
                                   <td>
-                                    {/* Changes by Agnij June 14, 2024 [Added created by display] */}
-                                    {mapping.created_by ? 
-                                      addedByOptions.find(user => user.value === parseInt(mapping.created_by))?.label || mapping.created_by 
-                                      : "-"}
-                                  </td>
-                                  <td>
-                                    {/* Changes by Agnij June 14, 2024 [Added updated by display] */}
-                                    {mapping.updated_by ? 
-                                      addedByOptions.find(user => user.value === parseInt(mapping.updated_by))?.label || mapping.updated_by 
-                                      : "-"}
-                                  </td>
-                                  <td>
-                                    {mapping.created_at || mapping.mapping_date ? 
-                                      new Date(mapping.created_at || mapping.mapping_date).toLocaleDateString("en-GB", {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                      }) : "-"}
-                                  </td>
-                                  <td>
-                                    {mapping.updated_at ? 
-                                      new Date(mapping.updated_at).toLocaleDateString("en-GB", {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                      }) : "-"}
+                                    {mapping.mapped_at_formatted || "-"}
                                   </td>
                                   <td>
                                     <button
@@ -2380,7 +2347,7 @@ const ProductManagement = () => {
                               ))
                             ) : (
                               <tr>
-                                <td colSpan="10" className="text-center">
+                                <td colSpan="8" className="text-center">
                                   No mappings found
                                 </td>
                               </tr>

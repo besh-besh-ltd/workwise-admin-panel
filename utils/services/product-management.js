@@ -568,8 +568,8 @@ export const getVariantMappings = (searchTerm) => {
           data: {
             status: 1,
             data: []
-          }
-        });
+        }
+      });
       }
     } catch (error) {
       console.error(`Error getting variant mappings with term ${searchTerm}:`, error);
