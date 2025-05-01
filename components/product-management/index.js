@@ -97,7 +97,9 @@ const ProductManagement = () => {
     addedBy: router.query.addedBy || "",
     dateFrom: router.query.dateFrom || "",
     dateTo: router.query.dateTo || "",
-    approvalStatus: router.query.approvalStatus || ""
+    approvalStatus: router.query.approvalStatus || "",
+    startDate: router.query.startDate || "",
+    endDate: router.query.endDate || ""
   });
 
   const [productSearchTerm, setProductSearchTerm] = useState('');
@@ -165,7 +167,9 @@ const ProductManagement = () => {
       addedBy: "",
       dateFrom: "",
       dateTo: "",
-      approvalStatus: ""
+      approvalStatus: "",
+      startDate: "",
+      endDate: ""
     });
 
     // Reset states
@@ -179,14 +183,27 @@ const ProductManagement = () => {
     setDateTo("");                   
     setSelectedApprovalStatus("");
     setPage(1);                      
+    setVariantsPage(1);
+    setMappingsPage(1);
+    setPageSearchInput("");
+    setVariantsPageSearchInput("");
+    setMappingsPageSearchInput("");
     
-    // Remove all URL query parameters
+    // Reset URL parameters
+    const currentTabParam = activeTab || 'products';
     router.push({
-      pathname: router.pathname
+      pathname: router.pathname,
+      query: { tab: currentTabParam }
     }, undefined, { shallow: true });
     
-    // Call getProducts to fetch data without filters
-    getProducts();
+    // Call appropriate fetch based on active tab
+    if (activeTab === 'products') {
+      getProducts();
+    } else if (activeTab === 'variants') {
+      getAllVariants();
+    } else if (activeTab === 'mappings') {
+      getAllMappings();
+    }
   };
 
   const [inputValue, setInputValue] = useState("");
@@ -1040,22 +1057,21 @@ const ProductManagement = () => {
   const getAllVariants = () => {
     setLoadingVariants(true);
     
+    // Changes by Agnij May 01, 2025 [Added date range parameters]
     const params = {
       page: variantsPage,
       limit: variantsLimit,
-      search: searchString
+      search: searchString,
+      start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
+      end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null
     };
-    
-    // Changes by Agnij May 30, 2025 [Improved variant loading with proper pagination]
-    console.log(`Fetching variants for page ${params.page}, limit ${params.limit}`);
     
     try {
       // Use the existing searchAllVariants function to get variants
-      searchAllVariants(params.search || "")
+      searchAllVariants(params.search || "", params.start_date, params.end_date)
         .then(response => {
           if (response?.data?.data) {
             const variantsData = response.data.data;
-            console.log(`Received ${variantsData.length} variants from API`);
             
             if (variantsData && Array.isArray(variantsData)) {
               // Format variants to include more information
@@ -1077,22 +1093,18 @@ const ProductManagement = () => {
               // Get the current page of variants
               const paginatedVariants = formattedVariants.slice(startIndex, endIndex);
               
-              console.log(`Displaying variants ${startIndex+1}-${endIndex} of ${totalItems}`);
               setVariants(paginatedVariants);
               setVariantsTotalPages(Math.ceil(totalItems / params.limit));
             } else {
-              console.log("No variants found or invalid data format");
               setVariants([]);
               setVariantsTotalPages(0);
             }
           } else {
-            console.error("Invalid response format:", response);
             setVariants([]);
             setVariantsTotalPages(0);
           }
         })
         .catch(error => {
-          console.error("Error fetching variants:", error);
           toast.error("Failed to fetch variants");
           setVariants([]);
           setVariantsTotalPages(0);
@@ -1101,7 +1113,6 @@ const ProductManagement = () => {
           setLoadingVariants(false);
         });
     } catch (error) {
-      console.error("Exception in getAllVariants:", error);
       setLoadingVariants(false);
       setVariants([]);
       setVariantsTotalPages(0);
@@ -1112,22 +1123,21 @@ const ProductManagement = () => {
   const getAllMappings = () => {
     setLoadingMappings(true);
     
+    // Changes by Agnij May 01, 2025 [Added date range parameters]
     const params = {
       page: mappingsPage,
       limit: mappingsLimit,
-      search: searchString
+      search: searchString,
+      start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
+      end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null
     };
     
-    // Changes by Agnij May 30, 2025 [Improved mappings loading with proper pagination]
-    console.log(`Fetching mappings for page ${params.page}, limit ${params.limit}`);
-    
     try {
-      // Use the variant mappings API
-      getVariantMappings(params.search || "")
+      // Use the variant mappings API with date parameters
+      getVariantMappings(params.search || "", params.start_date, params.end_date)
         .then(response => {
           if (response?.data?.data) {
             const mappingsData = response.data.data;
-            console.log(`Received ${mappingsData.length} variant-vendor mappings`);
           
             if (mappingsData && Array.isArray(mappingsData)) {
               // Format mappings for display
@@ -1160,22 +1170,18 @@ const ProductManagement = () => {
               // Get the current page of mappings
               const paginatedMappings = formattedMappings.slice(startIndex, endIndex);
               
-              console.log(`Displaying mappings ${startIndex+1}-${endIndex} of ${totalItems}`);
               setMappings(paginatedMappings);
               setMappingsTotalPages(Math.ceil(totalItems / params.limit));
             } else {
-              console.log("No mappings found or invalid data format");
               setMappings([]);
               setMappingsTotalPages(0);
             }
           } else {
-            console.log("No mappings data in response");
             setMappings([]);
             setMappingsTotalPages(0);
           }
         })
         .catch(error => {
-          console.error("Error fetching mappings:", error);
           toast.error("Failed to fetch mappings");
           setMappings([]);
           setMappingsTotalPages(0);
@@ -1184,31 +1190,39 @@ const ProductManagement = () => {
           setLoadingMappings(false);
         });
     } catch (error) {
-      console.error("Exception in getAllMappings:", error);
       setLoadingMappings(false);
       setMappings([]);
       setMappingsTotalPages(0);
     }
   };
   
-  // Changes by Agnij May 30, 2025 [Fixed variants pagination to use server-side pagination]
+  // Changes by Agnij May 31, 2025 [Updated variant page search and removed vendor filter]
   const handleVariantsPageClick = (event) => {
     const selectedPage = event.selected + 1;
     setVariantsPage(selectedPage);
     
     // Update URL params
-    updateUrlParams({ variantsPage: selectedPage });
+    updateUrlParams({ 
+      variantsPage: selectedPage,
+      tab: 'variants',
+      search: searchString,
+      startDate: filterValues.startDate,
+      endDate: filterValues.endDate
+    });
     
-    // Fetch data with new page - use true server-side pagination
+    // Fetch data with new page
     setLoadingVariants(true);
     
+    // Changes by Agnij May 01, 2025 [Added date range parameters]
     const params = {
       page: selectedPage,
       limit: variantsLimit,
-      search: searchString || ""
+      search: searchString || "",
+      start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
+      end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null
     };
     
-    searchAllVariants(params.search)
+    searchAllVariants(params.search, params.start_date, params.end_date)
       .then(response => {
         if (response?.data?.data) {
           const variantsData = response.data.data;
@@ -1239,7 +1253,6 @@ const ProductManagement = () => {
         }
       })
       .catch(error => {
-        console.error("Error fetching variants:", error);
         toast.error("Failed to fetch variants");
       })
       .finally(() => {
@@ -1247,24 +1260,35 @@ const ProductManagement = () => {
       });
   };
   
-  // Changes by Agnij May 30, 2025 [Fixed mappings pagination to use server-side pagination]
+  // Changes by Agnij May 31, 2025 [Updated mappings pagination to include vendor filter]
   const handleMappingsPageClick = (event) => {
     const selectedPage = event.selected + 1;
     setMappingsPage(selectedPage);
     
     // Update URL params
-    updateUrlParams({ mappingsPage: selectedPage });
+    updateUrlParams({ 
+      mappingsPage: selectedPage,
+      tab: 'mappings',
+      search: searchString,
+      vendor: selectedVendor,
+      startDate: filterValues.startDate,
+      endDate: filterValues.endDate
+    });
     
-    // Fetch data with new page - use true server-side pagination
+    // Fetch data with new page
     setLoadingMappings(true);
     
+    // Changes by Agnij May 01, 2025 [Added date range parameters]
     const params = {
       page: selectedPage,
       limit: mappingsLimit,
-      search: searchString || ""
+      search: searchString || "",
+      start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
+      end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null,
+      vendor_id: selectedVendor
     };
     
-    getVariantMappings(params.search)
+    getVariantMappings(params.search, params.start_date, params.end_date)
       .then(response => {
         if (response?.data?.data) {
           const mappingsData = response.data.data;
@@ -1290,7 +1314,13 @@ const ProductManagement = () => {
               };
             });
             
-            // Calculate total items (might need to be provided by API)
+            // Filter by vendor if selected
+            if (params.vendor_id) {
+              formattedMappings = formattedMappings.filter(mapping => 
+                mapping.vendor_id === parseInt(params.vendor_id));
+            }
+            
+            // Calculate total items from original unfiltered data
             const totalItems = formattedMappings.length;
             
             // Calculate indices for pagination
@@ -1306,12 +1336,78 @@ const ProductManagement = () => {
         }
       })
       .catch(error => {
-        console.error("Error fetching mappings:", error);
         toast.error("Failed to fetch mappings");
       })
       .finally(() => {
         setLoadingMappings(false);
       });
+  };
+
+  // Changes by Agnij May 31, 2025 [Added page search for variants tab]
+  const [variantsPageSearchInput, setVariantsPageSearchInput] = useState("");
+  
+  const handleVariantsPageSearchInput = (e) => {
+    const value = e.target.value;
+    // Allow only numbers and ensure it's within valid range
+    if (/^\d*$/.test(value)) {
+      setVariantsPageSearchInput(value);
+    }
+  };
+  
+  const handleVariantsPageSearchSubmit = () => {
+    const pageNum = parseInt(variantsPageSearchInput);
+    
+    if (pageNum && pageNum >= 1 && pageNum <= variantsTotalPages) {
+      setVariantsPage(pageNum);
+      
+      // Update URL params
+      updateUrlParams({ 
+        variantsPage: pageNum,
+        tab: 'variants',
+        search: searchString,
+        startDate: filterValues.startDate,
+        endDate: filterValues.endDate
+      });
+      
+      // Fetch data with new page
+      getAllVariants();
+    } else {
+      toast.error(`Please enter a valid page number between 1 and ${variantsTotalPages}`);
+    }
+  };
+
+  // Changes by Agnij May 31, 2025 [Added page search for mappings tab]
+  const [mappingsPageSearchInput, setMappingsPageSearchInput] = useState("");
+  
+  const handleMappingsPageSearchInput = (e) => {
+    const value = e.target.value;
+    // Allow only numbers and ensure it's within valid range
+    if (/^\d*$/.test(value)) {
+      setMappingsPageSearchInput(value);
+    }
+  };
+  
+  const handleMappingsPageSearchSubmit = () => {
+    const pageNum = parseInt(mappingsPageSearchInput);
+    
+    if (pageNum && pageNum >= 1 && pageNum <= mappingsTotalPages) {
+      setMappingsPage(pageNum);
+      
+      // Update URL params
+      updateUrlParams({ 
+        mappingsPage: pageNum,
+        tab: 'mappings',
+        search: searchString,
+        vendor: selectedVendor,
+        startDate: filterValues.startDate,
+        endDate: filterValues.endDate
+      });
+      
+      // Fetch data with new page
+      getAllMappings();
+    } else {
+      toast.error(`Please enter a valid page number between 1 and ${mappingsTotalPages}`);
+    }
   };
 
   // Handle filter changes
@@ -2093,6 +2189,28 @@ const ProductManagement = () => {
                         />
                       </div>
                       
+                      {/* Changes by Agnij May 01, 2025 [Added date range filters] */}
+                      <div className="col-sm-3 mb-3">
+                        <input
+                          type="date"
+                          className="form-control"
+                          placeholder="Start Date"
+                          value={filterValues.startDate || ''}
+                          onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <input
+                          type="date"
+                          className="form-control"
+                          placeholder="End Date"
+                          value={filterValues.endDate || ''}
+                          onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                        />
+                      </div>
+                      
+                      {/* Changes by Agnij May 31, 2025 [Removed vendor filter from variants tab] */}
                       <div className="col-sm-3 mb-3">
                         <Select
                           options={categories}
@@ -2102,18 +2220,6 @@ const ProductManagement = () => {
                           instanceId="category-select"
                           value={filterValues.category ? categories.find(opt => opt.value === filterValues.category) : null}
                           onChange={(selectedOption) => handleFilterChange('category', selectedOption)}
-                        />
-                      </div>
-                      
-                      <div className="col-sm-3 mb-3">
-                        <Select
-                          options={vendorData}
-                          placeholder="Vendor"
-                          styles={customSelectStyles}
-                          isClearable={true}
-                          instanceId="vendor-select"
-                          value={filterValues.vendor ? vendorData.find(opt => opt.value === filterValues.vendor) : null}
-                          onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
                         />
                       </div>
                       
@@ -2319,26 +2425,50 @@ const ProductManagement = () => {
                           <p><b>Total Variants: </b>{variants.length}</p>
                           <p><b>Page: </b>{variantsPage} of {variantsTotalPages}</p>
                         </div>
-                        <ReactPaginate
-                          previousLabel={"Previous"}
-                          nextLabel={"Next"}
-                          breakLabel={"..."}
-                          pageCount={variantsTotalPages}
-                          marginPagesDisplayed={2}
-                          pageRangeDisplayed={3}
-                          onPageChange={handleVariantsPageClick}
-                          containerClassName={"pagination mb-0"}
-                          pageClassName={"page-item"}
-                          pageLinkClassName={"page-link"}
-                          previousClassName={"page-item"}
-                          previousLinkClassName={"page-link"}
-                          nextClassName={"page-item"}
-                          nextLinkClassName={"page-link"}
-                          breakClassName={"page-item"}
-                          breakLinkClassName={"page-link"}
-                          activeClassName={"active"}
-                          forcePage={variantsPage - 1}
-                        />
+                        <div className="d-flex flex-column align-items-center gap-2">
+                          {/* Pagination Section */}
+                          <div className="d-flex justify-content-between align-items-center">
+                            <ReactPaginate
+                              previousLabel={"Previous"}
+                              nextLabel={"Next"}
+                              breakLabel={"..."}
+                              pageCount={variantsTotalPages}
+                              marginPagesDisplayed={2}
+                              pageRangeDisplayed={3}
+                              onPageChange={handleVariantsPageClick}
+                              containerClassName={"pagination mb-0"}
+                              pageClassName={"page-item"}
+                              pageLinkClassName={"page-link"}
+                              previousClassName={"page-item"}
+                              previousLinkClassName={"page-link"}
+                              nextClassName={"page-item"}
+                              nextLinkClassName={"page-link"}
+                              breakClassName={"page-item"}
+                              breakLinkClassName={"page-link"}
+                              activeClassName={"active"}
+                              forcePage={variantsPage - 1}
+                            />
+                            
+                            {/* Changes by Agnij May 31, 2025 [Added page search for variants] */}
+                            <div className="d-flex align-items-center ms-3">
+                              <input
+                                type="text"
+                                className="form-control me-2"
+                                style={{ width: "80px" }}
+                                value={variantsPageSearchInput}
+                                onChange={handleVariantsPageSearchInput}
+                                placeholder="Page #"
+                              />
+                              <button
+                                className="btn btn-primary"
+                                onClick={handleVariantsPageSearchSubmit}
+                                disabled={!variantsPageSearchInput || parseInt(variantsPageSearchInput) < 1 || parseInt(variantsPageSearchInput) > variantsTotalPages}
+                              >
+                                Go
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -2359,6 +2489,28 @@ const ProductManagement = () => {
                         />
                       </div>
                       
+                      {/* Changes by Agnij May 01, 2025 [Added date range filters] */}
+                      <div className="col-sm-3 mb-3">
+                        <input
+                          type="date"
+                          className="form-control"
+                          placeholder="Start Date"
+                          value={filterValues.startDate || ''}
+                          onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <input
+                          type="date"
+                          className="form-control"
+                          placeholder="End Date"
+                          value={filterValues.endDate || ''}
+                          onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                        />
+                      </div>
+                      
+                      {/* Changes by Agnij May 31, 2025 [Fixed vendor filter in mappings] */}
                       <div className="col-sm-3 mb-3">
                         <Select
                           options={vendorData}
@@ -2367,7 +2519,11 @@ const ProductManagement = () => {
                           isClearable={true}
                           instanceId="vendor-select-mappings"
                           value={filterValues.vendor ? vendorData.find(opt => opt.value === filterValues.vendor) : null}
-                          onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
+                          onChange={(selectedOption) => {
+                            handleFilterChange('vendor', selectedOption);
+                            // Also update selectedVendor state
+                            setSelectedVendor(selectedOption ? selectedOption.value : "");
+                          }}
                         />
                       </div>
                       
@@ -2470,26 +2626,50 @@ const ProductManagement = () => {
                           <p><b>Total Mappings: </b>{mappings.length}</p>
                           <p><b>Page: </b>{mappingsPage} of {mappingsTotalPages}</p>
                         </div>
-                        <ReactPaginate
-                          previousLabel={"Previous"}
-                          nextLabel={"Next"}
-                          breakLabel={"..."}
-                          pageCount={mappingsTotalPages}
-                          marginPagesDisplayed={2}
-                          pageRangeDisplayed={3}
-                          onPageChange={handleMappingsPageClick}
-                          containerClassName={"pagination mb-0"}
-                          pageClassName={"page-item"}
-                          pageLinkClassName={"page-link"}
-                          previousClassName={"page-item"}
-                          previousLinkClassName={"page-link"}
-                          nextClassName={"page-item"}
-                          nextLinkClassName={"page-link"}
-                          breakClassName={"page-item"}
-                          breakLinkClassName={"page-link"}
-                          activeClassName={"active"}
-                          forcePage={mappingsPage - 1}
-                        />
+                        <div className="d-flex flex-column align-items-center gap-2">
+                          {/* Pagination Section */}
+                          <div className="d-flex justify-content-between align-items-center">
+                            <ReactPaginate
+                              previousLabel={"Previous"}
+                              nextLabel={"Next"}
+                              breakLabel={"..."}
+                              pageCount={mappingsTotalPages}
+                              marginPagesDisplayed={2}
+                              pageRangeDisplayed={3}
+                              onPageChange={handleMappingsPageClick}
+                              containerClassName={"pagination mb-0"}
+                              pageClassName={"page-item"}
+                              pageLinkClassName={"page-link"}
+                              previousClassName={"page-item"}
+                              previousLinkClassName={"page-link"}
+                              nextClassName={"page-item"}
+                              nextLinkClassName={"page-link"}
+                              breakClassName={"page-item"}
+                              breakLinkClassName={"page-link"}
+                              activeClassName={"active"}
+                              forcePage={mappingsPage - 1}
+                            />
+                            
+                            {/* Changes by Agnij May 31, 2025 [Added page search for mappings] */}
+                            <div className="d-flex align-items-center ms-3">
+                              <input
+                                type="text"
+                                className="form-control me-2"
+                                style={{ width: "80px" }}
+                                value={mappingsPageSearchInput}
+                                onChange={handleMappingsPageSearchInput}
+                                placeholder="Page #"
+                              />
+                              <button
+                                className="btn btn-primary"
+                                onClick={handleMappingsPageSearchSubmit}
+                                disabled={!mappingsPageSearchInput || parseInt(mappingsPageSearchInput) < 1 || parseInt(mappingsPageSearchInput) > mappingsTotalPages}
+                              >
+                                Go
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

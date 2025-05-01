@@ -488,14 +488,25 @@ export const mapVariantWithVendor = (values) => {
 };
 
 // Changes by Agnij April 30, 2025 [Added direct variant search function]
-export const searchAllVariants = (searchTerm) => {
+export const searchAllVariants = (searchTerm, startDate, endDate) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij May 18, 2025 [Fixed variants search API handling]
+      // Changes by Agnij May 01, 2025 [Added date range parameters]
       // Add a timestamp to prevent 304 responses
       const timestamp = Date.now();
+      
+      // Build query params
+      let queryParams = `search_term=${encodeURIComponent(searchTerm || "")}`;
+      if (startDate) {
+        queryParams += `&start_date=${encodeURIComponent(startDate)}`;
+      }
+      if (endDate) {
+        queryParams += `&end_date=${encodeURIComponent(endDate)}`;
+      }
+      queryParams += `&_t=${timestamp}`;
+      
       let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/search-variants?search_term=${encodeURIComponent(searchTerm || "")}&_t=${timestamp}`,
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/search-variants?${queryParams}`,
         { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
       );
       
@@ -536,13 +547,25 @@ export const searchAllVariants = (searchTerm) => {
 };
 
 // Changes by Agnij May 18, 2025 [Added function to get variant-vendor mappings]
-export const getVariantMappings = (searchTerm) => {
+export const getVariantMappings = (searchTerm, startDate, endDate) => {
   return new Promise(async (resolve, reject) => {
     try {
+      // Changes by Agnij May 01, 2025 [Added date range parameters]
       // Add a timestamp to prevent 304 responses
       const timestamp = Date.now();
+      
+      // Build query params
+      let queryParams = `search_term=${encodeURIComponent(searchTerm || "")}`;
+      if (startDate) {
+        queryParams += `&start_date=${encodeURIComponent(startDate)}`;
+      }
+      if (endDate) {
+        queryParams += `&end_date=${encodeURIComponent(endDate)}`;
+      }
+      queryParams += `&_t=${timestamp}`;
+      
       let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-mappings?search_term=${encodeURIComponent(searchTerm || "")}&_t=${timestamp}`,
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-mappings?${queryParams}`,
         { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
       );
       
