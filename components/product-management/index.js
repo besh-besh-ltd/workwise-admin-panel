@@ -1967,11 +1967,7 @@ const ProductManagement = () => {
                     <th scope="col">Category</th>
                     <th scope="col">Accept/Reject</th>
                     <th scope="col">Sub Category</th>
-                    <th scope="col">Vendors</th>
                     <th scope="col">Approval Status</th>
-                    <th scope="col">Image</th>
-                    <th scope="col">TDS</th>
-                    <th scope="col">QAP</th>
                     <th scope="col">Created At</th>
                     <th scope="col">Action</th>
                   </tr>
@@ -2002,7 +1998,6 @@ const ProductManagement = () => {
                             {item?.is_approve === 1 ? "Approved" : "Rejected"}
                           </td>
                           <td className="subcatstd">{getSubCats(item)}</td>
-                          <td>{ item?.vendor ? item?.vendor_name: "-"}</td>
                           <td>
                             {(userType && userType != 6) && (
                               item?.is_approve === 1 ? (
@@ -2051,29 +2046,6 @@ const ProductManagement = () => {
                                 </div>
                               ))}
                             {getApprovalInfo(item)}
-                          </td>
-
-                          <td>
-                            {item?.new_image_name ? <img
-                              width={60}
-                              height={60}
-                              src={item?.new_image_name}
-                              alt="new_image"
-                            /> : "--"}
-                          </td>
-                          <td>
-                            {item?.tds_new_file_name ? (
-                              <a href={item?.tds_new_file_name} target="_blank">
-                                        <i className="fa fa-file"></i>
-                              </a>
-                            ) : '--'}
-                          </td>
-                          <td>
-                            {item?.qap_new_file_name ? (
-                              <a href={item?.qap_new_file_name} target="_blank">
-                                        <i className="fa fa-file"></i>
-                              </a>
-                            ) : '--'}
                           </td>
                           <td style={{ width: "100px" }}>
                             {new Date(item.created_at).toLocaleDateString("en-GB", {
@@ -2268,7 +2240,6 @@ const ProductManagement = () => {
                               <th>Name</th>
                               <th>Product</th>
                               <th>Category</th>
-                              <th>Vendors</th>
                               <th>Status</th>
                               <th>Created By</th>
                               <th>Updated By</th>
@@ -2303,11 +2274,6 @@ const ProductManagement = () => {
                                         ? variant.category_names[0] 
                                         : "-"}
                                     </span>
-                                  </td>
-                                  <td>
-                                    {variant.vendor_name 
-                                      ? <span className="badge badge-info">{variant.vendor_name}</span> 
-                                      : "-"}
                                   </td>
                                   <td>
                                     {/* Similar approval controls as products */}
