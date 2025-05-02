@@ -284,7 +284,7 @@ const ProductManagement = () => {
     // Process ID to ensure consistent format with mapping_ prefix for mappings
     const processedId = typeof id === 'string' && id.startsWith('mapping_') 
       ? id 
-      : (typeof id === 'number' && activeTabs.mappings ? `mapping_${id}` : id);
+      : (typeof id === 'number' && activeTab === 'mappings' ? `mapping_${id}` : id);
     
     console.log("Opening reject modal for:", processedId);
     setShowRejectModal(true);
@@ -426,7 +426,7 @@ const ProductManagement = () => {
     // For mappings, ensure we add the mapping_ prefix if it's not already there
     const processedId = typeof id === 'string' && id.startsWith('mapping_') 
       ? id 
-      : (typeof id === 'number' && activeTabs.mappings ? `mapping_${id}` : id);
+      : (typeof id === 'number' && activeTab === 'mappings' ? `mapping_${id}` : id);
     
     acceptProduct(processedId, status, reject_reason_id)
       .then((res) => {
@@ -439,7 +439,7 @@ const ProductManagement = () => {
         if (typeof processedId === 'string' && processedId.startsWith('mapping_')) {
           // This was a mapping approval
           getAllMappings();
-        } else if (activeTabs.variants) {
+        } else if (activeTab === 'variants') {
           // This was a variant approval from variants tab
           getAllVariants();
         } else {
@@ -946,8 +946,8 @@ const ProductManagement = () => {
       // Update state with filtered variants
       setVariantsList(allVariants);
     } catch (error) {
+      // Changes by Agnij May 02, 2025 [Removed toast error message]
       console.error('Error in fetchAllProductVariants:', error);
-      toast.error('An error occurred while fetching variants');
     } finally {
       setLoadingVariants(false);
     }
@@ -1087,16 +1087,14 @@ const ProductManagement = () => {
     }
   };
   
-  // Changes by Agnij Aprill 30, 2025 [Added function to get all variants]
+  // Changes by Agnij May 2, 2025 [Updated getAllVariants to remove vendor filter]
   const getAllVariants = () => {
     setLoadingVariants(true);
     
-    // Changes by Agnij May 01, 2025 [Updated to use all filters from filterValues state]
     const params = {
       page: variantsPage,
       limit: variantsLimit,
       search: searchString || filterValues.searchString,
-      vendor_id: selectedVendor || filterValues.vendor,
       category_id: filterValues.category,
       added_by: filterValues.addedBy,
       date_from: filterValues.dateFrom,
@@ -1110,7 +1108,7 @@ const ProductManagement = () => {
         params.search,                  // Search string
         params.date_from,               // Start date
         params.date_to,                 // End date
-        params.vendor_id,               // Vendor ID
+        null,                          // Removed vendor_id
         params.category_id,             // Category ID 
         params.added_by,                // Added by
         params.is_approve               // Approval status
@@ -1151,8 +1149,8 @@ const ProductManagement = () => {
           }
         })
         .catch(error => {
-          console.error("Error fetching variants:", error);
-          toast.error("Failed to fetch variants");
+          // Changes by Agnij May 02, 2025 [Removed toast error message]
+          console.error('Error fetching variants:', error);
           setVariants([]);
           setVariantsTotalPages(0);
         })
@@ -1160,10 +1158,11 @@ const ProductManagement = () => {
           setLoadingVariants(false);
         });
     } catch (error) {
-      console.error("Exception in getAllVariants:", error);
-      setLoadingVariants(false);
+      // Changes by Agnij May 02, 2025 [Removed toast error message]
+      console.error('Error in getAllVariants:', error);
       setVariants([]);
       setVariantsTotalPages(0);
+      setLoadingVariants(false);
     }
   };
   
@@ -1185,19 +1184,30 @@ const ProductManagement = () => {
     };
     
     try {
+      // Changes by Agnij May 02, 2025 [Fixed vendor filter to correctly pass vendor_id parameter]
       // Use the variant mappings API with all filter parameters
       getVariantMappings(
-        params.search || "",            // Search string
-        params.date_from,               // Start date
-        params.date_to,                 // End date
-        params.vendor_id,               // Vendor ID
-        params.category_id,             // Category ID
-        params.added_by,                // Added by
-        params.is_approve               // Approval status
+        null,                      // id
+        params.search || "",       // Search string
+        params.date_from,          // Start date
+        params.date_to,            // End date
+        params.vendor_id,          // Vendor ID - corrected from previous implementation
+        params.category_id,        // Category ID
+        params.added_by,           // Added by
+        params.is_approve,         // Approval status
+        params.page,               // Page number
+        params.limit               // Page size
       )
         .then(response => {
-          if (response?.data?.data) {
-            const mappingsData = response.data.data;
+          console.log("Mappings response:", response?.data);
+          
+          // Changes by Agnij May 02, 2025 [Enhanced handling of response data and pagination]
+          if (response?.data) {
+            const mappingsData = response.data.data || [];
+            const paginationData = response.data.pagination || {};
+            
+            console.log("Mappings data:", mappingsData);
+            console.log("Pagination data:", paginationData);
           
             if (mappingsData && Array.isArray(mappingsData)) {
               // Format mappings for display
@@ -1224,32 +1234,28 @@ const ProductManagement = () => {
                 };
               });
               
-              // Calculate total items from original unfiltered data
-              const totalItems = formattedMappings.length;
+              setMappings(formattedMappings);
               
-              // Calculate indices for pagination
-              const startIndex = (params.page - 1) * params.limit;
-              const endIndex = Math.min(startIndex + params.limit, totalItems);
-              
-              // Get the current page of mappings
-              const paginatedMappings = formattedMappings.slice(startIndex, endIndex);
-              
-              setMappings(paginatedMappings);
-              setMappingsTotalPages(Math.ceil(totalItems / params.limit));
+              // Set pagination data from response
+              const totalPages = paginationData.pages || Math.ceil((paginationData.total || formattedMappings.length) / params.limit);
+              console.log("Setting total pages:", totalPages);
+              setMappingsTotalPages(totalPages > 0 ? totalPages : 1);
             } else {
+              console.log("No mappings found or invalid format");
               setMappings([]);
-              setMappingsTotalPages(0);
+              setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
             }
           } else {
+            console.log("Empty response data");
             setMappings([]);
-            setMappingsTotalPages(0);
+            setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
           }
         })
         .catch(error => {
           console.error("Error fetching mappings:", error);
           toast.error("Failed to fetch mappings");
           setMappings([]);
-          setMappingsTotalPages(0);
+          setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
         })
         .finally(() => {
           setLoadingMappings(false);
@@ -1258,7 +1264,7 @@ const ProductManagement = () => {
       console.error("Exception in getAllMappings:", error);
       setLoadingMappings(false);
       setMappings([]);
-      setMappingsTotalPages(0);
+      setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
     }
   };
   
@@ -1319,7 +1325,10 @@ const ProductManagement = () => {
         }
       })
       .catch(error => {
-        toast.error("Failed to fetch variants");
+        // Changes by Agnij May 02, 2025 [Removed toast error message]
+        console.error("Error fetching variants:", error);
+        setVariants([]);
+        setVariantsTotalPages(0);
       })
       .finally(() => {
         setLoadingVariants(false);
@@ -1354,10 +1363,24 @@ const ProductManagement = () => {
       vendor_id: selectedVendor
     };
     
-    getVariantMappings(params.search, params.start_date, params.end_date)
+    // Changes by Agnij May 02, 2025 [Fixed vendor filter to correctly pass vendor_id parameter]
+    getVariantMappings(
+      null,                         // id
+      params.search || "",          // search term
+      params.start_date,            // start date
+      params.end_date,              // end date
+      params.vendor_id,             // vendor_id - correctly passed now
+      null,                         // category_id
+      null,                         // added_by
+      null,                         // approval status
+      params.page,                  // page number
+      params.limit                  // page size
+    )
       .then(response => {
         if (response?.data?.data) {
+          // Changes by Agnij May 02, 2025 [Updated to use new pagination format from backend]
           const mappingsData = response.data.data;
+          const paginationData = response.data.pagination || {};
           
           if (mappingsData && Array.isArray(mappingsData)) {
             // Format mappings for display
@@ -1380,29 +1403,17 @@ const ProductManagement = () => {
               };
             });
             
-            // Filter by vendor if selected
-            if (params.vendor_id) {
-              formattedMappings = formattedMappings.filter(mapping => 
-                mapping.vendor_id === parseInt(params.vendor_id));
-            }
-            
-            // Calculate total items from original unfiltered data
-            const totalItems = formattedMappings.length;
-            
-            // Calculate indices for pagination
-            const startIndex = (params.page - 1) * params.limit;
-            const endIndex = Math.min(startIndex + params.limit, totalItems);
-            
-            // Get the current page of mappings
-            const paginatedMappings = formattedMappings.slice(startIndex, endIndex);
-            
-            setMappings(paginatedMappings);
-            setMappingsTotalPages(Math.ceil(totalItems / params.limit));
+            setMappings(formattedMappings);
+            // Use pagination from backend if available, otherwise calculate it
+            setMappingsTotalPages(paginationData.pages || Math.ceil((paginationData.total || formattedMappings.length) / params.limit));
           }
         }
       })
       .catch(error => {
+        console.error("Error fetching mappings:", error);
         toast.error("Failed to fetch mappings");
+        setMappings([]);
+        setMappingsTotalPages(0);
       })
       .finally(() => {
         setLoadingMappings(false);
@@ -1790,13 +1801,8 @@ const ProductManagement = () => {
   return (
     <>
       <ToastContainer />
-      <div className="content-header">
-        <div className="container-fluid">
-          <div className="row">
-            <h1 className="m-0 text-dark">Product</h1>
-          </div>
-        </div>
-      </div>
+      {/* Changes by Agnij July 25, 2025 [Removed duplicate header] */}
+      {/* Removed the duplicate content-header that was showing a second header */}
 
       <section className="content">
         <div className="container-fluid">
@@ -2243,20 +2249,20 @@ const ProductManagement = () => {
                         />
                       </div>
                       
-                      {/* Changes by Agnij July 25, 2024 [Added complete filters to variants tab to match products tab] */}
+                      {/* Changes by Agnij May 2, 2025 [Fixed category filter in variants tab] */}
                       <div className="col-sm-3 mb-3">
                         <Select
                           id={id}
-                          options={vendorData}
-                          placeholder="Select Vendor"
+                          options={categories}
+                          placeholder="Category"
                           styles={customSelectStyles}
                           isClearable={true}
-                          instanceId="vendor-select-variants"
-                          value={filterValues.vendor ? vendorData.find(opt => opt.value === filterValues.vendor) : null}
-                          onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
-                          components={{ Option: CustomSelectOption }}
+                          instanceId="category-select-variants"
+                          value={filterValues.category ? categories.find(opt => opt.value === filterValues.category) : null}
+                          onChange={(selectedOption) => handleFilterChange('category', selectedOption)}
                         />
                       </div>
+                      
                       <div className="col-sm-3 mb-3">
                         <Select
                           id={id}
@@ -2269,20 +2275,7 @@ const ProductManagement = () => {
                           onChange={(selectedOption) => handleFilterChange('approvalStatus', selectedOption)}
                         />
                       </div>
-                      <div className="col-sm-3 mb-3">
-                        <select
-                          className="form-control"
-                          value={filterValues.category}
-                          onChange={(e) => handleFilterChange('category', e.target.value)}
-                        >
-                          <option value="">Filter by Category</option>
-                          {categories.map(category => (
-                            <option key={category.value} value={category.value}>
-                              {category.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      
                       <div className="col-sm-3 mb-3">
                         <select
                           className="form-control"
@@ -2864,56 +2857,58 @@ const ProductManagement = () => {
                     </div>
                     
                     {/* Mappings pagination */}
-                    {mappings.length > 0 && mappingsTotalPages > 1 && (
+                    {mappings.length > 0 && (
                       <div className="d-flex justify-content-between align-items-center">
                         <div>
                           <p><b>Total Mappings: </b>{mappings.length}</p>
                           <p><b>Page: </b>{mappingsPage} of {mappingsTotalPages}</p>
                         </div>
-                        <div className="d-flex flex-column align-items-center gap-2">
-                          {/* Pagination Section */}
-                          <div className="d-flex justify-content-between align-items-center">
-                            <ReactPaginate
-                              previousLabel={"Previous"}
-                              nextLabel={"Next"}
-                              breakLabel={"..."}
-                              pageCount={mappingsTotalPages}
-                              marginPagesDisplayed={2}
-                              pageRangeDisplayed={3}
-                              onPageChange={handleMappingsPageClick}
-                              containerClassName={"pagination mb-0"}
-                              pageClassName={"page-item"}
-                              pageLinkClassName={"page-link"}
-                              previousClassName={"page-item"}
-                              previousLinkClassName={"page-link"}
-                              nextClassName={"page-item"}
-                              nextLinkClassName={"page-link"}
-                              breakClassName={"page-item"}
-                              breakLinkClassName={"page-link"}
-                              activeClassName={"active"}
-                              forcePage={mappingsPage - 1}
-                            />
-                            
-                            {/* Changes by Agnij May 31, 2025 [Added page search for mappings] */}
-                            <div className="d-flex align-items-center ms-3">
-                              <input
-                                type="text"
-                                className="form-control me-2"
-                                style={{ width: "80px" }}
-                                value={mappingsPageSearchInput}
-                                onChange={handleMappingsPageSearchInput}
-                                placeholder="Page #"
+                        {mappingsTotalPages > 1 && (
+                          <div className="d-flex flex-column align-items-center gap-2">
+                            {/* Pagination Section */}
+                            <div className="d-flex justify-content-between align-items-center">
+                              <ReactPaginate
+                                previousLabel={"Previous"}
+                                nextLabel={"Next"}
+                                breakLabel={"..."}
+                                pageCount={mappingsTotalPages}
+                                marginPagesDisplayed={2}
+                                pageRangeDisplayed={3}
+                                onPageChange={handleMappingsPageClick}
+                                containerClassName={"pagination mb-0"}
+                                pageClassName={"page-item"}
+                                pageLinkClassName={"page-link"}
+                                previousClassName={"page-item"}
+                                previousLinkClassName={"page-link"}
+                                nextClassName={"page-item"}
+                                nextLinkClassName={"page-link"}
+                                breakClassName={"page-item"}
+                                breakLinkClassName={"page-link"}
+                                activeClassName={"active"}
+                                forcePage={mappingsPage - 1}
                               />
-                              <button
-                                className="btn btn-primary"
-                                onClick={handleMappingsPageSearchSubmit}
-                                disabled={!mappingsPageSearchInput || parseInt(mappingsPageSearchInput) < 1 || parseInt(mappingsPageSearchInput) > mappingsTotalPages}
-                              >
-                                Go
-                              </button>
+                              
+                              {/* Changes by Agnij May 31, 2025 [Added page search for mappings] */}
+                              <div className="d-flex align-items-center ms-3">
+                                <input
+                                  type="text"
+                                  className="form-control me-2"
+                                  style={{ width: "80px" }}
+                                  value={mappingsPageSearchInput}
+                                  onChange={handleMappingsPageSearchInput}
+                                  placeholder="Page #"
+                                />
+                                <button
+                                  className="btn btn-primary"
+                                  onClick={handleMappingsPageSearchSubmit}
+                                  disabled={!mappingsPageSearchInput || parseInt(mappingsPageSearchInput) < 1 || parseInt(mappingsPageSearchInput) > mappingsTotalPages}
+                                >
+                                  Go
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     )}
                   </div>

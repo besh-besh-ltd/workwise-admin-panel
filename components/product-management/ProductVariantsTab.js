@@ -22,13 +22,19 @@ const ProductVariantsTab = ({ product }) => {
     
     setLoading(true);
     try {
+      console.log("Fetching variants for product:", product.id);
       const response = await getProductVariants(product.id);
       if (response?.data?.data) {
+        console.log("Variants loaded:", response.data.data.length);
         setVariants(response.data.data);
+      } else {
+        console.log("No variants found or invalid response");
+        setVariants([]);
       }
     } catch (error) {
       console.error('Error fetching variants:', error);
       message.error('Failed to load product variants');
+      setVariants([]);
     } finally {
       setLoading(false);
     }
@@ -45,12 +51,22 @@ const ProductVariantsTab = ({ product }) => {
   };
 
   const handleMapVariant = (variant) => {
+    console.log("Opening map modal for variant:", variant);
     setSelectedVariant(variant);
     setShowMapModal(true);
   };
 
+  const handleCloseMapModal = () => {
+    console.log("Closing map modal");
+    setShowMapModal(false);
+    setTimeout(() => {
+      setSelectedVariant(null);
+    }, 100);
+  };
+
   const handleDeleteVariant = async (variantId) => {
     try {
+      console.log("Deleting variant:", variantId);
       const response = await deleteProductVariant(variantId);
       if (response?.data?.status === 1) {
         message.success('Product variant deleted successfully');
@@ -64,6 +80,11 @@ const ProductVariantsTab = ({ product }) => {
     }
   };
 
+  const handleMappingSuccess = () => {
+    console.log("Mapping success, refreshing variants");
+    fetchVariants();
+  };
+
   const columns = [
     {
       title: 'ID',
@@ -75,6 +96,7 @@ const ProductVariantsTab = ({ product }) => {
       title: 'Variant Name',
       dataIndex: 'variant_name',
       key: 'variant_name',
+      render: (text, record) => text || record.name || 'Unnamed Variant',
     },
     {
       title: 'Category',
@@ -86,7 +108,7 @@ const ProductVariantsTab = ({ product }) => {
       title: 'Created At',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (text) => new Date(text).toLocaleString(),
+      render: (text) => text ? new Date(text).toLocaleString() : '-',
     },
     {
       title: 'Actions',
@@ -154,12 +176,14 @@ const ProductVariantsTab = ({ product }) => {
         onSuccess={fetchVariants}
       />
 
-      <MapVariantVendorModal
-        isVisible={showMapModal}
-        onCancel={() => setShowMapModal(false)}
-        variant={selectedVariant}
-        onSuccess={fetchVariants}
-      />
+      {showMapModal && (
+        <MapVariantVendorModal
+          isVisible={showMapModal}
+          onCancel={handleCloseMapModal}
+          variant={selectedVariant}
+          onSuccess={handleMappingSuccess}
+        />
+      )}
     </div>
   );
 };

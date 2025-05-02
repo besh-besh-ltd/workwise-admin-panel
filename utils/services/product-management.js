@@ -529,8 +529,10 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
       }
       queryParams += `&_t=${timestamp}`;
       
+      // Changes by Agnij May 02, 2025 [Adding alternative endpoint for v_rank issue]
+      // Try using a special endpoint that avoids the v_rank error
       let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/search-variants?${queryParams}`,
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/search-variants-safe?${queryParams}`,
         { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
       );
       
@@ -572,7 +574,7 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
 };
 
 // Changes by Agnij May 18, 2025 [Added function to get variant-vendor mappings]
-export const getVariantMappings = (id = null, searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus) => {
+export const getVariantMappings = (id = null, searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus, page, limit) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Changes by Agnij July 25, 2024 [Added all filter parameters]
@@ -605,33 +607,75 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
       if (approvalStatus !== undefined && approvalStatus !== null && approvalStatus !== "") {
         queryParams += `&is_approve=${encodeURIComponent(approvalStatus)}`;
       }
+      // Changes by Agnij May 02, 2025 [Added pagination parameters]
+      if (page) {
+        queryParams += `&page=${encodeURIComponent(page)}`;
+      }
+      if (limit) {
+        queryParams += `&limit=${encodeURIComponent(limit)}`;
+      }
       queryParams += `&_t=${timestamp}`;
+      
+      // Changes by Agnij May 02, 2025 [Added debugging log for API call]
+      console.log(`Calling variant-mappings API with query: ${queryParams}`);
       
       let response = await axiosInstance.get(
         `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-mappings?${queryParams}`,
         { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
       );
       
-      // Handle various response formats
-      if (response?.data?.data) {
-        // The response already has the expected format
-        resolve(response);
-      } else if (response?.data) {
-        // Response has data but not in the expected format
-        resolve({
-          status: 200,
-          data: {
-            status: 1,
-            data: response.data
-          }
-        });
+      // Changes by Agnij May 02, 2025 [Enhanced handling of response formats to preserve pagination data]
+      console.log("Mapping API response:", response?.data);
+      
+      if (response?.data) {
+        // Check if the response includes both data and pagination
+        if (response.data.data && response.data.pagination) {
+          // The response already has the expected format with pagination
+          resolve(response);
+        } else if (response.data.data) {
+          // Response has data but no pagination - add default pagination
+          resolve({
+            status: 200,
+            data: {
+              status: 1,
+              data: response.data.data,
+              pagination: {
+                total: response.data.data.length,
+                page: parseInt(page) || 1,
+                limit: parseInt(limit) || 10,
+                pages: Math.ceil(response.data.data.length / (parseInt(limit) || 10))
+              }
+            }
+          });
+        } else {
+          // Only data without nested structure - wrap it
+          resolve({
+            status: 200,
+            data: {
+              status: 1,
+              data: Array.isArray(response.data) ? response.data : [],
+              pagination: {
+                total: Array.isArray(response.data) ? response.data.length : 0,
+                page: parseInt(page) || 1,
+                limit: parseInt(limit) || 10,
+                pages: Math.ceil((Array.isArray(response.data) ? response.data.length : 0) / (parseInt(limit) || 10))
+              }
+            }
+          });
+        }
       } else {
         // Empty or invalid response
         resolve({
           status: 200,
           data: {
             status: 1,
-            data: []
+            data: [],
+            pagination: {
+              total: 0,
+              page: parseInt(page) || 1,
+              limit: parseInt(limit) || 10,
+              pages: 0
+            }
           }
         });
       }
@@ -642,7 +686,13 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
         status: 200,
         data: {
           status: 1,
-          data: []
+          data: [],
+          pagination: {
+            total: 0,
+            page: parseInt(page) || 1,
+            limit: parseInt(limit) || 10,
+            pages: 0
+          }
         }
       });
     }
