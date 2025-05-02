@@ -1213,12 +1213,12 @@ const ProductManagement = () => {
         params.limit               // Page size
       )
         .then(response => {
-          console.log("Mappings response:", response?.data);
+          console.log("Mappings response:", response);
           
           // Changes by Agnij May 02, 2025 [Enhanced handling of response data and pagination]
           if (response?.data) {
-            const mappingsData = response.data.data || [];
-            const paginationData = response.data.pagination || {};
+            const mappingsData = response.data || [];
+            const paginationData = response.pagination || {};
             
             console.log("Mappings data:", mappingsData);
             console.log("Pagination data:", paginationData);

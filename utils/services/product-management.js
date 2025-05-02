@@ -692,10 +692,10 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
       
       if (response?.data) {
         // Check if the response includes both data and pagination
-        if (response.data.data && response.data.pagination) {
+        if (response.data && response.pagination) {
           // The response already has the expected format with pagination
           resolve(response);
-        } else if (response.data.data) {
+        } else if (response.data) {
           // Response has data but no pagination - add default pagination
           const totalItems = Array.isArray(response.data.data) ? response.data.data.length : 0;
           const totalPages = Math.max(1, Math.ceil(totalItems / limitNum));
@@ -704,12 +704,12 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
             status: 200,
             data: {
               status: 1,
-              data: response.data.data,
+              data: response.data,
               pagination: {
-                total: totalItems,
-                page: pageNum,
-                limit: limitNum,
-                pages: totalPages
+                total: response.data.length,
+                page: parseInt(page) || 1,
+                limit: parseInt(limit) || 10,
+                pages: Math.ceil(response.data.length / (parseInt(limit) || 10))
               }
             }
           });
