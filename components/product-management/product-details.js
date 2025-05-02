@@ -3,7 +3,7 @@ import { getProductDetailsById } from "../../utils/services/product-management";
 import { useRouter } from "next/router";
 import ProductVariantsTab from './ProductVariantsTab';
 
-// Changes by Agnij May 02, 2025 [Improved product details component to fix loading issues]
+// Changes by Agnij May 3, 2025 [Updated product details component to match reference design]
 const ProductDetails = () => {
     const [productData, setProductData] = useState(null);
     const [vendorData, setVendorData] = useState([]);
@@ -29,6 +29,7 @@ const ProductDetails = () => {
             
             console.log("API Response:", response);
             
+            // Check for proper data structure
             if (response?.data?.data) {
                 console.log("Setting product data:", response.data.data);
                 setProductData(response.data.data);
@@ -68,12 +69,7 @@ const ProductDetails = () => {
 
     // Add retry function
     const retryFetchProductDetails = () => {
-        setLoading(true);
-        setError(null);
-        
-        setTimeout(() => {
-            getProductDetails();
-        }, 500);
+        getProductDetails();
     };
 
     // Show appropriate loading or error state
@@ -150,8 +146,43 @@ const ProductDetails = () => {
                     <div className="card-body">
                         <div className="product-info mb-4">
                             <h2>{productData.name}</h2>
-                            {productData.manufacturer && <p><strong>Manufacturer:</strong> {productData.manufacturer}</p>}
-                            {productData.vendor_name && <p><strong>Vendor:</strong> {productData.vendor_name}</p>}
+                            <div className="row">
+                                <div className="col-md-6">
+                                    {productData.manufacturer && (
+                                        <p><strong>Manufacturer:</strong> {productData.manufacturer}</p>
+                                    )}
+                                    {productData.vendor_name && (
+                                        <p><strong>Vendor:</strong> {productData.vendor_name}</p>
+                                    )}
+                                    {productData.sku && (
+                                        <p><strong>SKU:</strong> {productData.sku}</p>
+                                    )}
+                                </div>
+                                <div className="col-md-6">
+                                    {productData.status !== undefined && (
+                                        <p>
+                                            <strong>Status:</strong>{" "}
+                                            <span className={`badge badge-${productData.status === 1 ? 'success' : 'secondary'}`}>
+                                                {productData.status === 1 ? 'Active' : 'Inactive'}
+                                            </span>
+                                        </p>
+                                    )}
+                                    {productData.created_at && (
+                                        <p>
+                                            <strong>Created:</strong>{" "}
+                                            {productData.created_at_formatted || new Date(productData.created_at).toLocaleString()}
+                                        </p>
+                                    )}
+                                    {productData.is_approve !== undefined && (
+                                        <p>
+                                            <strong>Approval Status:</strong>{" "}
+                                            <span className={`badge badge-${productData.is_approve === 1 ? 'success' : 'danger'}`}>
+                                                {productData.is_approve === 1 ? 'Approved' : 'Not Approved'}
+                                            </span>
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
                         {/* Bootstrap Tabs */}
@@ -194,6 +225,21 @@ const ProductDetails = () => {
                                 aria-labelledby="basic-tab"
                             >
                                 <div className="row">
+                                    {/* Description */}
+                                    {productData.description && (
+                                        <div className="col-md-12 mb-4">
+                                            <div className="card">
+                                                <div className="card-header">
+                                                    <h3 className="card-title">Product Description</h3>
+                                                </div>
+                                                <div className="card-body">
+                                                    <p>{productData.description}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Gallery Images */}
                                     <div className="col-md-12">
                                         <div className="card mb-4">
                                             <div className="card-header">
@@ -204,7 +250,7 @@ const ProductDetails = () => {
                                                     {productData.product_images &&
                                                         productData.product_images.length > 0 ?
                                                         (productData.product_images
-                                                            .filter(image => image.is_featured === 0)
+                                                            .filter(image => image.is_featured !== 1)
                                                             .map((image, index) => (
                                                                 <div className="gallery-image-panel m-2" key={index}>
                                                                     <img
@@ -224,6 +270,7 @@ const ProductDetails = () => {
                                         </div>
                                     </div>
 
+                                    {/* Featured Image */}
                                     <div className="col-md-6">
                                         <div className="card mb-4">
                                             <div className="card-header">
@@ -254,6 +301,7 @@ const ProductDetails = () => {
                                         </div>
                                     </div>
 
+                                    {/* Product Categories */}
                                     <div className="col-md-6">
                                         <div className="card mb-4">
                                             <div className="card-header">
@@ -262,77 +310,76 @@ const ProductDetails = () => {
                                             <div className="card-body">
                                                 <div className="product-categories-panel">
                                                     {productData.product_categories &&
-                                                        productData.product_categories.length > 0 ?
-                                                        (
-                                                            <div className="product-categories">
-                                                                <ul className="list-group">
-                                                                    {productData.product_categories.map((data, index) => (
-                                                                        <li className="list-group-item" key={index}>
-                                                                            {data.category_name}
-                                                                        </li>
-                                                                    ))}
-                                                                </ul>
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-muted">No categories assigned</p>
-                                                        )
-                                                    }
+                                                        productData.product_categories.length > 0 ? (
+                                                        <ul className="list-group">
+                                                            {productData.product_categories.map((category, index) => (
+                                                                <li className="list-group-item" key={index}>
+                                                                    {category.category_name}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <p className="text-muted">No categories assigned</p>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
+                                    {/* Vendor List */}
                                     <div className="col-md-12">
                                         <div className="card mb-4">
                                             <div className="card-header">
                                                 <h3 className="card-title">Vendor List</h3>
                                             </div>
                                             <div className="card-body">
-                                                <table className="table table-striped table-hover mb-3">
-                                                    <thead>
-                                                        <tr>
-                                                            <th scope="col">Sl. No.</th>
-                                                            <th scope="col">Name</th>
-                                                            <th scope="col">Approved By</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {vendorData && vendorData.length > 0 ? (
-                                                            vendorData.map((item, index) => (
-                                                                <tr key={item.id || index}>
-                                                                    <td>{index + 1}</td>
-                                                                    <td>{item.vendor_name}</td>
-                                                                    <td>
-                                                                        {item.vendor_approved_by &&
-                                                                            item.vendor_approved_by.length > 0 ?
-                                                                            (
+                                                <div className="table-responsive">
+                                                    <table className="table table-striped table-hover mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th scope="col">Sl. No.</th>
+                                                                <th scope="col">Name</th>
+                                                                <th scope="col">Email</th>
+                                                                <th scope="col">Approved By</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {vendorData && vendorData.length > 0 ? (
+                                                                vendorData.map((vendor, index) => (
+                                                                    <tr key={vendor.id || index}>
+                                                                        <td>{index + 1}</td>
+                                                                        <td>{vendor.vendor_name || vendor.name || 'Unknown'}</td>
+                                                                        <td>{vendor.vendor_email || vendor.email || 'N/A'}</td>
+                                                                        <td>
+                                                                            {vendor.vendor_approved_by && 
+                                                                            Array.isArray(vendor.vendor_approved_by) && 
+                                                                            vendor.vendor_approved_by.length > 0 ? (
                                                                                 <div className="d-flex flex-wrap">
-                                                                                    {item.vendor_approved_by.map((data, i) => (
+                                                                                    {vendor.vendor_approved_by.map((approver, i) => (
                                                                                         <div key={i} className="mr-2">
-                                                                                            {data.name || data}
-                                                                                            {i !== item.vendor_approved_by.length - 1 && <span>,&nbsp;</span>}
+                                                                                            {typeof approver === 'object' ? approver.name : approver}
+                                                                                            {i !== vendor.vendor_approved_by.length - 1 && ', '}
                                                                                         </div>
                                                                                     ))}
                                                                                 </div>
-                                                                            ) : (
-                                                                                <span className="text-muted">Not approved</span>
-                                                                            )
-                                                                        }
-                                                                    </td>
+                                                                            ) : 'Not specified'}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))
+                                                            ) : (
+                                                                <tr>
+                                                                    <td colSpan="4" className="text-center">No vendors available</td>
                                                                 </tr>
-                                                            ))
-                                                        ) : (
-                                                            <tr>
-                                                                <td colSpan="3" className="text-center">No vendors available</td>
-                                                            </tr>
-                                                        )}
-                                                    </tbody>
-                                                </table>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            
                             <div 
                                 className={`tab-pane fade ${activeTab === 'variants' ? 'show active' : ''}`} 
                                 id="variants" 

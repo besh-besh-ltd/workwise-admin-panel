@@ -20,26 +20,32 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     approved_by: []
   });
   
-  // Changes by Agnij May 3, 2025 [Added variant search functionality]
+  // Changes by Agnij May 2, 2025 [Added variant search functionality]
   const [searchVariantTerm, setSearchVariantTerm] = useState('');
   const [searchVariantResults, setSearchVariantResults] = useState([]);
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [error, setError] = useState(null);
   
   // Create portal element for modal
   useEffect(() => {
+    console.log("MapVariantVendorModal: Initializing portal element");
+    
     // Only create the element if it doesn't already exist
     if (!document.getElementById('variant-vendor-modal-root')) {
+      console.log("Creating new portal element");
       const el = document.createElement('div');
       el.id = 'variant-vendor-modal-root';
       document.body.appendChild(el);
       setModalElement(el);
     } else {
+      console.log("Using existing portal element");
       setModalElement(document.getElementById('variant-vendor-modal-root'));
     }
 
     // Cleanup function to remove the element when component unmounts
     return () => {
+      console.log("Cleaning up modal portal element");
       const el = document.getElementById('variant-vendor-modal-root');
       if (el && el.parentNode) {
         el.parentNode.removeChild(el);
@@ -50,18 +56,22 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   // Fetch vendors and approved_by options when modal becomes visible
   useEffect(() => {
     if (isVisible) {
+      console.log("Modal is visible, initializing data");
+      setError(null);
       fetchVendors();
       fetchApprovedBy();
       resetForm();
       
       // If a variant was passed to the modal, set it as selected
       if (variant) {
+        console.log("Variant provided to modal:", variant);
         setSelectedVariant(variant);
         setFormData(prev => ({
           ...prev,
           variant_id: variant.id
         }));
       } else {
+        console.log("No variant provided, clearing selection");
         setSelectedVariant(null);
       }
     }
@@ -72,7 +82,8 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
       console.log("Fetching vendors for mapping modal");
       setLoading(true);
       const vendorsResponse = await vendorList();
-      console.log("VENDOR RESPONSE -------- ", vendorsResponse);
+      console.log("Vendor API response:", vendorsResponse);
+      
       if (vendorsResponse?.data) {
         console.log(`Fetched ${vendorsResponse.data.length} vendors`);
         setVendors(vendorsResponse.data);
@@ -87,10 +98,12 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
         setVendorOptions(options);
       } else {
         console.error("Invalid vendor response:", vendorsResponse);
+        setError("Failed to load vendors: Invalid response");
         toast.error('Failed to load vendors: Invalid response');
       }
     } catch (error) {
       console.error('Error fetching vendors:', error);
+      setError(`Failed to load vendors: ${error.message || "Unknown error"}`);
       toast.error('Failed to load vendors');
     } finally {
       setLoading(false);
@@ -101,12 +114,16 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     try {
       console.log("Fetching approved-by options");
       const response = await vendorApproveList();
+      console.log("Approved-by API response:", response);
+      
       if (response?.data) {
         const approvedOptions = response.data.map((s) => ({
           label: s.vendor_approve,
           value: s.id,
         }));
         setApprovedByOptions(approvedOptions);
+      } else {
+        console.warn("Invalid approved-by response:", response);
       }
     } catch (error) {
       console.error("Error fetching approved-by options:", error);
@@ -116,6 +133,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
 
   // Reset form
   const resetForm = () => {
+    console.log("Resetting form data");
     setFormData({
       variant_id: variant?.id || '',
       vendor: null,
@@ -124,6 +142,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     setMappings([]);
     setSearchVariantTerm('');
     setSearchVariantResults([]);
+    setError(null);
   };
 
   // Function to search variants
@@ -149,6 +168,8 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
         null,       // added by
         null        // approval status
       );
+      
+      console.log("Variant search response:", response);
       
       if (response?.data?.data) {
         const variantsData = Array.isArray(response.data.data) 
@@ -207,7 +228,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   };
 
   const handleInputChange = (selectedOption, { name }) => {
-    console.log(`Updating ${name} to`, selectedOption);
+    console.log(`Updating ${name} to:`, selectedOption);
     setFormData(prev => ({
       ...prev,
       [name]: selectedOption
@@ -224,6 +245,8 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
       toast.error('Please select a variant');
       return;
     }
+    
+    console.log("Adding mapping:", { vendor: formData.vendor, variant: selectedVariant });
     
     // Add the current mapping to the list
     setMappings(prev => [...prev, {
@@ -243,6 +266,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   };
 
   const handleRemoveMapping = (id) => {
+    console.log("Removing mapping with ID:", id);
     setMappings(prev => prev.filter(mapping => mapping.id !== id));
     toast.success('Vendor removed from mapping list');
   };
@@ -259,6 +283,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     }
     
     setLoading(true);
+    setError(null);
     
     // Process current form data if vendor is selected
     const allMappings = [...mappings];
@@ -270,8 +295,10 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
       });
     }
     
+    console.log("Processing mappings:", allMappings);
     let success = true;
     let failureCount = 0;
+    let errorMessages = [];
 
     for (const mapping of allMappings) {
       try {
@@ -283,6 +310,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
           approved_by: mapping.approved_by?.map(item => item.value) || null
         };
         
+        console.log("API payload:", payload);
         const response = await mapVariantWithVendor(payload);
         
         console.log("Mapping response:", response);
@@ -290,7 +318,9 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
         if (!(response?.data?.status === 1 || response?.status === 1)) {
           success = false;
           failureCount++;
-          toast.error(`Failed to map with ${mapping.vendor.label}: ${response?.data?.message || response?.message || 'Unknown error'}`);
+          const errorMsg = `Failed to map variant to ${mapping.vendor.label}: ${response?.data?.message || 'Unknown error'}`;
+          errorMessages.push(errorMsg);
+          toast.error(errorMsg);
         }
       } catch (apiError) {
         console.error('API Error mapping variant with vendor:', apiError);
@@ -307,11 +337,16 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
           errorMessage = apiError.message;
         }
         
+        errorMessages.push(errorMessage);
         toast.error(errorMessage);
       }
     }
     
     setLoading(false);
+    
+    if (errorMessages.length > 0) {
+      setError(errorMessages.join("; "));
+    }
     
     if (success) {
       toast.success('All variant mappings completed successfully');
@@ -339,6 +374,119 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     </components.Option>
   );
 
+  // Selected Variant Display
+  const renderSelectedVariant = () => {
+    if (!selectedVariant) return null;
+
+    return (
+      <div className="mb-4 p-3 border rounded bg-light">
+        <div className="d-flex justify-content-between align-items-center">
+          <h5 className="mb-2 font-weight-bold">Selected Variant</h5>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-danger"
+            onClick={() => setSelectedVariant(null)}
+          >
+            <i className="fas fa-times"></i> Clear Selection
+          </button>
+        </div>
+        
+        <div className="row">
+          <div className="col-md-6">
+            <dl className="mb-0">
+              <dt className="font-weight-bold">Variant Name:</dt>
+              <dd>{selectedVariant.name}</dd>
+              
+              <dt className="font-weight-bold mt-2">Variant ID:</dt>
+              <dd>{selectedVariant.id}</dd>
+            </dl>
+          </div>
+          <div className="col-md-6">
+            <dl className="mb-0">
+              {selectedVariant.product_name && (
+                <>
+                  <dt className="font-weight-bold">Product:</dt>
+                  <dd>{selectedVariant.product_name}</dd>
+                </>
+              )}
+              
+              {selectedVariant.category_info && (
+                <>
+                  <dt className="font-weight-bold mt-2">Category:</dt>
+                  <dd>{selectedVariant.category_info}</dd>
+                </>
+              )}
+              
+              {selectedVariant.created_at && (
+                <>
+                  <dt className="font-weight-bold mt-2">Created:</dt>
+                  <dd>{selectedVariant.created_at_formatted || new Date(selectedVariant.created_at).toLocaleString()}</dd>
+                </>
+              )}
+            </dl>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  // Search Results Display
+  const renderSearchResults = () => {
+    if (!searchVariantTerm || searchVariantTerm.length === 0) return null;
+    
+    return (
+      <div className="border rounded p-3 mb-3">
+        <h6 className="mb-3">
+          {loadingVariants ? (
+            <span>
+              <i className="fa fa-spinner fa-spin me-2"></i>
+              Searching variants...
+            </span>
+          ) : (
+            searchVariantTerm.length < 3 ? 
+              "Type at least 3 characters to search" : 
+              `Search Results (${searchVariantResults.length})`
+          )}
+        </h6>
+        
+        {!loadingVariants && searchVariantTerm.length >= 3 && (
+          searchVariantResults.length > 0 ? (
+            <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="variant-search-results">
+              {searchVariantResults.map((variant) => (
+                <div
+                  key={variant.id}
+                  className="d-flex justify-content-between align-items-center border-bottom py-2"
+                >
+                  <div>
+                    <p className="mb-0 font-weight-bold">{variant.name}</p>
+                    <p className="mb-0 text-muted small">
+                      <strong>ID:</strong> {variant.id}
+                      {variant.product_name && (
+                        <>, <strong>Product:</strong> {variant.product_name}</>
+                      )}
+                      {variant.category_info && (
+                        <>, <strong>Category:</strong> {variant.category_info}</>
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => handleSelectVariant(variant)}
+                  >
+                    Select
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted">No variants found matching your search criteria</p>
+          )
+        )}
+      </div>
+    );
+  };
+
   // If modal isn't visible or the portal element isn't ready, don't render anything
   if (!isVisible || !modalElement) return null;
 
@@ -358,9 +506,12 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     }}>
       <div className="modal-dialog modal-lg" onClick={e => e.stopPropagation()}>
         <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">Map Variant with Vendor</h5>
-            <button type="button" className="close" onClick={onCancel}>
+          <div className="modal-header bg-primary text-white">
+            <h5 className="modal-title">
+              <i className="fas fa-link mr-2"></i>
+              Map Variant with Vendor
+            </h5>
+            <button type="button" className="close text-white" onClick={onCancel}>
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
@@ -371,9 +522,20 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
               value={formData.variant_id}
             />
 
+            {/* Error state */}
+            {error && (
+              <div className="alert alert-danger mb-3">
+                <i className="fas fa-exclamation-triangle mr-2"></i>
+                {error}
+              </div>
+            )}
+
             {/* Variant Search Section */}
             <div className="mb-4">
-              <h6 className="mb-3 font-weight-bold">Search and Select Variant</h6>
+              <h6 className="mb-3 font-weight-bold text-primary">
+                <i className="fas fa-search mr-2"></i>
+                Search and Select Variant
+              </h6>
               
               <div className="input-group mb-3">
                 <span className="input-group-text">
@@ -389,85 +551,18 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
               </div>
               
               {/* Selected Variant Display */}
-              {selectedVariant && (
-                <div className="mb-4 p-3 border rounded bg-light">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <h6 className="mb-2 font-weight-bold">Selected Variant</h6>
-                    <button 
-                      type="button" 
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={() => setSelectedVariant(null)}
-                    >
-                      <i className="fas fa-times"></i> Clear Selection
-                    </button>
-                  </div>
-                  <p className="mb-1 font-weight-bold">Variant Name:</p>
-                  <p>{selectedVariant.name}</p>
-                  {selectedVariant.product_name && (
-                    <>
-                      <p className="mb-1 font-weight-bold mt-2">Product:</p>
-                      <p>{selectedVariant.product_name}</p>
-                    </>
-                  )}
-                  {selectedVariant.category_info && (
-                    <>
-                      <p className="mb-1 font-weight-bold mt-2">Category:</p>
-                      <p>{selectedVariant.category_info}</p>
-                    </>
-                  )}
-                </div>
-              )}
+              {renderSelectedVariant()}
               
               {/* Search Results */}
-              {searchVariantTerm.length > 0 && (
-                <div className="border rounded p-3 mb-3">
-                  <h6 className="mb-3">
-                    {loadingVariants ? (
-                      <span>
-                        <i className="fa fa-spinner fa-spin me-2"></i>
-                        Searching variants...
-                      </span>
-                    ) : (
-                      searchVariantTerm.length < 3 ? 
-                        "Type at least 3 characters to search" : 
-                        `Search Results (${searchVariantResults.length})`
-                    )}
-                  </h6>
-                  
-                  {!loadingVariants && searchVariantTerm.length >= 3 && (
-                    searchVariantResults.length > 0 ? (
-                      <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="variant-search-results">
-                        {searchVariantResults.map((variant) => (
-                          <div
-                            key={variant.id}
-                            className="d-flex justify-content-between align-items-center border-bottom py-2"
-                          >
-                            <div>
-                              <p className="mb-0 font-weight-bold">{variant.name}</p>
-                              <p className="mb-0 text-muted small">
-                                <strong>Product:</strong> {variant.product_name}
-                                {variant.category_info && (
-                                  <>, <strong>Category:</strong> {variant.category_info}</>
-                                )}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              onClick={() => handleSelectVariant(variant)}
-                            >
-                              Select
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-muted">No variants found matching your search criteria</p>
-                    )
-                  )}
-                </div>
-              )}
+              {renderSearchResults()}
             </div>
+
+            <hr className="my-4" />
+
+            <h6 className="mb-3 font-weight-bold text-primary">
+              <i className="fas fa-building mr-2"></i>
+              Select Vendor
+            </h6>
 
             <div className="row">
               <div className="col-md-6 mb-3">
@@ -516,10 +611,13 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
             {/* Display list of mappings */}
             {mappings.length > 0 && (
               <div className="mb-4">
-                <h6 className="mb-3 font-weight-bold">Vendors to Map</h6>
+                <h6 className="mb-3 font-weight-bold text-primary">
+                  <i className="fas fa-list mr-2"></i>
+                  Vendors to Map
+                </h6>
                 <div className="table-responsive">
                   <table className="table table-bordered table-hover">
-                    <thead>
+                    <thead className="thead-light">
                       <tr>
                         <th>Variant</th>
                         <th>Vendor</th>
@@ -533,12 +631,17 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
                           <td>
                             <strong>{mapping.variant?.name || 'Unknown Variant'}</strong>
                             <br />
-                            <small>{mapping.variant?.product_name || ''}</small>
+                            <small className="text-muted">
+                              {mapping.variant?.product_name || ''}
+                              {mapping.variant?.category_info && (
+                                <> - {mapping.variant.category_info}</>
+                              )}
+                            </small>
                           </td>
                           <td>
                             <strong>{mapping.vendor.label}</strong>
                             <br />
-                            <small>{mapping.vendor.email}</small>
+                            <small className="text-muted">{mapping.vendor.email}</small>
                           </td>
                           <td>
                             {mapping.approved_by && mapping.approved_by.length > 0 
