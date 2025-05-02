@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { mapVariantWithVendor } from '../../utils/services/product-management';
 import { getAllVendors } from '../../utils/services/vendor-management';
 import { toast } from 'react-toastify';
-import { Modal, Button } from 'react-bootstrap';
 
-// Changes by Agnij May 02, 2025 [Enhanced modal to prevent disappearing on click with additional event prevention]
+// Changes by Agnij August 15, 2024 [Implemented portal-based modal to completely isolate it from other UI elements]
 const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [vendors, setVendors] = useState([]);
@@ -12,34 +12,56 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     variant_id: '',
     vendor_id: ''
   });
+  const [modalElement, setModalElement] = useState(null);
+
+  // Create portal element for modal
+  useEffect(() => {
+    // Only create the element if it doesn't already exist
+    if (!document.getElementById('variant-vendor-modal-root')) {
+      const el = document.createElement('div');
+      el.id = 'variant-vendor-modal-root';
+      document.body.appendChild(el);
+      setModalElement(el);
+    } else {
+      setModalElement(document.getElementById('variant-vendor-modal-root'));
+    }
+
+    // Cleanup function to remove the element when component unmounts
+    return () => {
+      const el = document.getElementById('variant-vendor-modal-root');
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+    };
+  }, []);
 
   // Fetch vendors when modal becomes visible
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        console.log("Fetching vendors for mapping modal");
-        setLoading(true);
-        const vendorsResponse = await getAllVendors();
-        if (vendorsResponse?.data?.data) {
-          console.log(`Fetched ${vendorsResponse.data.data.length} vendors`);
-          setVendors(vendorsResponse.data.data);
-        } else {
-          console.error("Invalid vendor response:", vendorsResponse);
-          toast.error('Failed to load vendors: Invalid response');
-        }
-      } catch (error) {
-        console.error('Error fetching vendors:', error);
-        toast.error('Failed to load vendors');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (isVisible) {
-      fetchData();
+      fetchVendors();
       resetForm();
     }
   }, [isVisible]);
+
+  const fetchVendors = async () => {
+    try {
+      console.log("Fetching vendors for mapping modal");
+      setLoading(true);
+      const vendorsResponse = await getAllVendors();
+      if (vendorsResponse?.data?.data) {
+        console.log(`Fetched ${vendorsResponse.data.data.length} vendors`);
+        setVendors(vendorsResponse.data.data);
+      } else {
+        console.error("Invalid vendor response:", vendorsResponse);
+        toast.error('Failed to load vendors: Invalid response');
+      }
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+      toast.error('Failed to load vendors');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Reset form
   const resetForm = () => {
@@ -62,8 +84,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    // Stop event propagation to prevent modal closure
-    e.stopPropagation();
     console.log(`Updating ${name} to ${value}`);
     setFormData(prev => ({
       ...prev,
@@ -71,12 +91,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
+  const handleSubmit = async () => {
     if (!formData.vendor_id) {
       toast.error('Please select a vendor');
       return;
@@ -93,7 +108,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
       if (response?.data?.status === 1 || response?.status === 1) {
         toast.success('Variant mapped with vendor successfully');
         resetForm();
-        onSuccess && onSuccess();
+        if (onSuccess) onSuccess();
         onCancel();
       } else {
         toast.error(response?.data?.message || response?.message || 'Failed to map variant with vendor');
@@ -117,41 +132,54 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     }
   };
 
-  // Prevent modal from closing on clicks and mousedown
-  const preventClose = (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-  };
+  // If modal isn't visible or the portal element isn't ready, don't render anything
+  if (!isVisible || !modalElement) return null;
 
-  // Use React Bootstrap Modal to fix disappearing on click issue
-  return (
-    <Modal 
-      show={isVisible} 
-      onHide={onCancel}
-      backdrop="static" 
-      keyboard={false}
-      centered
-      style={{ zIndex: 1050 }}
-      onClick={preventClose}
-      onMouseDown={preventClose}
-      dialogAs={(props) => (
-        <div 
-          {...props} 
-          onClick={preventClose} 
-          onMouseDown={preventClose}
-          className={`${props.className || ''} modal-dialog`}
-        />
-      )}
-    >
-      <Modal.Header closeButton onClick={(e) => e.stopPropagation()}>
-        <Modal.Title>Map Variant with Vendor</Modal.Title>
-      </Modal.Header>
-      <Modal.Body onClick={preventClose} onMouseDown={preventClose}>
-        <form onSubmit={handleSubmit} onClick={preventClose} onMouseDown={preventClose}>
-          <input 
-            type="hidden" 
-            name="variant_id" 
-            value={formData.variant_id} 
+  // Use portal to render the modal outside the normal component hierarchy
+  return ReactDOM.createPortal(
+    <div className="custom-modal-overlay" onClick={onCancel}>
+      <div 
+        className="custom-modal-container" 
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'white',
+          padding: '20px',
+          borderRadius: '5px',
+          boxShadow: '0 5px 15px rgba(0,0,0,0.2)',
+          zIndex: 2000,
+          minWidth: '400px',
+          maxWidth: '90%'
+        }}
+      >
+        <div className="custom-modal-header">
+          <h4 style={{ margin: 0 }}>Map Variant with Vendor</h4>
+          <button 
+            type="button" 
+            className="close" 
+            onClick={onCancel}
+            style={{
+              position: 'absolute',
+              top: '15px',
+              right: '15px',
+              border: 'none',
+              background: 'none',
+              fontSize: '20px',
+              cursor: 'pointer'
+            }}
+          >
+            <span>&times;</span>
+          </button>
+        </div>
+
+        <div className="custom-modal-body" style={{ margin: '15px 0' }}>
+          <input
+            type="hidden"
+            name="variant_id"
+            value={formData.variant_id}
           />
 
           {variant && (
@@ -173,7 +201,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
             </div>
           )}
 
-          <div className="form-group" onClick={preventClose} onMouseDown={preventClose}>
+          <div className="form-group">
             <label htmlFor="vendor_id">Vendor <span className="text-danger">*</span></label>
             <select
               id="vendor_id"
@@ -181,8 +209,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
               className="form-control"
               value={formData.vendor_id}
               onChange={handleInputChange}
-              onClick={preventClose}
-              onMouseDown={preventClose}
               required
             >
               <option value="">Select a vendor</option>
@@ -193,21 +219,43 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
               ))}
             </select>
           </div>
-        </form>
-      </Modal.Body>
-      <Modal.Footer onClick={preventClose} onMouseDown={preventClose}>
-        <Button variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button 
-          variant="primary" 
-          onClick={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? 'Processing...' : 'Map Variant'}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+        </div>
+
+        <div className="custom-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button 
+            type="button" 
+            className="btn btn-secondary mr-2" 
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? 'Processing...' : 'Map Variant'}
+          </button>
+        </div>
+      </div>
+      
+      <style jsx>{`
+        .custom-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1999;
+        }
+      `}</style>
+    </div>,
+    modalElement
   );
 };
 

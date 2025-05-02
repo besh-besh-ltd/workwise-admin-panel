@@ -824,6 +824,13 @@ const ProductManagement = () => {
   }  
 
   const handleOpenProductMap = () => {
+    // Save the current state before opening modal
+    const prevTab = activeTab;
+    const currentTabContent = document.querySelector('.tab-pane.active');
+    if (currentTabContent) {
+      currentTabContent.style.display = 'block';
+    }
+
     setOpenProductMap(true);
     setIsVariantMapping(true); // Always set to true for variant mapping
     
@@ -1066,6 +1073,12 @@ const ProductManagement = () => {
   
   // Changes by Agnij Aprill 30, 2025 [Added tab switching function]
   const handleTabChange = (tabName) => {
+    // Store current tabs content in DOM
+    const currentTab = document.querySelector('.tab-pane.active');
+    if (currentTab) {
+      currentTab.style.display = 'none';
+    }
+
     setActiveTab(tabName);
     updateUrlParams({ tab: tabName });
     
@@ -1783,32 +1796,29 @@ const ProductManagement = () => {
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
-      .product-search-results {
-        scrollbar-width: thin;
-        scrollbar-color: #007bff #f8f9fa;
+      .tab-pane {
+        opacity: 0;
+        transition: opacity 0.15s ease-in-out;
       }
       
-      .product-search-results::-webkit-scrollbar {
-        width: 6px;
+      .tab-pane.active.show {
+        opacity: 1;
       }
       
-      .product-search-results::-webkit-scrollbar-track {
-        background: #f8f9fa;
+      .nav-tabs .nav-link {
+        transition: all 0.2s ease-in-out;
       }
-      
-      .product-search-results::-webkit-scrollbar-thumb {
-        background-color: #007bff;
-        border-radius: 6px;
+
+      .nav-tabs .nav-link.active {
+        border-color: transparent;
+        border-bottom: 2px solid #0046ad;
+        color: #0046ad;
+        font-weight: 500;
       }
-      
-      .product-search-results > div {
-        transition: background-color 0.2s ease;
-        padding: 8px;
-        border-radius: 4px;
-      }
-      
-      .product-search-results > div:hover {
-        background-color: #f8f9fa;
+
+      .nav-tabs .nav-link:not(.active):hover {
+        border-color: transparent;
+        border-bottom: 2px solid rgba(0, 70, 173, 0.3);
       }
     `;
     document.head.appendChild(style);
@@ -1911,14 +1921,19 @@ const ProductManagement = () => {
           {/* Changes by Agnij June 14, 2024 [Added tab navigation] */}
           <div className="card card-primary card-outline card-tabs">
             <div className="card-header p-0 pt-1 border-bottom-0">
-              <ul className="nav nav-tabs" role="tablist">
+              <ul className="nav nav-tabs" role="tablist" id="productTabs">
                 <li className="nav-item">
                   <a 
                     className={`nav-link ${activeTab === 'products' ? 'active' : ''}`} 
-                    onClick={() => handleTabChange('products')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleTabChange('products');
+                    }}
                     role="tab" 
                     aria-selected={activeTab === 'products'}
-                    href="#"
+                    href="#products-tab"
+                    data-bs-toggle="tab"
+                    data-bs-target="#products-tab"
                   >
                     Products
                   </a>
@@ -1926,10 +1941,15 @@ const ProductManagement = () => {
                 <li className="nav-item">
                   <a 
                     className={`nav-link ${activeTab === 'variants' ? 'active' : ''}`} 
-                    onClick={() => handleTabChange('variants')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleTabChange('variants');
+                    }}
                     role="tab" 
                     aria-selected={activeTab === 'variants'}
-                    href="#"
+                    href="#variants-tab"
+                    data-bs-toggle="tab"
+                    data-bs-target="#variants-tab"
                   >
                     Variants
                   </a>
@@ -1937,10 +1957,15 @@ const ProductManagement = () => {
                 <li className="nav-item">
                   <a 
                     className={`nav-link ${activeTab === 'mappings' ? 'active' : ''}`} 
-                    onClick={() => handleTabChange('mappings')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleTabChange('mappings');
+                    }}
                     role="tab" 
                     aria-selected={activeTab === 'mappings'}
-                    href="#"
+                    href="#mappings-tab"
+                    data-bs-toggle="tab"
+                    data-bs-target="#mappings-tab"
                   >
                     Mappings
                   </a>
@@ -1949,9 +1974,9 @@ const ProductManagement = () => {
             </div>
             
             <div className="card-body">
-              <div className="tab-content">
+              <div className="tab-content" id="productTabsContent">
                 {/* Products Tab */}
-                <div className={`tab-pane fade ${activeTab === 'products' ? 'active show' : ''}`}>
+                <div className={`tab-pane fade ${activeTab === 'products' ? 'active show' : ''}`} id="products-tab" role="tabpanel" aria-labelledby="products-tab">
                   {/* Filter controls for products */}
             {!enableBulkUpload && !enableBulkProdUpload && !openProductMap && (
                     <div className="card card-body">
@@ -2333,7 +2358,7 @@ const ProductManagement = () => {
           </div>
 
                 {/* Variants Tab */}
-                <div className={`tab-pane fade ${activeTab === 'variants' ? 'active show' : ''}`}>
+                <div className={`tab-pane fade ${activeTab === 'variants' ? 'active show' : ''}`} id="variants-tab" role="tabpanel" aria-labelledby="variants-tab">
                   <div className="card card-body">
                     <div className="row g-3">
                       {/* Search and filters for variants */}
@@ -2679,7 +2704,7 @@ const ProductManagement = () => {
                 </div>
                 
                 {/* Mappings Tab */}
-                <div className={`tab-pane fade ${activeTab === 'mappings' ? 'active show' : ''}`}>
+                <div className={`tab-pane fade ${activeTab === 'mappings' ? 'active show' : ''}`} id="mappings-tab" role="tabpanel" aria-labelledby="mappings-tab">
                   <div className="card card-body">
                     <div className="row g-3">
                       {/* Search and filters for mappings */}

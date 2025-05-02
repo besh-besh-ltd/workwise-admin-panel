@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import Layout from "../../../components/layout";
 import { getAdminProfile } from "@/utils/services/login";
 import { searchAllVariants, getVariantMappings, mapVariantWithVendor } from '@/utils/services/product-management';
 import { useRouter } from 'next/router';
@@ -211,7 +210,7 @@ const MappingDetail = () => {
   };
 
   return (
-    <Layout>
+    <section className="content">
       <div className="content-header">
         <div className="container-fluid">
           <div className="row mb-2">
@@ -488,7 +487,7 @@ const MappingDetail = () => {
           )}
         </div>
       </section>
-    </Layout>
+    </section>
   );
 };
 

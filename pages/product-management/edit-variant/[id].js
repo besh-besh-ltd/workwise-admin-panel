@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import Layout from "../../../components/layout";
 import { getAdminProfile } from "@/utils/services/login";
 import { searchAllVariants, updateProductVariant, getAllProducts } from '@/utils/services/product-management';
 import { useRouter } from 'next/router';
@@ -214,7 +213,7 @@ const EditVariant = () => {
   };
 
   return (
-    <Layout>
+    
       <section className="content">
         <div className="container-fluid">
           <div className="row mb-2">
@@ -373,7 +372,6 @@ const EditVariant = () => {
           )}
         </div>
       </section>
-    </Layout>
   );
 };
 
