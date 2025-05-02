@@ -1179,8 +1179,7 @@ const ProductManagement = () => {
     }
   };
   
-  // Changes by Agnij May 02, 2025 [Added function to get all mappings]
-  // Changes by Agnij August 15, 2024 [Updated to match exactly how getProducts works]
+  // Changes by Agnij May 2, 2025 [Fixed mappings data handling]
   const getAllMappings = () => {
     setLoadingMappings(true);
     
@@ -1213,67 +1212,92 @@ const ProductManagement = () => {
         params.limit               // Page size
       )
         .then(response => {
-          console.log("Mappings response:", response);
+          // Changes by Agnij May 2, 2025 [Fixed response data handling]
+          console.log("Mappings response structure:", {
+            responseType: typeof response,
+            hasData: !!response,
+            isArray: Array.isArray(response),
+            length: Array.isArray(response) ? response.length : 'not an array',
+            firstItem: Array.isArray(response) && response.length > 0 ? response[0] : 'no items'
+          });
           
-          // Changes by Agnij May 02, 2025 [Enhanced handling of response data and pagination]
-          if (response?.data) {
-            const mappingsData = response.data || [];
-            const paginationData = response.pagination || {};
-            
-            console.log("Mappings data:", mappingsData);
-            console.log("Pagination data:", paginationData);
+          // Handle different response formats
+          let mappingsData = [];
+          let paginationData = {};
           
-            if (mappingsData && Array.isArray(mappingsData)) {
-              // Format mappings for display
-              let formattedMappings = mappingsData.map(mapping => {
-                // Use the vendor_display_name which combines organization name and name
-                const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
-                
-                return {
-                  id: mapping.variant_id,
-                  mapping_id: mapping.mapping_id,
-                  name: mapping.variant_name || `Variant ID: ${mapping.variant_id}`,
-                  product_name: mapping.product_name || 'Unknown Product',
-                  category_info: '',  // No category info in simplified query
-                  vendor_id: mapping.vendor_id,
-                  vendor_name: vendorName,
-                  vendor_email: mapping.vendor_email || 'N/A',
-                  mapped_at: mapping.mapped_at,
-                  mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 'Unknown',
-                  is_mapped: true,
-                  is_approve: mapping.is_approve || 0,
-                  reject_reason: mapping.reject_reason,
-                  created_by: mapping.created_by,
-                  updated_by: mapping.updated_by
-                };
-              });
-              
-              setMappings(formattedMappings);
-              
-              // Changes by Agnij August 15, 2024 [Ensuring pagination is always visible and matches products tab]
-              // Calculate total pages from pagination data or estimated from data length
-              let totalPages = 1; // Default to at least 1 page
-              
-              if (paginationData.pages && paginationData.pages > 0) {
-                // Use server-provided page count if available
-                totalPages = paginationData.pages;
-              } else if (paginationData.total) {
-                // Calculate from total count if available
-                totalPages = Math.ceil(paginationData.total / params.limit);
-              } else if (formattedMappings.length > 0) {
-                // Estimate based on current page data
-                totalPages = Math.max(1, Math.ceil(formattedMappings.length / params.limit));
-              }
-              
-              console.log("Setting total mapping pages:", totalPages);
-              setMappingsTotalPages(totalPages);
-            } else {
-              console.log("No mappings found or invalid format");
-              setMappings([]);
-              setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
+          if (Array.isArray(response)) {
+            // Direct array response
+            mappingsData = response;
+            // Estimate pagination since we have array data
+            paginationData = {
+              total: mappingsData.length * 10, // Rough estimate
+              page: params.page,
+              limit: params.limit,
+              pages: Math.ceil(mappingsData.length * 10 / params.limit)
+            };
+          } else if (response?.data) {
+            if (Array.isArray(response.data)) {
+              // Response with data array
+              mappingsData = response.data;
+              paginationData = response.pagination || {};
+            } else if (response.data.data && Array.isArray(response.data.data)) {
+              // Nested data object
+              mappingsData = response.data.data;
+              paginationData = response.data.pagination || {};
             }
+          }
+          
+          console.log("Processed mappings data:", {
+            count: mappingsData.length,
+            pagination: paginationData
+          });
+          
+          if (mappingsData && mappingsData.length > 0) {
+            // Format mappings for display
+            let formattedMappings = mappingsData.map(mapping => {
+              // Use the vendor_display_name which combines organization name and name
+              const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
+              
+              return {
+                id: mapping.variant_id || mapping.id,
+                mapping_id: mapping.mapping_id || mapping.id,
+                name: mapping.variant_name || mapping.name || `Variant ID: ${mapping.variant_id || mapping.id}`,
+                product_name: mapping.product_name || 'Unknown Product',
+                category_info: mapping.category_names ? mapping.category_names.join(', ') : '',
+                vendor_id: mapping.vendor_id,
+                vendor_name: vendorName,
+                vendor_email: mapping.vendor_email || 'N/A',
+                mapped_at: mapping.mapped_at || mapping.created_at,
+                mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 
+                                      mapping.created_at ? new Date(mapping.created_at).toLocaleString() : 'Unknown',
+                is_mapped: true,
+                is_approve: mapping.is_approve || 0,
+                reject_reason: mapping.reject_reason,
+                created_by: mapping.created_by,
+                updated_by: mapping.updated_by
+              };
+            });
+            
+            setMappings(formattedMappings);
+            
+            // Calculate total pages from pagination data or estimated from data length
+            let totalPages = 1; // Default to at least 1 page
+            
+            if (paginationData.pages && paginationData.pages > 0) {
+              // Use server-provided page count if available
+              totalPages = paginationData.pages;
+            } else if (paginationData.total) {
+              // Calculate from total count if available
+              totalPages = Math.ceil(paginationData.total / params.limit);
+            } else if (formattedMappings.length > 0) {
+              // Estimate based on current page data
+              totalPages = Math.max(1, Math.ceil(formattedMappings.length / params.limit) * 10);
+            }
+            
+            console.log("Setting total mapping pages:", totalPages);
+            setMappingsTotalPages(totalPages);
           } else {
-            console.log("Empty response data");
+            console.log("No mappings found or invalid format");
             setMappings([]);
             setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
           }
@@ -1362,8 +1386,7 @@ const ProductManagement = () => {
       });
   };
   
-  // Changes by Agnij May 31, 2025 [Updated mappings pagination to include vendor filter]
-  // Changes by Agnij August 15, 2024 [Fixed mappings pagination to work exactly like products tab]
+  // Changes by Agnij May 31, 2025 [Updated mappings pagination to handle different response formats]
   const handleMappingsPageClick = (event) => {
     try {
       if (event.selected === undefined) {
@@ -1416,63 +1439,91 @@ const ProductManagement = () => {
           params.limit                  // page size
         )
           .then(response => {
-            console.log("Mappings page change response:", response?.data);
+            // Changes by Agnij May 3, 2025 [Fixed response processing for page changes]
+            console.log("Mappings page change response structure:", {
+              responseType: typeof response,
+              hasData: !!response,
+              isArray: Array.isArray(response),
+              length: Array.isArray(response) ? response.length : 'not an array'
+            });
             
-            if (response?.data?.data) {
-              // Changes by Agnij May 02, 2025 [Updated to use new pagination format from backend]
-              const mappingsData = response.data.data;
-              const paginationData = response.data.pagination || {};
-              
-              console.log("Mappings page data:", mappingsData);
-              console.log("Pagination data:", paginationData);
-              
-              if (mappingsData && Array.isArray(mappingsData)) {
-                // Format mappings for display
-                let formattedMappings = mappingsData.map(mapping => {
-                  // Use the vendor_display_name which combines organization name and name
-                  const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
-                  
-                  return {
-                    id: mapping.variant_id,
-                    mapping_id: mapping.mapping_id,
-                    name: mapping.variant_name || `Variant ID: ${mapping.variant_id}`,
-                    product_name: mapping.product_name || 'Unknown Product',
-                    category_info: '',  // No category info in simplified query
-                    vendor_id: mapping.vendor_id,
-                    vendor_name: vendorName,
-                    vendor_email: mapping.vendor_email || 'N/A',
-                    mapped_at: mapping.mapped_at,
-                    mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 'Unknown',
-                    is_mapped: true
-                  };
-                });
-                
-                setMappings(formattedMappings);
-                
-                // Changes by Agnij May 02, 2025 [Ensuring pagination is always visible]
-                // Calculate total pages from pagination data or estimated from data length
-                let totalPages = 1; // Default to at least 1 page
-                
-                if (paginationData.pages && paginationData.pages > 0) {
-                  // Use server-provided page count if available
-                  totalPages = paginationData.pages;
-                } else if (paginationData.total) {
-                  // Calculate from total count if available
-                  totalPages = Math.ceil(paginationData.total / params.limit);
-                } else if (formattedMappings.length > 0) {
-                  // Estimate based on current page data
-                  totalPages = Math.max(1, Math.ceil(formattedMappings.length / params.limit));
-                }
-                
-                console.log("Setting total pages:", totalPages);
-                setMappingsTotalPages(totalPages);
-              } else {
-                console.log("No mappings found or invalid format in page response");
-                setMappings([]);
-                setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
+            // Handle different response formats
+            let mappingsData = [];
+            let paginationData = {};
+            
+            if (Array.isArray(response)) {
+              // Direct array response
+              mappingsData = response;
+              // Estimate pagination since we have array data
+              paginationData = {
+                total: mappingsData.length * 10, // Rough estimate
+                page: params.page,
+                limit: params.limit,
+                pages: Math.ceil(mappingsData.length * 10 / params.limit)
+              };
+            } else if (response?.data) {
+              if (Array.isArray(response.data)) {
+                // Response with data array
+                mappingsData = response.data;
+                paginationData = response.pagination || {};
+              } else if (response.data.data && Array.isArray(response.data.data)) {
+                // Nested data object
+                mappingsData = response.data.data;
+                paginationData = response.data.pagination || {};
               }
+            }
+            
+            console.log("Processed page change data:", {
+              count: mappingsData.length,
+              pagination: paginationData
+            });
+            
+            if (mappingsData && mappingsData.length > 0) {
+              // Format mappings for display
+              let formattedMappings = mappingsData.map(mapping => {
+                // Use the vendor_display_name which combines organization name and name
+                const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
+                
+                return {
+                  id: mapping.variant_id || mapping.id,
+                  mapping_id: mapping.mapping_id || mapping.id,
+                  name: mapping.variant_name || mapping.name || `Variant ID: ${mapping.variant_id || mapping.id}`,
+                  product_name: mapping.product_name || 'Unknown Product',
+                  category_info: mapping.category_names ? mapping.category_names.join(', ') : '',
+                  vendor_id: mapping.vendor_id,
+                  vendor_name: vendorName,
+                  vendor_email: mapping.vendor_email || 'N/A',
+                  mapped_at: mapping.mapped_at || mapping.created_at,
+                  mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 
+                                     mapping.created_at ? new Date(mapping.created_at).toLocaleString() : 'Unknown',
+                  is_mapped: true,
+                  is_approve: mapping.is_approve || 0,
+                  reject_reason: mapping.reject_reason,
+                  created_by: mapping.created_by,
+                  updated_by: mapping.updated_by
+                };
+              });
+              
+              setMappings(formattedMappings);
+              
+              // Calculate total pages from pagination data or estimated from data length
+              let totalPages = 1; // Default to at least 1 page
+              
+              if (paginationData.pages && paginationData.pages > 0) {
+                // Use server-provided page count if available
+                totalPages = paginationData.pages;
+              } else if (paginationData.total) {
+                // Calculate from total count if available
+                totalPages = Math.ceil(paginationData.total / params.limit);
+              } else if (formattedMappings.length > 0) {
+                // Estimate based on current page data
+                totalPages = Math.max(1, Math.ceil(formattedMappings.length / params.limit) * 10);
+              }
+              
+              console.log("Setting total pages:", totalPages);
+              setMappingsTotalPages(totalPages);
             } else {
-              console.log("Empty response data in page response");
+              console.log("No mappings found in page response");
               setMappings([]);
               setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
             }
