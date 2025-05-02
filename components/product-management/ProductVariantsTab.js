@@ -59,7 +59,14 @@ const ProductVariantsTab = ({ product }) => {
     setShowMapModal(false);
     setTimeout(() => {
       setSelectedVariant(null);
-    }, 100);
+    }, 200);
+  };
+
+  const handleModalClick = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   };
 
   const handleConfirmDelete = (variantId) => {
@@ -208,7 +215,11 @@ const ProductVariantsTab = ({ product }) => {
                         <button 
                           type="button" 
                           className="btn btn-info btn-sm" 
-                          onClick={() => handleMapVariant(variant)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleMapVariant(variant);
+                          }}
                         >
                           <i className="fas fa-link mr-1"></i> Map to Vendor
                         </button>
@@ -257,14 +268,12 @@ const ProductVariantsTab = ({ product }) => {
         onSuccess={fetchVariants}
       />
 
-      {showMapModal && (
-        <MapVariantVendorModal
-          isVisible={showMapModal}
-          onCancel={handleCloseMapModal}
-          variant={selectedVariant}
-          onSuccess={handleMappingSuccess}
-        />
-      )}
+      <MapVariantVendorModal
+        isVisible={showMapModal}
+        onCancel={handleCloseMapModal}
+        variant={selectedVariant}
+        onSuccess={handleMappingSuccess}
+      />
     </div>
   );
 };

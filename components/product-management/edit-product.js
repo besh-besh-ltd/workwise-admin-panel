@@ -105,7 +105,7 @@ const EditProduct = () => {
 			vendorListData.forEach(vendor => {
 				if (vendor.vendor_approved_by && vendor.vendor_approved_by.length > 0) {
 					vendor.vendor_approved_by.forEach(approval => {
-						if (!allApprovals.includes(approval.id)) {
+						if (approval && approval.id && !allApprovals.includes(approval.id)) {
 							allApprovals.push(approval.id);
 						}
 					});
@@ -202,16 +202,26 @@ const EditProduct = () => {
 	const getVendor = () => {
 		vendorList()
 			.then((rsp) => {
-				let lists = rsp.data.map((s) => ({
-					label: s.name,
-					value: s.id,
-				}));
-				lists.unshift({ label: "Select Vendor list", value: "" });
-				lists.push({ label: "Other", value: "o" });
-				setVendorData(lists);
+				// Changes by Agnij May 02, 2025 [Improved vendor data handling]
+				console.log("Vendor list API response:", rsp);
+				if (rsp && rsp.data && Array.isArray(rsp.data)) {
+					let lists = rsp.data.map((s) => ({
+						label: s.organization_name ? s.organization_name : s.name,
+						value: s.id,
+						email: s.email || "Email Not Available",
+						phone: s.mobile || "Phone Not Available",
+					}));
+					console.log("Formatted vendor list:", lists);
+					setVendorData(lists);
+				} else {
+					console.error("Invalid vendor list data:", rsp);
+					setVendorData([]);
+				}
 			})
 			.catch((error) => {
-				setcatloading(false);
+				console.error("Error fetching vendor list:", error);
+				toast.error("Failed to load vendors");
+				setVendorData([]);
 			});
 	};
 	const getVendorApproveList = () => {

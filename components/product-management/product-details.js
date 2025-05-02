@@ -3,10 +3,12 @@ import { getProductDetailsById } from "../../utils/services/product-management";
 import { useRouter } from "next/router";
 import ProductVariantsTab from './ProductVariantsTab';
 
+// Changes by Agnij May 02, 2025 [Improved product details component to fix loading issues]
 const ProductDetails = () => {
     const [productData, setProductData] = useState(null);
     const [vendorData, setVendorData] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('basic');
     const router = useRouter();
     const { id } = router.query;
@@ -19,21 +21,83 @@ const ProductDetails = () => {
 
     const getProductDetails = async () => {
         setLoading(true);
+        setError(null);
+        
         try {
+            console.log("Fetching product details for ID:", id);
             const response = await getProductDetailsById(id);
+            
+            console.log("API Response:", response);
+            
             if (response?.data?.data) {
+                console.log("Setting product data:", response.data.data);
                 setProductData(response.data.data);
-                setVendorData(response.data.vendor_list || []);
+                
+                // Check if vendor_list exists, otherwise use an empty array
+                if (response.data.vendor_list) {
+                    console.log("Setting vendor data:", response.data.vendor_list);
+                    setVendorData(response.data.vendor_list);
+                } else {
+                    console.log("No vendor list found, setting empty array");
+                    setVendorData([]);
+                }
+            } else {
+                console.error("Invalid response format:", response);
+                setError("Failed to load product details: Invalid response format");
             }
         } catch (error) {
             console.error("Error fetching product details:", error);
+            setError(`Failed to load product details: ${error.message || "Unknown error"}`);
         } finally {
             setLoading(false);
         }
     };
 
+    // Show appropriate loading or error state
+    if (loading) {
+        return (
+            <div className="p-4 d-flex justify-content-center align-items-center" style={{ minHeight: "300px" }}>
+                <div className="spinner-border text-primary" role="status">
+                    <span className="sr-only">Loading product details...</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="p-4">
+                <div className="alert alert-danger">
+                    <h4 className="alert-heading">Error Loading Product</h4>
+                    <p>{error}</p>
+                    <hr/>
+                    <button 
+                        className="btn btn-outline-danger"
+                        onClick={() => getProductDetails()}
+                    >
+                        <i className="fas fa-sync-alt mr-2"></i> Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (!productData) {
-        return <div className="p-4">Loading product details...</div>;
+        return (
+            <div className="p-4">
+                <div className="alert alert-warning">
+                    <h4 className="alert-heading">No Product Found</h4>
+                    <p>Could not find the requested product. It may have been deleted or you don't have permission to view it.</p>
+                    <hr/>
+                    <button 
+                        className="btn btn-primary"
+                        onClick={() => router.push('/product-management')}
+                    >
+                        <i className="fas fa-arrow-left mr-2"></i> Back to Products
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -41,7 +105,19 @@ const ProductDetails = () => {
             <div className="content-header">
                 <div className="container-fluid">
                     <div className="row mb-2">
-                        <h1>Product Details</h1>
+                        <div className="col-sm-6">
+                            <h1>Product Details</h1>
+                        </div>
+                        <div className="col-sm-6">
+                            <div className="float-sm-right">
+                                <button 
+                                    className="btn btn-primary"
+                                    onClick={() => router.push('/product-management')}
+                                >
+                                    <i className="fas fa-arrow-left mr-2"></i> Back to Products
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -51,8 +127,8 @@ const ProductDetails = () => {
                     <div className="card-body">
                         <div className="product-info mb-4">
                             <h2>{productData.name}</h2>
-                            <p><strong>Manufacturer:</strong> {productData.manufacturer}</p>
-                            <p><strong>Vendor:</strong> {productData.vendor_name}</p>
+                            {productData.manufacturer && <p><strong>Manufacturer:</strong> {productData.manufacturer}</p>}
+                            {productData.vendor_name && <p><strong>Vendor:</strong> {productData.vendor_name}</p>}
                         </div>
 
                         {/* Bootstrap Tabs */}
@@ -101,19 +177,24 @@ const ProductDetails = () => {
                                                 <h3 className="card-title">Gallery Images</h3>
                                             </div>
                                             <div className="card-body">
-                                                <div className="gallery-panel">
+                                                <div className="gallery-panel d-flex flex-wrap">
                                                     {productData.product_images &&
-                                                        productData.product_images.length > 0 &&
-                                                        productData.product_images
+                                                        productData.product_images.length > 0 ?
+                                                        (productData.product_images
                                                             .filter(image => image.is_featured === 0)
                                                             .map((image, index) => (
-                                                                <div className="gallery-image-panel" key={index}>
+                                                                <div className="gallery-image-panel m-2" key={index}>
                                                                     <img
                                                                         src={image.product_image_url}
                                                                         alt="Gallery Image"
+                                                                        style={{ maxWidth: '150px', maxHeight: '150px', objectFit: 'contain' }}
+                                                                        className="img-thumbnail"
                                                                     />
                                                                 </div>
                                                             ))
+                                                        ) : (
+                                                            <p className="text-muted">No gallery images available</p>
+                                                        )
                                                     }
                                                 </div>
                                             </div>
@@ -126,19 +207,24 @@ const ProductDetails = () => {
                                                 <h3 className="card-title">Featured Image</h3>
                                             </div>
                                             <div className="card-body">
-                                                <div className="featured-panel">
+                                                <div className="featured-panel text-center">
                                                     {productData.product_images &&
-                                                        productData.product_images.length > 0 &&
-                                                        productData.product_images
+                                                        productData.product_images.length > 0 ?
+                                                        (productData.product_images
                                                             .filter(image => image.is_featured === 1)
                                                             .map((image, index) => (
                                                                 <div className="featured-image-panel" key={index}>
                                                                     <img
                                                                         src={image.product_image_url}
                                                                         alt="Featured Image"
+                                                                        style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }}
+                                                                        className="img-fluid"
                                                                     />
                                                                 </div>
                                                             ))
+                                                        ) : (
+                                                            <p className="text-muted">No featured image available</p>
+                                                        )
                                                     }
                                                 </div>
                                             </div>
@@ -153,14 +239,20 @@ const ProductDetails = () => {
                                             <div className="card-body">
                                                 <div className="product-categories-panel">
                                                     {productData.product_categories &&
-                                                        productData.product_categories.length > 0 &&
-                                                        productData.product_categories.map((data, index) => (
-                                                            <div className="product-categories" key={index}>
-                                                                <ul>
-                                                                    <li>{data.category_name}</li>
+                                                        productData.product_categories.length > 0 ?
+                                                        (
+                                                            <div className="product-categories">
+                                                                <ul className="list-group">
+                                                                    {productData.product_categories.map((data, index) => (
+                                                                        <li className="list-group-item" key={index}>
+                                                                            {data.category_name}
+                                                                        </li>
+                                                                    ))}
                                                                 </ul>
                                                             </div>
-                                                        ))
+                                                        ) : (
+                                                            <p className="text-muted">No categories assigned</p>
+                                                        )
                                                     }
                                                 </div>
                                             </div>
@@ -182,20 +274,27 @@ const ProductDetails = () => {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {vendorData.length > 0 ? (
+                                                        {vendorData && vendorData.length > 0 ? (
                                                             vendorData.map((item, index) => (
                                                                 <tr key={item.id || index}>
                                                                     <td>{index + 1}</td>
                                                                     <td>{item.vendor_name}</td>
-                                                                    <td className="d-flex">
+                                                                    <td>
                                                                         {item.vendor_approved_by &&
-                                                                            item.vendor_approved_by.length > 0 &&
-                                                                            item.vendor_approved_by.map((data, i) => (
-                                                                                <div key={i}>
-                                                                                    {data.name}
-                                                                                    {i !== item.vendor_approved_by.length - 1 && <span>,&nbsp;</span>}
+                                                                            item.vendor_approved_by.length > 0 ?
+                                                                            (
+                                                                                <div className="d-flex flex-wrap">
+                                                                                    {item.vendor_approved_by.map((data, i) => (
+                                                                                        <div key={i} className="mr-2">
+                                                                                            {data.name || data}
+                                                                                            {i !== item.vendor_approved_by.length - 1 && <span>,&nbsp;</span>}
+                                                                                        </div>
+                                                                                    ))}
                                                                                 </div>
-                                                                            ))}
+                                                                            ) : (
+                                                                                <span className="text-muted">Not approved</span>
+                                                                            )
+                                                                        }
                                                                     </td>
                                                                 </tr>
                                                             ))

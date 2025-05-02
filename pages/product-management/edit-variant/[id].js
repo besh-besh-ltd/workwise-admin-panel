@@ -34,6 +34,39 @@ const EditVariant = () => {
       fetchVariantDetails();
     }
   }, [id]);
+  
+  // Changes by Agnij August 15, 2024 [Added effect to set the parent product when products and variant are loaded]
+  useEffect(() => {
+    // This effect runs when both products and formData.product_id are available
+    if (products.length > 0 && formData.product_id && 
+        !products.some(p => p.value === formData.product_id)) {
+      // If product_id exists but doesn't match any product in the list,
+      // try to fetch product details again or fetch the specific product
+      console.log(`Product ID ${formData.product_id} not found in products list, trying to fetch product details...`);
+      
+      // Simulate fetching the specific product for now
+      getAllProducts(1, 1, formData.product_id)
+        .then(response => {
+          if (response?.data && response.data.length > 0) {
+            const product = response.data[0];
+            if (product) {
+              // Add the product to the list if not already there
+              const newProduct = {
+                value: product.id,
+                label: product.name,
+                data: product
+              };
+              
+              console.log("Adding missing product to options:", newProduct);
+              setProducts(prev => [...prev, newProduct]);
+            }
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching specific product:", error);
+        });
+    }
+  }, [products, formData.product_id]);
 
   const getUserProfile = async () => {
     try {
@@ -89,13 +122,22 @@ const EditVariant = () => {
         
         if (variantData) {
           console.log("Found variant:", variantData);
+          
+          // Changes by Agnij August 15, 2024 [Ensuring product_id is correctly extracted from various possible response formats]
+          // Different backend endpoints may return product_id in different formats
+          const productId = variantData.product_id || 
+                           (variantData.product && variantData.product.id) || 
+                           '';
+          
+          console.log("Extracted product ID:", productId);
+          
           setVariant(variantData);
           
           // Initialize form data with variant details
           setFormData({
             name: variantData.name || variantData.variant_name || '',
             description: variantData.description || '',
-            product_id: variantData.product_id || ''
+            product_id: productId
           });
           
           // Set vendor approved by

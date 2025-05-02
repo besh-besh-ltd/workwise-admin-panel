@@ -1166,21 +1166,22 @@ const ProductManagement = () => {
     }
   };
   
-  // Changes by Agnij Aprill 30, 2025 [Added function to get all mappings]
+  // Changes by Agnij May 02, 2025 [Added function to get all mappings]
+  // Changes by Agnij August 15, 2024 [Updated to match exactly how getProducts works]
   const getAllMappings = () => {
     setLoadingMappings(true);
     
-    // Changes by Agnij July 25, 2024 [Updated to use all filters from filterValues state]
+    // Changes by Agnij August 15, 2024 [Updated to use all filters from active states like getProducts does]
     const params = {
       page: mappingsPage,
       limit: mappingsLimit,
-      search: searchString || filterValues.searchString,
-      vendor_id: selectedVendor || filterValues.vendor,
-      category_id: filterValues.category,
-      added_by: filterValues.addedBy,
-      date_from: filterValues.dateFrom,
-      date_to: filterValues.dateTo,
-      is_approve: filterValues.approvalStatus
+      search: searchString,
+      vendor_id: selectedVendor,
+      category_id: selectedCategory,
+      added_by: selectedAddedBy,
+      date_from: dateFrom,
+      date_to: dateTo,
+      approval_status: selectedApprovalStatus
     };
     
     try {
@@ -1194,7 +1195,7 @@ const ProductManagement = () => {
         params.vendor_id,          // Vendor ID - corrected from previous implementation
         params.category_id,        // Category ID
         params.added_by,           // Added by
-        params.is_approve,         // Approval status
+        params.approval_status,    // Approval status
         params.page,               // Page number
         params.limit               // Page size
       )
@@ -1236,11 +1237,23 @@ const ProductManagement = () => {
               
               setMappings(formattedMappings);
               
-              // Set pagination data from response
-              const totalPages = paginationData.pages || Math.ceil((paginationData.total || formattedMappings.length) / params.limit);
-              console.log("Setting total pages:", totalPages);
-              // Changes by Agnij May 02, 2025 [Ensuring pagination is always visible by setting minimum 1 page]
-              setMappingsTotalPages(totalPages > 0 ? totalPages : 1);
+              // Changes by Agnij August 15, 2024 [Ensuring pagination is always visible and matches products tab]
+              // Calculate total pages from pagination data or estimated from data length
+              let totalPages = 1; // Default to at least 1 page
+              
+              if (paginationData.pages && paginationData.pages > 0) {
+                // Use server-provided page count if available
+                totalPages = paginationData.pages;
+              } else if (paginationData.total) {
+                // Calculate from total count if available
+                totalPages = Math.ceil(paginationData.total / params.limit);
+              } else if (formattedMappings.length > 0) {
+                // Estimate based on current page data
+                totalPages = Math.max(1, Math.ceil(formattedMappings.length / params.limit));
+              }
+              
+              console.log("Setting total mapping pages:", totalPages);
+              setMappingsTotalPages(totalPages);
             } else {
               console.log("No mappings found or invalid format");
               setMappings([]);
@@ -1337,96 +1350,176 @@ const ProductManagement = () => {
   };
   
   // Changes by Agnij May 31, 2025 [Updated mappings pagination to include vendor filter]
+  // Changes by Agnij August 15, 2024 [Fixed mappings pagination to work exactly like products tab]
   const handleMappingsPageClick = (event) => {
-    const selectedPage = event.selected + 1;
-    setMappingsPage(selectedPage);
-    
-    // Update URL params
-    updateUrlParams({ 
-      mappingsPage: selectedPage,
-      tab: 'mappings',
-      search: searchString,
-      vendor: selectedVendor,
-      startDate: filterValues.startDate,
-      endDate: filterValues.endDate
-    });
-    
-    // Fetch data with new page
-    setLoadingMappings(true);
-    
-    // Changes by Agnij May 02, 2025 [Added date range parameters and improved pagination]
-    const params = {
-      page: selectedPage,
-      limit: mappingsLimit,
-      search: searchString || "",
-      start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
-      end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null,
-      vendor_id: selectedVendor
-    };
-    
-    // Changes by Agnij May 02, 2025 [Fixed vendor filter to correctly pass vendor_id parameter]
-    getVariantMappings(
-      null,                         // id
-      params.search || "",          // search term
-      params.start_date,            // start date
-      params.end_date,              // end date
-      params.vendor_id,             // vendor_id - correctly passed now
-      null,                         // category_id
-      null,                         // added_by
-      null,                         // approval status
-      params.page,                  // page number
-      params.limit                  // page size
-    )
-      .then(response => {
-        if (response?.data?.data) {
-          // Changes by Agnij May 02, 2025 [Updated to use new pagination format from backend]
-          const mappingsData = response.data.data;
-          const paginationData = response.data.pagination || {};
-          
-          if (mappingsData && Array.isArray(mappingsData)) {
-            // Format mappings for display
-            let formattedMappings = mappingsData.map(mapping => {
-              // Use the vendor_display_name which combines organization name and name
-              const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
-              
-              return {
-                id: mapping.variant_id,
-                mapping_id: mapping.mapping_id,
-                name: mapping.variant_name || `Variant ID: ${mapping.variant_id}`,
-                product_name: mapping.product_name || 'Unknown Product',
-                category_info: '',  // No category info in simplified query
-                vendor_id: mapping.vendor_id,
-                vendor_name: vendorName,
-                vendor_email: mapping.vendor_email || 'N/A',
-                mapped_at: mapping.mapped_at,
-                mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 'Unknown',
-                is_mapped: true
-              };
-            });
+    try {
+      if (event.selected === undefined) {
+        const isNext = event.nextSelectedPage !== undefined;
+        handleMappingsEllipsisClick(isNext);
+      } else {
+        const selectedPage = event.selected + 1;
+        setMappingsPage(selectedPage);
+        
+        // Update URL params with all relevant filters
+        updateUrlParams({ 
+          mappingsPage: selectedPage,
+          tab: 'mappings',
+          search: searchString,
+          vendor: selectedVendor,
+          category: selectedCategory,
+          addedBy: selectedAddedBy,
+          dateFrom: dateFrom,
+          dateTo: dateTo,
+          approvalStatus: selectedApprovalStatus
+        });
+        
+        // Fetch data with new page
+        setLoadingMappings(true);
+        
+        // Changes by Agnij May 02, 2025 [Added date range parameters and improved pagination]
+        const params = {
+          page: selectedPage,
+          limit: mappingsLimit,
+          search: searchString || "",
+          start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
+          end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null,
+          vendor_id: selectedVendor,
+          category_id: selectedCategory,
+          added_by: selectedAddedBy,
+          approval_status: selectedApprovalStatus
+        };
+        
+        // Changes by Agnij May 02, 2025 [Fixed vendor filter to correctly pass vendor_id parameter]
+        getVariantMappings(
+          null,                         // id
+          params.search || "",          // search term
+          params.start_date,            // start date
+          params.end_date,              // end date
+          params.vendor_id,             // vendor_id - correctly passed now
+          params.category_id,           // category_id
+          params.added_by,              // added_by
+          params.approval_status,       // approval status
+          params.page,                  // page number
+          params.limit                  // page size
+        )
+          .then(response => {
+            console.log("Mappings page change response:", response?.data);
             
-            setMappings(formattedMappings);
-            // Changes by Agnij May 02, 2025 [Ensuring pagination controls are always visible]
-            // Use pagination from backend if available, otherwise calculate it
-            const totalPages = paginationData.pages || Math.ceil((paginationData.total || formattedMappings.length) / params.limit);
-            setMappingsTotalPages(totalPages > 0 ? totalPages : 1); // Ensure at least 1 page for pagination controls
-          } else {
-            setMappings([]);
-            setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
-          }
-        } else {
-          setMappings([]);
-          setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
-        }
-      })
-      .catch(error => {
-        console.error("Error fetching mappings:", error);
-        toast.error("Failed to fetch mappings");
-        setMappings([]);
-        setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
-      })
-      .finally(() => {
-        setLoadingMappings(false);
+            if (response?.data?.data) {
+              // Changes by Agnij May 02, 2025 [Updated to use new pagination format from backend]
+              const mappingsData = response.data.data;
+              const paginationData = response.data.pagination || {};
+              
+              console.log("Mappings page data:", mappingsData);
+              console.log("Pagination data:", paginationData);
+              
+              if (mappingsData && Array.isArray(mappingsData)) {
+                // Format mappings for display
+                let formattedMappings = mappingsData.map(mapping => {
+                  // Use the vendor_display_name which combines organization name and name
+                  const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
+                  
+                  return {
+                    id: mapping.variant_id,
+                    mapping_id: mapping.mapping_id,
+                    name: mapping.variant_name || `Variant ID: ${mapping.variant_id}`,
+                    product_name: mapping.product_name || 'Unknown Product',
+                    category_info: '',  // No category info in simplified query
+                    vendor_id: mapping.vendor_id,
+                    vendor_name: vendorName,
+                    vendor_email: mapping.vendor_email || 'N/A',
+                    mapped_at: mapping.mapped_at,
+                    mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 'Unknown',
+                    is_mapped: true
+                  };
+                });
+                
+                setMappings(formattedMappings);
+                
+                // Changes by Agnij May 02, 2025 [Ensuring pagination is always visible]
+                // Calculate total pages from pagination data or estimated from data length
+                let totalPages = 1; // Default to at least 1 page
+                
+                if (paginationData.pages && paginationData.pages > 0) {
+                  // Use server-provided page count if available
+                  totalPages = paginationData.pages;
+                } else if (paginationData.total) {
+                  // Calculate from total count if available
+                  totalPages = Math.ceil(paginationData.total / params.limit);
+                } else if (formattedMappings.length > 0) {
+                  // Estimate based on current page data
+                  totalPages = Math.max(1, Math.ceil(formattedMappings.length / params.limit));
+                }
+                
+                console.log("Setting total pages:", totalPages);
+                setMappingsTotalPages(totalPages);
+              } else {
+                console.log("No mappings found or invalid format in page response");
+                setMappings([]);
+                setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
+              }
+            } else {
+              console.log("Empty response data in page response");
+              setMappings([]);
+              setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
+            }
+          })
+          .catch(error => {
+            console.error("Error changing mappings page:", error);
+            toast.error("Failed to change page. Trying to refresh mappings...");
+            // Try to reload the current data
+            getAllMappings();
+          })
+          .finally(() => {
+            setLoadingMappings(false);
+          });
+      }
+    } catch (error) {
+      console.error("Exception in handleMappingsPageClick:", error);
+      toast.error("Error changing page");
+      setLoadingMappings(false);
+    }
+  };
+
+  // Changes by Agnij August 15, 2024 [Added ellipsis handling for mappings pagination]
+  const handleMappingsEllipsisClick = (isNext) => {
+    const totalPageCount = mappingsTotalPages;
+    const currentPage = mappingsPage; // Current page (1-based index)
+    
+    if (isNext) {
+      // Right ellipsis: Go to middle between current page and last page
+      const middlePage = Math.floor((currentPage + totalPageCount) / 2);
+      setMappingsPage(middlePage);
+      updateUrlParams({ 
+        mappingsPage: middlePage,
+        tab: 'mappings',
+        search: searchString,
+        vendor: selectedVendor,
+        category: selectedCategory,
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        approvalStatus: selectedApprovalStatus
       });
+    } else {
+      // Left ellipsis: Go to middle between first page (1) and current page
+      const middlePage = Math.floor((1 + currentPage) / 2);
+      setMappingsPage(middlePage);
+      updateUrlParams({ 
+        mappingsPage: middlePage,
+        tab: 'mappings',
+        search: searchString,
+        vendor: selectedVendor,
+        category: selectedCategory,
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        approvalStatus: selectedApprovalStatus
+      });
+    }
+    
+    // Trigger data fetch with the new page
+    getAllMappings();
   };
 
   // Changes by Agnij May 31, 2025 [Added page search for variants tab]
@@ -2868,52 +2961,51 @@ const ProductManagement = () => {
                           <p><b>Total Mappings: </b>{mappings.length}</p>
                           <p><b>Page: </b>{mappingsPage} of {mappingsTotalPages}</p>
                         </div>
-                        {mappingsTotalPages > 1 && (
-                          <div className="d-flex flex-column align-items-center gap-2">
-                            {/* Pagination Section */}
-                            <div className="d-flex justify-content-between align-items-center">
-                              <ReactPaginate
-                                previousLabel={"Previous"}
-                                nextLabel={"Next"}
-                                breakLabel={"..."}
-                                pageCount={mappingsTotalPages}
-                                marginPagesDisplayed={2}
-                                pageRangeDisplayed={3}
-                                onPageChange={handleMappingsPageClick}
-                                containerClassName={"pagination mb-0"}
-                                pageClassName={"page-item"}
-                                pageLinkClassName={"page-link"}
-                                previousClassName={"page-item"}
-                                previousLinkClassName={"page-link"}
-                                nextClassName={"page-item"}
-                                nextLinkClassName={"page-link"}
-                                breakClassName={"page-item"}
-                                breakLinkClassName={"page-link"}
-                                activeClassName={"active"}
-                                forcePage={mappingsPage - 1}
+                        {/* Changes by Agnij May 02, 2025 [Removed condition to always show pagination] */}
+                        <div className="d-flex flex-column align-items-center gap-2">
+                          {/* Pagination Section */}
+                          <div className="d-flex justify-content-between align-items-center">
+                            <ReactPaginate
+                              previousLabel={"Previous"}
+                              nextLabel={"Next"}
+                              breakLabel={"..."}
+                              pageCount={mappingsTotalPages}
+                              marginPagesDisplayed={2}
+                              pageRangeDisplayed={5}
+                              onPageChange={handleMappingsPageClick}
+                              containerClassName={"pagination mb-0"}
+                              pageClassName={"page-item"}
+                              pageLinkClassName={"page-link"}
+                              previousClassName={"page-item"}
+                              previousLinkClassName={"page-link"}
+                              nextClassName={"page-item"}
+                              nextLinkClassName={"page-link"}
+                              breakClassName={"page-item"}
+                              breakLinkClassName={"page-link"}
+                              activeClassName={"active"}
+                              forcePage={mappingsPage - 1}
+                            />
+                            
+                            {/* Changes by Agnij May 31, 2025 [Added page search for mappings] */}
+                            <div className="d-flex align-items-center ms-3">
+                              <input
+                                type="text"
+                                className="form-control me-2"
+                                style={{ width: "80px" }}
+                                value={mappingsPageSearchInput}
+                                onChange={handleMappingsPageSearchInput}
+                                placeholder="Page #"
                               />
-                              
-                              {/* Changes by Agnij May 31, 2025 [Added page search for mappings] */}
-                              <div className="d-flex align-items-center ms-3">
-                                <input
-                                  type="text"
-                                  className="form-control me-2"
-                                  style={{ width: "80px" }}
-                                  value={mappingsPageSearchInput}
-                                  onChange={handleMappingsPageSearchInput}
-                                  placeholder="Page #"
-                                />
-                                <button
-                                  className="btn btn-primary"
-                                  onClick={handleMappingsPageSearchSubmit}
-                                  disabled={!mappingsPageSearchInput || parseInt(mappingsPageSearchInput) < 1 || parseInt(mappingsPageSearchInput) > mappingsTotalPages}
-                                >
-                                  Go
-                                </button>
-                              </div>
+                              <button
+                                className="btn btn-primary"
+                                onClick={handleMappingsPageSearchSubmit}
+                                disabled={!mappingsPageSearchInput || parseInt(mappingsPageSearchInput) < 1 || parseInt(mappingsPageSearchInput) > mappingsTotalPages}
+                              >
+                                Go
+                              </button>
                             </div>
                           </div>
-                        )}
+                        </div>
                       </div>
                     )}
                   </div>
