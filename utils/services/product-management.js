@@ -174,6 +174,7 @@ export const getProductDetailsById = (id) => {
     try {
       // Changes by Agnij July 25, 2024 [Improved error handling for product details API]
       // Changes by Agnij August 15, 2024 [Added connection error handling]
+      // Changes by Agnij May 2, 2025 [Fixed empty response handling with cache-busting]
       console.log(`Fetching product details for ID: ${id}`);
       
       // Set a timeout of 5 seconds to prevent long hanging requests
@@ -181,34 +182,81 @@ export const getProductDetailsById = (id) => {
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       
       try {
+        // Add cache busting to prevent 304 responses with empty data
+        const timestamp = Date.now();
         const response = await axiosInstance.get(
-          `${process.env.NEXT_PUBLIC_API_WEB_URL}/products/vendor-product-details/${id}`,
-          { signal: controller.signal }
+          `${process.env.NEXT_PUBLIC_API_WEB_URL}/products/vendor-product-details/${id}?_t=${timestamp}`,
+          { 
+            signal: controller.signal,
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            },
+            // Changes by Agnij May 3, 2025 [Allow 304 responses but handle them properly]
+            validateStatus: status => (status >= 200 && status < 300) || status === 304
+          }
         );
         
         clearTimeout(timeoutId); // Clear the timeout
         
-        // Handle case where API only returns status: 1 without data
-        if (response?.status === 200 && response.data && response.data.status === 1) {
-          if (!response.data.data) {
-            console.log('API returned status 1 but no data, creating default response structure');
-            // Provide a default response structure
-            response.data = {
-              ...response.data,
-              data: {
-                id: id,
-                name: 'Product information unavailable',
-                status: 1,
-                product_images: [],
-                product_categories: [],
-                product_variants: []
-              },
-              vendor_list: []
-            };
+        console.log('Product details API raw response:', response);
+        
+        // Changes by Agnij May 3, 2025 [Handle 304 Not Modified responses]
+        // If we got a 304 response with no data, create a default response structure
+        if (response.status === 304 || !response?.data) {
+          console.log('Received 304 Not Modified or empty response, creating default response structure');
+          response.status = 200; // Change to 200 to be handled properly
+          response.data = {
+            status: 1,
+            message: "Limited product data available (cached)",
+            data: {
+              id: id,
+              name: 'Product information unavailable',
+              status: 1,
+              description: 'Product description not available',
+              product_images: [],
+              product_categories: [],
+              product_variants: []
+            },
+            vendor_list: []
+          };
+        }
+        // Enhanced response validation and structure creation
+        else if (response.data && response.data.status === 1 && !response.data.data) {
+          console.log('API returned status 1 but no data, creating default response structure');
+          
+          // Create a structured response from just the status
+          response.data = {
+            ...response.data,
+            message: "Limited product data available",
+            data: {
+              id: id,
+              name: 'Product information unavailable',
+              status: 1,
+              description: 'Product description not available',
+              product_images: [],
+              product_categories: [],
+              product_variants: []
+            },
+            vendor_list: []
+          };
+        }
+        // Case 2: Normal response with data
+        else if (response.data && response.data.data) {
+          console.log('Successfully received product data');
+          // Ensure vendor_list exists
+          if (!response.data.vendor_list) {
+            response.data.vendor_list = [];
           }
         }
+        // Case 3: Unexpected response format
+        else {
+          console.warn('Unexpected API response format:', response.data);
+          throw new Error('Invalid response format from API');
+        }
         
-        console.log('Product details API response:', response);
+        console.log('Processed product details response:', response.data);
         resolve(response);
       } catch (requestError) {
         clearTimeout(timeoutId); // Clear the timeout
@@ -222,16 +270,18 @@ export const getProductDetailsById = (id) => {
         status: 200,
         data: {
           status: 1,
-          message: "Using fallback data due to connection error",
+          message: "Using fallback data due to API error",
           data: {
             id: id,
             name: 'Product information temporarily unavailable',
             status: 1,
+            description: 'Unable to load product description at this time',
             product_images: [],
             product_categories: [],
             product_variants: []
           },
-          vendor_list: []
+          vendor_list: [],
+          error: error.message || 'Unknown error'
         }
       };
       
@@ -498,21 +548,48 @@ export const addProductVariant = (values) => {
 export const getProductVariants = (productId) => {
   return new Promise(async (resolve, reject) => {
     try {
+      // Changes by Agnij May 3, 2025 [Improved 304 response handling]
+      console.log(`Getting variants for product: ${productId}`);
+      
+      // Add cache busting to prevent 304 responses
+      const timestamp = Date.now();
       let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${productId}`,
-        { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${productId}?_t=${timestamp}`,
+        { 
+          validateStatus: status => (status >= 200 && status < 300) || status === 304,
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
       
-      if (response.status === 304 && !response.data) {
+      // Handle 304 responses or empty data
+      if (response.status === 304) {
+        console.log(`Received 304 Not Modified for variants of product ${productId}, creating empty response`);
         response.data = { status: 1, data: [] };
       } else if (!response.data) {
+        console.log(`Empty response for variants of product ${productId}, creating default structure`);
         response.data = { status: 1, data: [] };
+      } else if (response.data && !response.data.data) {
+        console.log(`Response missing data array for variants of product ${productId}, adding empty array`);
+        response.data.data = [];
       }
       
+      console.log(`Found ${response.data.data.length} variants for product ${productId}`);
       resolve(response);
     } catch (error) {
       console.error(`Error fetching variants for product ${productId}:`, error);
-      reject({ message: error });
+      // Return an empty data structure instead of rejecting
+      resolve({
+        status: 200,
+        data: {
+          status: 1,
+          data: [],
+          message: `Error loading variants: ${error.message || 'Unknown error'}`
+        }
+      });
     }
   });
 };

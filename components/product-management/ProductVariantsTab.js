@@ -22,9 +22,11 @@ const ProductVariantsTab = ({ product }) => {
     try {
       console.log("Fetching variants for product:", product.id);
       const response = await getProductVariants(product.id);
-      if (response?.data?.data) {
-        console.log("Variants loaded:", response.data.data.length);
-        setVariants(response.data.data);
+      
+      if (response && response.data) {
+        const variantsData = response.data.data || [];
+        console.log("Variants loaded:", variantsData.length);
+        setVariants(variantsData);
       } else {
         console.log("No variants found or invalid response");
         setVariants([]);

@@ -43,7 +43,20 @@ const ProductDetails = () => {
                 }
             } else {
                 console.error("Invalid response format:", response);
-                setError("Failed to load product details: Invalid response format");
+                
+                if (response?.data?.error) {
+                    setError(`Failed to load product details: ${response.data.error}`);
+                } else if (response?.data?.message) {
+                    setError(`Failed to load product details: ${response.data.message}`);
+                } else {
+                    setError("Failed to load product details: Invalid response format");
+                }
+                
+                if (response?.data?.data) {
+                    console.log("Using fallback data from response");
+                    setProductData(response.data.data);
+                    setVendorData(response.data.vendor_list || []);
+                }
             }
         } catch (error) {
             console.error("Error fetching product details:", error);
@@ -51,6 +64,16 @@ const ProductDetails = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Add retry function
+    const retryFetchProductDetails = () => {
+        setLoading(true);
+        setError(null);
+        
+        setTimeout(() => {
+            getProductDetails();
+        }, 500);
     };
 
     // Show appropriate loading or error state
@@ -73,7 +96,7 @@ const ProductDetails = () => {
                     <hr/>
                     <button 
                         className="btn btn-outline-danger"
-                        onClick={() => getProductDetails()}
+                        onClick={retryFetchProductDetails}
                     >
                         <i className="fas fa-sync-alt mr-2"></i> Try Again
                     </button>
