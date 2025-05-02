@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import Layout from "../../../components/layout";
 import { getAdminProfile } from "@/utils/services/login";
-import { searchAllVariants, updateProductVariant } from '@/utils/services/product-management';
+import { searchAllVariants, updateProductVariant, getAllProducts } from '@/utils/services/product-management';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 import FullLoading from '@/components/loading/FullLoading';
+import Select from 'react-select';
 
 // Changes by Agnij May 31, 2025 [Created variant edit page]
 const EditVariant = () => {
@@ -17,13 +18,15 @@ const EditVariant = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    price: '',
-    stock: '',
-    sku: ''
+    product_id: ''
   });
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [vendorApprovedBy, setVendorApprovedBy] = useState(null);
 
   useEffect(() => {
     getUserProfile();
+    fetchProducts();
   }, []);
 
   useEffect(() => {
@@ -38,6 +41,26 @@ const EditVariant = () => {
       setUserType(res.data.user_type);
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      // Fetch products for the dropdown
+      const response = await getAllProducts(1000, 1);
+      if (response?.data) {
+        const productsData = response.data.map(product => ({
+          value: product.id,
+          label: product.name,
+          data: product
+        }));
+        setProducts(productsData);
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -72,10 +95,11 @@ const EditVariant = () => {
           setFormData({
             name: variantData.name || variantData.variant_name || '',
             description: variantData.description || '',
-            price: variantData.price || '',
-            stock: variantData.stock || '',
-            sku: variantData.sku || ''
+            product_id: variantData.product_id || ''
           });
+          
+          // Set vendor approved by
+          setVendorApprovedBy(variantData.vendor_approved_by || null);
           
           setLoading(false);
           return;
@@ -102,6 +126,15 @@ const EditVariant = () => {
     }));
   };
 
+  const handleProductChange = (selectedOption) => {
+    if (selectedOption) {
+      setFormData(prev => ({
+        ...prev,
+        product_id: selectedOption.value
+      }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -112,12 +145,12 @@ const EditVariant = () => {
     
     setSaving(true);
     try {
+      // Changes by Agnij July 25, 2025 [Updated to set is_approve to 0 when edited]
       const payload = {
         variant_name: formData.name,
         description: formData.description,
-        price: formData.price,
-        stock: formData.stock,
-        sku: formData.sku
+        product_id: formData.product_id,
+        is_approve: 0 // Auto-disapprove when edited
       };
       
       console.log("Submitting update with payload:", payload);
@@ -125,7 +158,7 @@ const EditVariant = () => {
       console.log("Update response:", response);
       
       if (response && (response.status === 1 || response.status === "1" || response.status === 200)) {
-        toast.success("Variant updated successfully");
+        toast.success("Variant updated successfully and set to 'Disapproved' status");
         router.push(`/product-management/variant/${id}`);
       } else {
         toast.error(response?.message || "Failed to update variant");
@@ -140,7 +173,7 @@ const EditVariant = () => {
 
   return (
     <Layout>
-      <div className="content-header">
+      <section className="content">
         <div className="container-fluid">
           <div className="row mb-2">
             <div className="col-sm-6">
@@ -158,11 +191,7 @@ const EditVariant = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <section className="content">
-        <div className="container-fluid">
           {loading ? (
             <FullLoading />
           ) : variant ? (
@@ -204,91 +233,54 @@ const EditVariant = () => {
                         ></textarea>
                       </div>
                       
-                      <div className="row">
-                        <div className="col-md-4">
-                          <div className="form-group">
-                            <label htmlFor="price">Price</label>
-                            <input
-                              type="number"
-                              className="form-control"
-                              id="price"
-                              name="price"
-                              value={formData.price}
-                              onChange={handleInputChange}
-                              min="0"
-                              step="0.01"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="col-md-4">
-                          <div className="form-group">
-                            <label htmlFor="stock">Stock</label>
-                            <input
-                              type="number"
-                              className="form-control"
-                              id="stock"
-                              name="stock"
-                              value={formData.stock}
-                              onChange={handleInputChange}
-                              min="0"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="col-md-4">
-                          <div className="form-group">
-                            <label htmlFor="sku">SKU</label>
-                            <input
-                              type="text"
-                              className="form-control"
-                              id="sku"
-                              name="sku"
-                              value={formData.sku}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                        </div>
+                      <div className="form-group">
+                        <label htmlFor="product_id">Parent Product</label>
+                        <Select
+                          id="product_id"
+                          name="product_id"
+                          options={products}
+                          isLoading={loadingProducts}
+                          placeholder="Select parent product"
+                          value={products.find(p => p.value === formData.product_id)}
+                          onChange={handleProductChange}
+                          className="basic-select"
+                          classNamePrefix="select"
+                        />
+                        <small className="form-text text-muted">
+                          Changing the parent product will affect variant relationships
+                        </small>
                       </div>
                       
-                      <div className="text-right mt-4">
-                        <button
-                          type="button"
-                          className="btn btn-secondary mr-2"
-                          onClick={() => router.back()}
-                        >
-                          Cancel
-                        </button>
+                      {vendorApprovedBy && (
+                        <div className="form-group">
+                          <label>Approved By:</label>
+                          <p className="form-control-static">{vendorApprovedBy}</p>
+                        </div>
+                      )}
+                      
+                      <div className="alert alert-warning">
+                        <i className="fas fa-exclamation-triangle mr-2"></i>
+                        Editing this variant will automatically set its status to "Disapproved"
+                      </div>
+                      
+                      <div className="form-group">
                         <button
                           type="submit"
                           className="btn btn-primary"
                           disabled={saving}
                         >
-                          {saving ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>
-                              Saving...
-                            </>
-                          ) : (
-                            'Save Changes'
-                          )}
+                          {saving ? "Saving..." : "Save Changes"}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary ml-2"
+                          onClick={() => router.back()}
+                          disabled={saving}
+                        >
+                          Cancel
                         </button>
                       </div>
                     </form>
-                    
-                    {/* Debug info - show raw variant data */}
-                    {process.env.NODE_ENV === 'development' && (
-                      <div className="row mt-4">
-                        <div className="col-12">
-                          <details>
-                            <summary>Debug - Variant Data</summary>
-                            <pre className="bg-light p-3 mt-2" style={{maxHeight: '300px', overflow: 'auto'}}>
-                              {JSON.stringify(variant, null, 2)}
-                            </pre>
-                          </details>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -299,77 +291,42 @@ const EditVariant = () => {
                     <h3 className="card-title">Variant Details</h3>
                   </div>
                   <div className="card-body">
-                    <div className="row mb-3">
-                      <div className="col-md-5">
-                        <strong>Variant ID:</strong>
-                      </div>
-                      <div className="col-md-7">
-                        {variant.id}
-                      </div>
-                    </div>
-                    
-                    <div className="row mb-3">
-                      <div className="col-md-5">
-                        <strong>Categories:</strong>
-                      </div>
-                      <div className="col-md-7">
-                        {variant.category_names && variant.category_names.length > 0 ? (
-                          variant.category_names.map((category, index) => (
-                            <span key={index} className="badge badge-warning mr-1">
-                              {category}
-                            </span>
-                          ))
-                        ) : (
-                          "No categories"
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="row mb-3">
-                      <div className="col-md-5">
-                        <strong>Status:</strong>
-                      </div>
-                      <div className="col-md-7">
-                        {variant.is_approve === 1 ? (
-                          <span className="badge badge-success">Approved</span>
-                        ) : (
-                          <span className="badge badge-danger">Not Approved</span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="row mb-3">
-                      <div className="col-md-5">
-                        <strong>Created:</strong>
-                      </div>
-                      <div className="col-md-7">
+                    <dl className="row">
+                      <dt className="col-sm-4">Variant ID:</dt>
+                      <dd className="col-sm-8">{variant.id}</dd>
+                      
+                      <dt className="col-sm-4">Categories:</dt>
+                      <dd className="col-sm-8">
+                        {variant.category_names && variant.category_names.length > 0
+                          ? variant.category_names.join(", ")
+                          : "No categories"}
+                      </dd>
+                      
+                      <dt className="col-sm-4">Status:</dt>
+                      <dd className="col-sm-8">
+                        <span className={`badge ${variant.is_approve === 1 ? 'badge-success' : 'badge-danger'}`}>
+                          {variant.is_approve === 1 ? "Approved" : "Disapproved"}
+                        </span>
+                      </dd>
+                      
+                      <dt className="col-sm-4">Created:</dt>
+                      <dd className="col-sm-8">
                         {variant.created_at ? new Date(variant.created_at).toLocaleString() : "N/A"}
-                      </div>
-                    </div>
-                    
-                    <div className="row mb-3">
-                      <div className="col-md-5">
-                        <strong>Last Updated:</strong>
-                      </div>
-                      <div className="col-md-7">
+                      </dd>
+                      
+                      <dt className="col-sm-4">Last Updated:</dt>
+                      <dd className="col-sm-8">
                         {variant.updated_at ? new Date(variant.updated_at).toLocaleString() : "N/A"}
-                      </div>
-                    </div>
+                      </dd>
+                    </dl>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
             <div className="alert alert-danger">
-              <h5><i className="icon fas fa-exclamation-triangle"></i> Variant not found</h5>
-              <p>The variant with ID {id} could not be found. It may have been deleted or you don't have permission to edit it.</p>
-              <button
-                type="button"
-                className="btn btn-primary mt-3"
-                onClick={() => router.push("/product-management?tab=variants")}
-              >
-                <i className="fas fa-arrow-left mr-1"></i> Back to Variants
-              </button>
+              <h4><i className="icon fas fa-exclamation-triangle"></i> Error!</h4>
+              Variant not found or could not be loaded.
             </div>
           )}
         </div>

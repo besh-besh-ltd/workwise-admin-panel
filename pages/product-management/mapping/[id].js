@@ -283,6 +283,38 @@ const MappingDetail = () => {
                     </div>
                     <div className="row mb-3">
                       <div className="col-md-4">
+                        <strong>Vendor Approved By:</strong>
+                      </div>
+                      <div className="col-md-8">
+                        {mapping.approved_by ? (
+                          Array.isArray(mapping.approved_by) ? (
+                            mapping.approved_by.map((approver, index) => (
+                              <div key={index}>
+                                {approver}
+                                {index !== mapping.approved_by.length - 1 && <span>,&nbsp;</span>}
+                              </div>
+                            ))
+                          ) : (
+                            mapping.approved_by
+                          )
+                        ) : variant && variant.vendor_approved_by ? (
+                          Array.isArray(variant.vendor_approved_by) ? (
+                            variant.vendor_approved_by.map((approver, index) => (
+                              <div key={index}>
+                                {approver.name || approver}
+                                {index !== variant.vendor_approved_by.length - 1 && <span>,&nbsp;</span>}
+                              </div>
+                            ))
+                          ) : (
+                            variant.vendor_approved_by
+                          )
+                        ) : (
+                          <span className="text-muted">No approval information</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="row mb-3">
+                      <div className="col-md-4">
                         <strong>Mapped At:</strong>
                       </div>
                       <div className="col-md-8">

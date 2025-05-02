@@ -1239,6 +1239,7 @@ const ProductManagement = () => {
               // Set pagination data from response
               const totalPages = paginationData.pages || Math.ceil((paginationData.total || formattedMappings.length) / params.limit);
               console.log("Setting total pages:", totalPages);
+              // Changes by Agnij May 02, 2025 [Ensuring pagination is always visible by setting minimum 1 page]
               setMappingsTotalPages(totalPages > 0 ? totalPages : 1);
             } else {
               console.log("No mappings found or invalid format");
@@ -1353,7 +1354,7 @@ const ProductManagement = () => {
     // Fetch data with new page
     setLoadingMappings(true);
     
-    // Changes by Agnij May 01, 2025 [Added date range parameters]
+    // Changes by Agnij May 02, 2025 [Added date range parameters and improved pagination]
     const params = {
       page: selectedPage,
       limit: mappingsLimit,
@@ -1404,16 +1405,24 @@ const ProductManagement = () => {
             });
             
             setMappings(formattedMappings);
+            // Changes by Agnij May 02, 2025 [Ensuring pagination controls are always visible]
             // Use pagination from backend if available, otherwise calculate it
-            setMappingsTotalPages(paginationData.pages || Math.ceil((paginationData.total || formattedMappings.length) / params.limit));
+            const totalPages = paginationData.pages || Math.ceil((paginationData.total || formattedMappings.length) / params.limit);
+            setMappingsTotalPages(totalPages > 0 ? totalPages : 1); // Ensure at least 1 page for pagination controls
+          } else {
+            setMappings([]);
+            setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
           }
+        } else {
+          setMappings([]);
+          setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
         }
       })
       .catch(error => {
         console.error("Error fetching mappings:", error);
         toast.error("Failed to fetch mappings");
         setMappings([]);
-        setMappingsTotalPages(0);
+        setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
       })
       .finally(() => {
         setLoadingMappings(false);
@@ -1801,8 +1810,8 @@ const ProductManagement = () => {
   return (
     <>
       <ToastContainer />
-      {/* Changes by Agnij July 25, 2025 [Removed duplicate header] */}
-      {/* Removed the duplicate content-header that was showing a second header */}
+      {/* Changes by Agnij May 02, 2025 [Removed duplicate header] */}
+      {/* PRODUCT MANAGEMENT header is already shown from the layout component */}
 
       <section className="content">
         <div className="container-fluid">
@@ -2037,7 +2046,6 @@ const ProductManagement = () => {
                     </th>
                     <th scope="col">Product Name</th>
                     <th scope="col">Category</th>
-                    <th scope="col">Accept/Reject</th>
                     <th scope="col">Sub Category</th>
                     <th scope="col">Approval Status</th>
                     <th scope="col">Created At</th>
@@ -2067,9 +2075,6 @@ const ProductManagement = () => {
                                 ? item.product_categories[0].category_name
                                 : "-"}
                             </span>
-                          </td>
-                          <td>
-                            {item?.is_approve === 1 ? "Approved" : "Rejected"}
                           </td>
                           <td className="subcatstd">{getSubCats(item)}</td>
                           <td>
