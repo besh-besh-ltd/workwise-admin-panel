@@ -545,16 +545,16 @@ export const addProductVariant = (values) => {
   });
 };
 
-export const getProductVariants = (productId) => {
+export const getProductVariants = (productId, page = 1, limit = 10) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij May 3, 2025 [Improved 304 response handling]
-      console.log(`Getting variants for product: ${productId}`);
+      // Changes by Agnij May 3, 2025 [Added pagination support for product variants]
+      console.log(`Getting variants for product: ${productId}, page: ${page}, limit: ${limit}`);
       
       // Add cache busting to prevent 304 responses
       const timestamp = Date.now();
       let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${productId}?_t=${timestamp}`,
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${productId}?page=${page}&limit=${limit}&_t=${timestamp}`,
         { 
           validateStatus: status => (status >= 200 && status < 300) || status === 304,
           headers: {
@@ -568,16 +568,28 @@ export const getProductVariants = (productId) => {
       // Handle 304 responses or empty data
       if (response.status === 304) {
         console.log(`Received 304 Not Modified for variants of product ${productId}, creating empty response`);
-        response.data = { status: 1, data: [] };
+        response.data = { status: 1, data: [], pagination: { total: 0, page, limit, pages: 0 } };
       } else if (!response.data) {
         console.log(`Empty response for variants of product ${productId}, creating default structure`);
-        response.data = { status: 1, data: [] };
+        response.data = { status: 1, data: [], pagination: { total: 0, page, limit, pages: 0 } };
       } else if (response.data && !response.data.data) {
         console.log(`Response missing data array for variants of product ${productId}, adding empty array`);
         response.data.data = [];
+        response.data.pagination = { total: 0, page, limit, pages: 0 };
       }
       
-      console.log(`Found ${response.data.data.length} variants for product ${productId}`);
+      // If there's no pagination info, create it
+      if (!response.data.pagination) {
+        const totalItems = Array.isArray(response.data.data) ? response.data.data.length : 0;
+        response.data.pagination = {
+          total: totalItems,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(totalItems / limit)
+        };
+      }
+      
+      console.log(`Found ${response.data.data.length} variants for product ${productId}, pagination:`, response.data.pagination);
       resolve(response);
     } catch (error) {
       console.error(`Error fetching variants for product ${productId}:`, error);
@@ -587,6 +599,12 @@ export const getProductVariants = (productId) => {
         data: {
           status: 1,
           data: [],
+          pagination: {
+            total: 0,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            pages: 0
+          },
           message: `Error loading variants: ${error.message || 'Unknown error'}`
         }
       });
