@@ -7,8 +7,6 @@ import { toast } from 'react-toastify';
 import AddProductVariantModal from './AddProductVariantModal';
 import MapVariantVendorModal from '../modal/MapVariantVendorModal';
 
-// Changes by Agnij May 4, 2025 [Enhanced ProductVariantsTab with pagination and better error handling]
-// Changes by Agnij May 4, 2025 [Added detailed product and category information display]
 const ProductVariantsTab = ({ product }) => {
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,11 +40,11 @@ const ProductVariantsTab = ({ product }) => {
       
       // Save product details if included in the response
       if (response?.data?.product_details) {
-        console.log("Setting product details from API response");
+        console.log("Setting product details from API response:", response.data.product_details);
         setProductDetails(response.data.product_details);
       } else {
         // Fallback to the passed product prop
-        console.log("Using product prop for details");
+        console.log("Using product prop for details:", product);
         setProductDetails(product);
       }
       
@@ -100,7 +98,8 @@ const ProductVariantsTab = ({ product }) => {
 
   useEffect(() => {
     if (product && product.id) {
-      setProductDetails(product); // Initialize with passed product details
+      // Initialize with passed product details but will be updated from API
+      setProductDetails(product);
       fetchVariants(1); // Reset to page 1 when product changes
     }
   }, [product]);
@@ -170,6 +169,30 @@ const ProductVariantsTab = ({ product }) => {
   const renderProductDetails = () => {
     if (!productDetails) return null;
     
+    // Ensure we have properly formatted data
+    const productName = productDetails.name || 'Product information unavailable';
+    const status = productDetails.status === 1 ? 'Active' : 'Inactive';
+    const statusClass = productDetails.status === 1 ? 'success' : 'secondary';
+    
+    // Format categories
+    let categories = 'No categories';
+    if (productDetails.product_categories && productDetails.product_categories.length > 0) {
+      categories = productDetails.product_categories
+        .map(c => c.category_name || c.name)
+        .filter(Boolean)
+        .join(', ');
+    }
+    
+    // Format dates
+    let createdDate = 'N/A';
+    if (productDetails.created_at) {
+      try {
+        createdDate = new Date(productDetails.created_at).toLocaleString();
+      } catch (e) {
+        console.warn('Could not parse product creation date');
+      }
+    }
+    
     return (
       <div className="card mb-4">
         <div className="card-header bg-primary text-white">
@@ -184,19 +207,16 @@ const ProductVariantsTab = ({ product }) => {
               <dl className="row mb-0">
                 <dt className="col-sm-4">Product Name:</dt>
                 <dd className="col-sm-8">
-                  <span className="font-weight-bold">{productDetails.name || 'N/A'}</span>
+                  <span className="font-weight-bold">{productName}</span>
                 </dd>
                 
                 <dt className="col-sm-4">ID:</dt>
                 <dd className="col-sm-8">{productDetails.id || 'N/A'}</dd>
                 
-                <dt className="col-sm-4">SKU:</dt>
-                <dd className="col-sm-8">{productDetails.sku || 'Not specified'}</dd>
-                
                 <dt className="col-sm-4">Status:</dt>
                 <dd className="col-sm-8">
-                  <span className={`badge badge-${productDetails.status === 1 ? 'success' : 'secondary'}`}>
-                    {productDetails.status === 1 ? 'Active' : 'Inactive'}
+                  <span className={`badge badge-${statusClass}`}>
+                    {status}
                   </span>
                 </dd>
               </dl>
@@ -204,24 +224,10 @@ const ProductVariantsTab = ({ product }) => {
             <div className="col-md-6">
               <dl className="row mb-0">
                 <dt className="col-sm-4">Created:</dt>
-                <dd className="col-sm-8">{productDetails.created_at ? new Date(productDetails.created_at).toLocaleString() : 'N/A'}</dd>
-                
-                <dt className="col-sm-4">Manufacturer:</dt>
-                <dd className="col-sm-8">{productDetails.manufacturer || 'Not specified'}</dd>
-                
-                <dt className="col-sm-4">Approval:</dt>
-                <dd className="col-sm-8">
-                  <span className={`badge badge-${productDetails.is_approve === 1 ? 'success' : 'danger'}`}>
-                    {productDetails.is_approve === 1 ? 'Approved' : 'Not Approved'}
-                  </span>
-                </dd>
+                <dd className="col-sm-8">{createdDate}</dd>
                 
                 <dt className="col-sm-4">Categories:</dt>
-                <dd className="col-sm-8">
-                  {productDetails.product_categories && productDetails.product_categories.length > 0 
-                    ? productDetails.product_categories.map(c => c.category_name || c.name).join(', ')
-                    : 'No categories'}
-                </dd>
+                <dd className="col-sm-8">{categories}</dd>
               </dl>
             </div>
           </div>
@@ -352,7 +358,7 @@ const ProductVariantsTab = ({ product }) => {
                         </td>
                         <td>{variant.product_name || productDetails?.name || 'Unknown Product'}</td>
                         <td>{variant.category_info || '-'}</td>
-                        <td>{variant.created_at ? new Date(variant.created_at).toLocaleString() : '-'}</td>
+                        <td>{variant.created_at_formatted || (variant.created_at ? new Date(variant.created_at).toLocaleString() : '-')}</td>
                         <td>
                           <div className="btn-group">
                             <button 
@@ -417,7 +423,7 @@ const ProductVariantsTab = ({ product }) => {
         isVisible={showAddModal}
         onCancel={() => setShowAddModal(false)}
         productId={product?.id}
-        productName={product?.name}
+        productName={productDetails?.name || product?.name}
         onSuccess={fetchVariants}
       />
 

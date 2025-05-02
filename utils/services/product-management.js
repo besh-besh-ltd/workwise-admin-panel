@@ -172,10 +172,7 @@ export const approvedProductList = () => {
 export const getProductDetailsById = (id) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij July 25, 2024 [Improved error handling for product details API]
-      // Changes by Agnij August 15, 2024 [Added connection error handling]
-      // Changes by Agnij May 2, 2025 [Fixed empty response handling with cache-busting]
-      // Changes by Agnij May 3, 2025 [Enhanced product data with more comprehensive details]
+      // Changes by Agnij May 4, 2025 [Fixed product data retrieval to use database values]
       console.log(`Fetching product details for ID: ${id}`);
       
       // Set a timeout of 5 seconds to prevent long hanging requests
@@ -185,8 +182,10 @@ export const getProductDetailsById = (id) => {
       try {
         // Add cache busting to prevent 304 responses with empty data
         const timestamp = Date.now();
+        
+        // Added debug query parameter to show full database data
         const response = await axiosInstance.get(
-          `${process.env.NEXT_PUBLIC_API_WEB_URL}/products/vendor-product-details/${id}?_t=${timestamp}`,
+          `${process.env.NEXT_PUBLIC_API_WEB_URL}/products/vendor-product-details/${id}?_t=${timestamp}&debug=true`,
           { 
             signal: controller.signal,
             headers: {
@@ -194,7 +193,7 @@ export const getProductDetailsById = (id) => {
               'Pragma': 'no-cache',
               'Expires': '0'
             },
-            // Changes by Agnij May 3, 2025 [Allow 304 responses but handle them properly]
+            // Allow all successful status codes
             validateStatus: status => (status >= 200 && status < 300) || status === 304
           }
         );
@@ -202,105 +201,95 @@ export const getProductDetailsById = (id) => {
         clearTimeout(timeoutId); // Clear the timeout
         
         console.log('Product details API raw response:', response);
+        console.log('Raw data:', JSON.stringify(response.data));
         
-        // Changes by Agnij May 3, 2025 [Handle 304 Not Modified responses]
-        // If we got a 304 response with no data, create a default response structure
+        // Handle empty or error responses
         if (response.status === 304 || !response?.data) {
-          console.log('Received 304 Not Modified or empty response, creating default response structure');
-          response.status = 200; // Change to 200 to be handled properly
-          response.data = {
-            status: 1,
-            message: "Limited product data available (cached)",
-            data: {
-              id: id,
-              name: 'Product information unavailable',
-              status: 1,
-              manufacturer: 'Not specified',
-              sku: `SKU-${id}`,
-              description: 'Product description not available',
-              product_images: [],
-              product_categories: [],
-              product_variants: [],
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            },
-            vendor_list: []
-          };
-        }
-        // Enhanced response validation and structure creation
-        else if (response.data && response.data.status === 1 && !response.data.data) {
-          console.log('API returned status 1 but no data, creating default response structure');
-          
-          // Create a structured response from just the status
-          response.data = {
-            ...response.data,
-            message: "Limited product data available",
-            data: {
-              id: id,
-              name: 'Product information unavailable',
-              status: 1,
-              manufacturer: 'Not specified',
-              sku: `SKU-${id}`,
-              description: 'Product description not available',
-              product_images: [],
-              product_categories: [],
-              product_variants: [],
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            },
-            vendor_list: []
-          };
-        }
-        // Case 2: Normal response with data
-        else if (response.data && response.data.data) {
-          console.log('Successfully received product data');
-          
-          // Ensure standard fields exist
-          const productData = response.data.data;
-          
-          // Ensure essential fields exist with defaults
-          if (!productData.manufacturer) productData.manufacturer = 'Not specified';
-          if (!productData.sku) productData.sku = `SKU-${id}`;
-          if (!productData.description) productData.description = 'No description available';
-          if (!productData.product_images) productData.product_images = [];
-          if (!productData.product_categories) productData.product_categories = [];
-          if (!productData.product_variants) productData.product_variants = [];
-          
-          // Format dates consistently if they exist
-          if (productData.created_at) {
-            try {
-              const date = new Date(productData.created_at);
-              productData.created_at_formatted = date.toLocaleString();
-            } catch (e) {
-              productData.created_at_formatted = 'Unknown date';
-            }
-          }
-          
-          // Ensure vendor_list exists and is formatted properly
-          if (!response.data.vendor_list) {
-            response.data.vendor_list = [];
-          } else if (Array.isArray(response.data.vendor_list)) {
-            // Ensure each vendor has required fields
-            response.data.vendor_list = response.data.vendor_list.map(vendor => ({
-              id: vendor.id || `temp-${Math.random().toString(36).substring(2)}`,
-              vendor_name: vendor.vendor_name || vendor.name || 'Unknown Vendor',
-              vendor_email: vendor.vendor_email || vendor.email || 'No email available',
-              vendor_approved_by: Array.isArray(vendor.vendor_approved_by) ? 
-                vendor.vendor_approved_by : 
-                (vendor.vendor_approved_by ? [vendor.vendor_approved_by] : [])
-            }));
-          }
-          
-          response.data.data = productData;
-        }
-        // Case 3: Unexpected response format
-        else {
-          console.warn('Unexpected API response format:', response.data);
-          throw new Error('Invalid response format from API');
+          console.log('Received 304 Not Modified or empty response');
+          throw new Error('Empty response from API');
         }
         
-        console.log('Processed product details response:', response.data);
-        resolve(response);
+        // Extract the raw product data
+        let productData = null;
+        
+        if (response.data.data && typeof response.data.data === 'object') {
+          // Standard API response with data object
+          console.log('Standard data format found in response');
+          productData = response.data.data;
+        } else if (response.data.product && typeof response.data.product === 'object') {
+          // Some APIs return data in a 'product' field
+          console.log('Product data found in product field');
+          productData = response.data.product;
+        } else if (response.data.result && typeof response.data.result === 'object') {
+          // Some APIs use 'result' field
+          console.log('Product data found in result field');
+          productData = response.data.result;
+        } else if (response.data && typeof response.data === 'object' && response.data.id) {
+          // Direct product object in data
+          console.log('Direct product object found in data');
+          productData = response.data;
+        } else {
+          // Look for product-like object in the response
+          console.log('Searching for product-like object in response');
+          const findProductObject = (obj) => {
+            if (!obj || typeof obj !== 'object') return null;
+            
+            // Check if this object looks like a product
+            if (obj.id && (obj.name || obj.product_name)) {
+              return obj;
+            }
+            
+            // Check nested objects
+            for (const key in obj) {
+              if (typeof obj[key] === 'object') {
+                const found = findProductObject(obj[key]);
+                if (found) return found;
+              }
+            }
+            
+            return null;
+          };
+          
+          productData = findProductObject(response.data);
+          
+          if (!productData) {
+            console.log('No product-like object found in response');
+            throw new Error('Could not find product data in response');
+          } else {
+            console.log('Found product-like object in response:', productData);
+          }
+        }
+        
+        // Ensure we have a properly structured product object
+        const formattedProduct = {
+          id: productData.id || id,
+          name: productData.name || productData.product_name || 'Product information unavailable',
+          status: productData.status || productData.is_active || 1,
+          manufacturer: productData.manufacturer || 'Not specified',
+          sku: productData.sku || `SKU-${id}`,
+          description: productData.description || 'No description available',
+          product_images: productData.product_images || productData.images || [],
+          product_categories: productData.product_categories || productData.categories || [],
+          product_variants: productData.product_variants || productData.variants || [],
+          created_at: productData.created_at || new Date().toISOString(),
+          updated_at: productData.updated_at || new Date().toISOString(),
+          is_approve: productData.is_approve || productData.is_approved || 0,
+          slug: productData.slug || ''
+        };
+        
+        // Create a properly formatted response
+        const formattedResponse = {
+          ...response,
+          data: {
+            status: 1,
+            message: "Product details retrieved successfully",
+            data: formattedProduct,
+            vendor_list: response.data.vendor_list || []
+          }
+        };
+        
+        console.log('Formatted product details response:', formattedProduct);
+        resolve(formattedResponse);
       } catch (requestError) {
         clearTimeout(timeoutId); // Clear the timeout
         throw requestError; // Re-throw to be caught by the outer catch
@@ -308,7 +297,67 @@ export const getProductDetailsById = (id) => {
     } catch (error) {
       console.error(`Error fetching product details for ID ${id}:`, error);
       
-      // Create a fallback response instead of rejecting
+      // Try an alternative endpoint as a fallback
+      try {
+        console.log(`Trying alternative endpoint for product ${id}`);
+        const alternativeResponse = await axiosInstance.get(
+          `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/get-product-by-id/${id}`,
+          {
+            headers: {
+              'Cache-Control': 'no-cache'
+            }
+          }
+        );
+        
+        if (alternativeResponse?.data) {
+          console.log('Alternative endpoint returned data:', alternativeResponse.data);
+          
+          let productData = null;
+          if (alternativeResponse.data.data) {
+            productData = alternativeResponse.data.data;
+          } else if (alternativeResponse.data.product) {
+            productData = alternativeResponse.data.product;
+          } else if (alternativeResponse.data) {
+            productData = alternativeResponse.data;
+          }
+          
+          if (productData) {
+            const formattedProduct = {
+              id: productData.id || id,
+              name: productData.name || productData.product_name || 'Product information unavailable',
+              status: productData.status || productData.is_active || 1,
+              manufacturer: productData.manufacturer || 'Not specified',
+              sku: productData.sku || `SKU-${id}`,
+              description: productData.description || 'No description available',
+              product_images: productData.product_images || productData.images || [],
+              product_categories: productData.product_categories || productData.categories || [],
+              product_variants: productData.product_variants || productData.variants || [],
+              created_at: productData.created_at || new Date().toISOString(),
+              updated_at: productData.updated_at || new Date().toISOString(),
+              is_approve: productData.is_approve || productData.is_approved || 0,
+              slug: productData.slug || ''
+            };
+            
+            const formattedResponse = {
+              status: 200,
+              data: {
+                status: 1,
+                message: "Product details retrieved successfully from alternative endpoint",
+                data: formattedProduct,
+                vendor_list: alternativeResponse.data.vendor_list || []
+              }
+            };
+            
+            console.log('Formatted product details from alternative endpoint:', formattedProduct);
+            resolve(formattedResponse);
+            return;
+          }
+        }
+      } catch (alternativeError) {
+        console.error('Alternative endpoint also failed:', alternativeError);
+      }
+      
+      // Create a fallback response if both endpoints fail
       const fallbackResponse = {
         status: 200,
         data: {
@@ -599,13 +648,15 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
       // Changes by Agnij May 3, 2025 [Added pagination support for product variants]
       // Changes by Agnij May 4, 2025 [Enhanced debugging and error handling for variants]
       // Changes by Agnij May 4, 2025 [Added enhanced data fields for variant display]
+      // Changes by Agnij May 4, 2025 [Fixed product data retrieval for variant details]
+      // Changes by Agnij May 4, 2025 [Added direct database access for variants]
       console.log(`Getting variants for product: ${productId}, page: ${page}, limit: ${limit}`);
       
       // Add cache busting to prevent 304 responses
       const timestamp = Date.now();
       
-      // Build complete URL for debugging purposes
-      const url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${productId}?page=${page}&limit=${limit}&include_details=true&_t=${timestamp}`;
+      // Build complete URL for debugging purposes - added include_product_details and direct_db params
+      const url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${productId}?page=${page}&limit=${limit}&include_details=true&include_product_details=true&direct_db=true&_t=${timestamp}`;
       console.log(`Calling variant API: ${url}`);
       
       let response = await axiosInstance.get(
@@ -631,7 +682,8 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
         console.log(`Empty response for variants of product ${productId}, creating default structure`);
         response.data = { status: 1, data: [], pagination: { total: 0, page, limit, pages: 0 } };
       } else if (response.data && !response.data.data) {
-        console.log(`Response missing data array for variants of product ${productId}, adding empty array`);
+        console.log(`Response missing data array for variants of product ${productId}`);
+        
         // Check if response.data is the array itself (sometimes the backend returns just the array)
         if (Array.isArray(response.data)) {
           console.log(`Response.data is an array with ${response.data.length} items, restructuring`);
@@ -647,8 +699,41 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
             }
           };
         } else {
-          response.data.data = [];
-          response.data.pagination = { total: 0, page, limit, pages: 0 };
+          // Try to extract array from a nested field
+          let variantsArray = null;
+          
+          if (response.data.variants && Array.isArray(response.data.variants)) {
+            console.log(`Found variants array in response.data.variants`);
+            variantsArray = response.data.variants;
+          } else if (response.data.product_variants && Array.isArray(response.data.product_variants)) {
+            console.log(`Found variants array in response.data.product_variants`);
+            variantsArray = response.data.product_variants;
+          } else if (response.data.results && Array.isArray(response.data.results)) {
+            console.log(`Found variants array in response.data.results`);
+            variantsArray = response.data.results;
+          } else {
+            // Look for any array in the response
+            Object.keys(response.data).forEach(key => {
+              if (Array.isArray(response.data[key]) && !variantsArray) {
+                console.log(`Found potential variants array in response.data.${key}`);
+                variantsArray = response.data[key];
+              }
+            });
+          }
+          
+          if (variantsArray) {
+            response.data.data = variantsArray;
+          } else {
+            console.log(`No variants array found, creating empty array`);
+            response.data.data = [];
+          }
+          
+          response.data.pagination = { 
+            total: response.data.data.length, 
+            page, 
+            limit, 
+            pages: Math.ceil(response.data.data.length / limit) 
+          };
         }
       }
       
@@ -662,64 +747,82 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
           pages: Math.ceil(totalItems / limit)
         };
       }
+      
+      // Extract product details directly from response if possible
+      let productDetails = null;
+      
+      // Try to find product details in the response
+      if (response.data.product) {
+        console.log('Product details found in response.data.product');
+        productDetails = response.data.product;
+      } else if (response.data.product_details) {
+        console.log('Product details found in response.data.product_details');
+        productDetails = response.data.product_details;
+      } else {
+        // If not found, fetch product details separately
+        try {
+          console.log('Product details not found in response, fetching separately');
+          const productResponse = await getProductDetailsById(productId);
+          if (productResponse?.data?.data) {
+            productDetails = productResponse.data.data;
+            console.log("Retrieved product details:", productDetails.name);
+          }
+        } catch (productError) {
+          console.warn(`Could not fetch product details for ${productId}:`, productError);
+        }
+      }
+      
+      // Store product details in response for use by the frontend
+      response.data.product_details = productDetails;
 
       // Enhance the variant data with additional info if missing
       if (response.data.data && Array.isArray(response.data.data)) {
-        // Try to fetch product details if not already included
-        let productDetails = null;
-        
-        if (!response.data.product_details) {
-          try {
-            const productResponse = await getProductDetailsById(productId);
-            if (productResponse?.data?.data) {
-              productDetails = productResponse.data.data;
-              console.log("Retrieved product details:", productDetails.name);
-            }
-          } catch (productError) {
-            console.warn(`Could not fetch product details for ${productId}:`, productError);
-          }
-        } else {
-          productDetails = response.data.product_details;
-        }
-        
         // Enhance each variant with additional information
         response.data.data = response.data.data.map(variant => {
+          // Deep clone to avoid mutating the original object
+          const enhancedVariant = { ...variant };
+          
           // Use variant.product_name if it exists, otherwise use from product details
-          if (!variant.product_name && productDetails) {
-            variant.product_name = productDetails.name || `Product #${productId}`;
+          if (!enhancedVariant.product_name && productDetails) {
+            enhancedVariant.product_name = productDetails.name;
           }
           
           // Format category information
-          if (variant.categories && Array.isArray(variant.categories) && variant.categories.length > 0) {
-            variant.category_info = variant.categories.map(c => c.name || c.category_name).join(', ');
+          if (enhancedVariant.categories && Array.isArray(enhancedVariant.categories) && enhancedVariant.categories.length > 0) {
+            enhancedVariant.category_info = enhancedVariant.categories.map(c => c.name || c.category_name).join(', ');
           } else if (productDetails && productDetails.product_categories && 
                     Array.isArray(productDetails.product_categories) && 
                     productDetails.product_categories.length > 0) {
             // Fallback to product categories if variant categories not available
-            variant.category_info = productDetails.product_categories
+            enhancedVariant.category_info = productDetails.product_categories
               .map(c => c.category_name || c.name)
+              .filter(Boolean)
               .join(', ');
           } else {
-            variant.category_info = variant.category_info || variant.category_name || '';
+            enhancedVariant.category_info = enhancedVariant.category_info || enhancedVariant.category_name || '';
           }
           
           // Ensure variant has name field
-          variant.name = variant.variant_name || variant.name || `Variant #${variant.id}`;
+          enhancedVariant.name = enhancedVariant.variant_name || enhancedVariant.name || `Variant #${enhancedVariant.id}`;
+          enhancedVariant.variant_name = enhancedVariant.name;
           
           // Normalize created_at date if exists
-          if (variant.created_at) {
+          if (enhancedVariant.created_at) {
             try {
               // Check if it's already a Date object to avoid errors
-              if (!(variant.created_at instanceof Date)) {
-                const createdDate = new Date(variant.created_at);
-                variant.created_at_formatted = createdDate.toLocaleString();
+              if (!(enhancedVariant.created_at instanceof Date)) {
+                const createdDate = new Date(enhancedVariant.created_at);
+                enhancedVariant.created_at_formatted = createdDate.toLocaleString();
               }
             } catch (e) {
-              console.warn(`Could not parse date for variant ${variant.id}:`, e);
+              console.warn(`Could not parse date for variant ${enhancedVariant.id}:`, e);
             }
           }
           
-          return variant;
+          // Add product reference
+          enhancedVariant.product_id = productId;
+          
+          return enhancedVariant;
         });
       }
       
@@ -875,13 +978,13 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
       console.log(`Processed ${enhancedData.length} variants from search results`);
       
       // Return the enhanced data in a standard format
-      resolve({
-        status: 200,
-        data: {
-          status: 1,
+        resolve({
+          status: 200,
+          data: {
+            status: 1,
           data: enhancedData
-        }
-      });
+          }
+        });
     } catch (error) {
       console.error("Error in searchAllVariants:", error);
       // Return empty data on error instead of rejecting
