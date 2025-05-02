@@ -93,7 +93,7 @@ const MappingDetail = () => {
       const stringId = id.toString();
       
       // Fetch all mappings
-      const mappingsResponse = await getVariantMappings("", null, null);
+      const mappingsResponse = await getVariantMappings(id, "", null, null);
       console.log("Mappings response:", mappingsResponse?.data);
       
       if (mappingsResponse?.data?.data && Array.isArray(mappingsResponse.data.data)) {

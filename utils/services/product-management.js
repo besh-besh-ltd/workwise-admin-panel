@@ -549,7 +549,7 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate) => {
 };
 
 // Changes by Agnij May 18, 2025 [Added function to get variant-vendor mappings]
-export const getVariantMappings = (searchTerm, startDate, endDate) => {
+export const getVariantMappings = (id, searchTerm, startDate, endDate) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Changes by Agnij May 01, 2025 [Added date range parameters]
@@ -557,7 +557,9 @@ export const getVariantMappings = (searchTerm, startDate, endDate) => {
       const timestamp = Date.now();
       
       // Build query params
-      let queryParams = `search_term=${encodeURIComponent(searchTerm || "")}`;
+      let queryParams = `id=${id}`
+      if(searchTerm)
+        queryParams = `&search_term=${encodeURIComponent(searchTerm || "")}`;
       if (startDate) {
         queryParams += `&start_date=${encodeURIComponent(startDate)}`;
       }
