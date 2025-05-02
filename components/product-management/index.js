@@ -280,8 +280,15 @@ const ProductManagement = () => {
   };
 
   const openRejectModal = (id) => {
-    setShowRejectModal(true)
-    setselectedProductsId(id)
+    // Changes by Agnij August 19, 2024 [Improved handling for variants and mappings]
+    // Process ID to ensure consistent format with mapping_ prefix for mappings
+    const processedId = typeof id === 'string' && id.startsWith('mapping_') 
+      ? id 
+      : (typeof id === 'number' && activeTabs.mappings ? `mapping_${id}` : id);
+    
+    console.log("Opening reject modal for:", processedId);
+    setShowRejectModal(true);
+    setselectedProductsId(processedId);
   }
 
   const handlePageClick = (e) => {
@@ -412,21 +419,48 @@ const ProductManagement = () => {
       })
   }
 
-  const handleAcceptRejectProduct = (id, status) => {
-    acceptProduct(id, status)
+  const handleAcceptRejectProduct = (id, status, reject_reason_id = null) => {
+    // Changes by Agnij August 19, 2024 [Improved mapping ID handling]
+    console.log("Approving/rejecting:", { id, status, reject_reason_id });
+    
+    // For mappings, ensure we add the mapping_ prefix if it's not already there
+    const processedId = typeof id === 'string' && id.startsWith('mapping_') 
+      ? id 
+      : (typeof id === 'number' && activeTabs.mappings ? `mapping_${id}` : id);
+    
+    acceptProduct(processedId, status, reject_reason_id)
       .then((res) => {
         setShowRejectModal(false);
         setselectedProductsId("")
         setInputValue("")
         setSelectValue("")
-        toast.success(res.message);
-        getProducts();
+        toast.success(res.message || `Product ${status === '1' ? 'approved' : 'rejected'} successfully`);
+        // Refresh different tables based on the ID type
+        if (typeof processedId === 'string' && processedId.startsWith('mapping_')) {
+          // This was a mapping approval
+          getAllMappings();
+        } else if (activeTabs.variants) {
+          // This was a variant approval from variants tab
+          getAllVariants();
+        } else {
+          // This was a regular product approval
+          getProducts();
+        }
         getReasonList();
       })
       .catch((error) => {
+        console.error("Error in handleAcceptRejectProduct:", error);
         let txt = "";
-        for (let x in error.error.response.data.errors) {
-          txt = error.error.response.data.errors[x];
+        if (error.error?.response?.data?.errors) {
+          for (let x in error.error.response.data.errors) {
+            txt = error.error.response.data.errors[x];
+          }
+        } else if (error.error?.response?.data?.message) {
+          txt = error.error.response.data.message;
+        } else if (error.error?.message) {
+          txt = error.error.message;
+        } else {
+          txt = "An error occurred during approval/rejection";
         }
         toast.error(txt);
       })
@@ -1057,18 +1091,30 @@ const ProductManagement = () => {
   const getAllVariants = () => {
     setLoadingVariants(true);
     
-    // Changes by Agnij May 01, 2025 [Added date range parameters]
+    // Changes by Agnij May 01, 2025 [Updated to use all filters from filterValues state]
     const params = {
       page: variantsPage,
       limit: variantsLimit,
-      search: searchString,
-      start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
-      end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null
+      search: searchString || filterValues.searchString,
+      vendor_id: selectedVendor || filterValues.vendor,
+      category_id: filterValues.category,
+      added_by: filterValues.addedBy,
+      date_from: filterValues.dateFrom,
+      date_to: filterValues.dateTo,
+      is_approve: filterValues.approvalStatus
     };
     
     try {
       // Use the existing searchAllVariants function to get variants
-      searchAllVariants(params.search || "", params.start_date, params.end_date)
+      searchAllVariants(
+        params.search,                  // Search string
+        params.date_from,               // Start date
+        params.date_to,                 // End date
+        params.vendor_id,               // Vendor ID
+        params.category_id,             // Category ID 
+        params.added_by,                // Added by
+        params.is_approve               // Approval status
+      )
         .then(response => {
           if (response?.data?.data) {
             const variantsData = response.data.data;
@@ -1083,7 +1129,7 @@ const ProductManagement = () => {
                 created_at_formatted: new Date(variant.created_at).toLocaleString()
               }));
               
-              // Calculate total pages using original unfiltered data
+              // Calculate total items
               const totalItems = formattedVariants.length;
               
               // Calculate indices for pagination
@@ -1105,6 +1151,7 @@ const ProductManagement = () => {
           }
         })
         .catch(error => {
+          console.error("Error fetching variants:", error);
           toast.error("Failed to fetch variants");
           setVariants([]);
           setVariantsTotalPages(0);
@@ -1113,6 +1160,7 @@ const ProductManagement = () => {
           setLoadingVariants(false);
         });
     } catch (error) {
+      console.error("Exception in getAllVariants:", error);
       setLoadingVariants(false);
       setVariants([]);
       setVariantsTotalPages(0);
@@ -1123,18 +1171,30 @@ const ProductManagement = () => {
   const getAllMappings = () => {
     setLoadingMappings(true);
     
-    // Changes by Agnij May 01, 2025 [Added date range parameters]
+    // Changes by Agnij July 25, 2024 [Updated to use all filters from filterValues state]
     const params = {
       page: mappingsPage,
       limit: mappingsLimit,
-      search: searchString,
-      start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
-      end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null
+      search: searchString || filterValues.searchString,
+      vendor_id: selectedVendor || filterValues.vendor,
+      category_id: filterValues.category,
+      added_by: filterValues.addedBy,
+      date_from: filterValues.dateFrom,
+      date_to: filterValues.dateTo,
+      is_approve: filterValues.approvalStatus
     };
     
     try {
-      // Use the variant mappings API with date parameters
-      getVariantMappings(params.search || "", params.start_date, params.end_date)
+      // Use the variant mappings API with all filter parameters
+      getVariantMappings(
+        params.search || "",            // Search string
+        params.date_from,               // Start date
+        params.date_to,                 // End date
+        params.vendor_id,               // Vendor ID
+        params.category_id,             // Category ID
+        params.added_by,                // Added by
+        params.is_approve               // Approval status
+      )
         .then(response => {
           if (response?.data?.data) {
             const mappingsData = response.data.data;
@@ -1156,7 +1216,11 @@ const ProductManagement = () => {
                   vendor_email: mapping.vendor_email || 'N/A',
                   mapped_at: mapping.mapped_at,
                   mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 'Unknown',
-                  is_mapped: true
+                  is_mapped: true,
+                  is_approve: mapping.is_approve || 0,
+                  reject_reason: mapping.reject_reason,
+                  created_by: mapping.created_by,
+                  updated_by: mapping.updated_by
                 };
               });
               
@@ -1182,6 +1246,7 @@ const ProductManagement = () => {
           }
         })
         .catch(error => {
+          console.error("Error fetching mappings:", error);
           toast.error("Failed to fetch mappings");
           setMappings([]);
           setMappingsTotalPages(0);
@@ -1190,6 +1255,7 @@ const ProductManagement = () => {
           setLoadingMappings(false);
         });
     } catch (error) {
+      console.error("Exception in getAllMappings:", error);
       setLoadingMappings(false);
       setMappings([]);
       setMappingsTotalPages(0);
@@ -1969,6 +2035,8 @@ const ProductManagement = () => {
                     <th scope="col">Sub Category</th>
                     <th scope="col">Approval Status</th>
                     <th scope="col">Created At</th>
+                    <th scope="col">Updated At</th>
+                    <th scope="col">Approved At</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
@@ -2053,6 +2121,20 @@ const ProductManagement = () => {
                               month: "short",
                               year: "numeric",
                             })}
+                          </td>
+                          <td style={{ width: "100px" }}>
+                            {item.updated_at ? new Date(item.updated_at).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            }) : "-"}
+                          </td>
+                          <td style={{ width: "100px" }}>
+                            {item.approved_at ? new Date(item.approved_at).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            }) : "-"}
                           </td>
                           <td>
                             <div className="d-flex">
@@ -2161,38 +2243,94 @@ const ProductManagement = () => {
                         />
                       </div>
                       
-                      {/* Changes by Agnij May 01, 2025 [Added date range filters] */}
-                      <div className="col-sm-3 mb-3">
-                        <input
-                          type="date"
-                          className="form-control"
-                          placeholder="Start Date"
-                          value={filterValues.startDate || ''}
-                          onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                        />
-                      </div>
-                      
-                      <div className="col-sm-3 mb-3">
-                        <input
-                          type="date"
-                          className="form-control"
-                          placeholder="End Date"
-                          value={filterValues.endDate || ''}
-                          onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                        />
-                      </div>
-                      
-                      {/* Changes by Agnij May 31, 2025 [Removed vendor filter from variants tab] */}
+                      {/* Changes by Agnij July 25, 2024 [Added complete filters to variants tab to match products tab] */}
                       <div className="col-sm-3 mb-3">
                         <Select
-                          options={categories}
-                          placeholder="Category"
+                          id={id}
+                          options={vendorData}
+                          placeholder="Select Vendor"
                           styles={customSelectStyles}
                           isClearable={true}
-                          instanceId="category-select"
-                          value={filterValues.category ? categories.find(opt => opt.value === filterValues.category) : null}
-                          onChange={(selectedOption) => handleFilterChange('category', selectedOption)}
+                          instanceId="vendor-select-variants"
+                          value={filterValues.vendor ? vendorData.find(opt => opt.value === filterValues.vendor) : null}
+                          onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
+                          components={{ Option: CustomSelectOption }}
                         />
+                      </div>
+                      <div className="col-sm-3 mb-3">
+                        <Select
+                          id={id}
+                          options={approvalStatusOptions}
+                          placeholder="Filter by Approval Status"
+                          styles={customSelectStyles}
+                          isClearable={true}
+                          instanceId="approval-status-select-variants"
+                          value={filterValues.approvalStatus ? approvalStatusOptions.find(opt => opt.value === filterValues.approvalStatus) : null}
+                          onChange={(selectedOption) => handleFilterChange('approvalStatus', selectedOption)}
+                        />
+                      </div>
+                      <div className="col-sm-3 mb-3">
+                        <select
+                          className="form-control"
+                          value={filterValues.category}
+                          onChange={(e) => handleFilterChange('category', e.target.value)}
+                        >
+                          <option value="">Filter by Category</option>
+                          {categories.map(category => (
+                            <option key={category.value} value={category.value}>
+                              {category.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-sm-3 mb-3">
+                        <select
+                          className="form-control"
+                          value={filterValues.addedBy}
+                          onChange={(e) => handleFilterChange('addedBy', e.target.value)}
+                        >
+                          <option value="">Filter by Added By</option>
+                          {addedByOptions.map(user => (
+                            <option key={user.value} value={user.value}>
+                              {user.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* Date Filters */}
+                      <div className="col-sm-3 mb-3">
+                        <div className="date-input-container">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Start Date"
+                            onFocus={(e) => (e.target.type = 'date')}
+                            onBlur={(e) => {
+                              if (!e.target.value) {
+                                e.target.type = 'text'
+                              }
+                            }}
+                            value={filterValues.dateFrom}
+                            onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="col-sm-3 mb-3">
+                        <div className="date-input-container">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="End Date"
+                            onFocus={(e) => (e.target.type = 'date')}
+                            onBlur={(e) => {
+                              if (!e.target.value) {
+                                e.target.type = 'text'
+                              }
+                            }}
+                            value={filterValues.dateTo}
+                            onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                          />
+                        </div>
                       </div>
                       
                       <div className="col-sm-3 mb-3">
@@ -2245,6 +2383,7 @@ const ProductManagement = () => {
                               <th>Updated By</th>
                               <th>Created At</th>
                               <th>Updated At</th>
+                              <th>Approved At</th>
                               <th>Actions</th>
                             </tr>
                           </thead>
@@ -2353,6 +2492,14 @@ const ProductManagement = () => {
                                       }) : "-"}
                                   </td>
                                   <td>
+                                    {variant.approved_at ? 
+                                      new Date(variant.approved_at).toLocaleDateString("en-GB", {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                      }) : "-"}
+                                  </td>
+                                  <td>
                                     <button
                                       className="btn btn-sm btn-primary me-2"
                                       onClick={() => {
@@ -2455,28 +2602,7 @@ const ProductManagement = () => {
                         />
                       </div>
                       
-                      {/* Changes by Agnij May 01, 2025 [Added date range filters] */}
-                      <div className="col-sm-3 mb-3">
-                        <input
-                          type="date"
-                          className="form-control"
-                          placeholder="Start Date"
-                          value={filterValues.startDate || ''}
-                          onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                        />
-                      </div>
-                      
-                      <div className="col-sm-3 mb-3">
-                        <input
-                          type="date"
-                          className="form-control"
-                          placeholder="End Date"
-                          value={filterValues.endDate || ''}
-                          onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                        />
-                      </div>
-                      
-                      {/* Changes by Agnij May 31, 2025 [Fixed vendor filter in mappings] */}
+                      {/* Changes by Agnij July 25, 2024 [Added complete filters to mappings tab to match products tab] */}
                       <div className="col-sm-3 mb-3">
                         <Select
                           options={vendorData}
@@ -2491,6 +2617,85 @@ const ProductManagement = () => {
                             setSelectedVendor(selectedOption ? selectedOption.value : "");
                           }}
                         />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <Select
+                          id={id}
+                          options={approvalStatusOptions}
+                          placeholder="Filter by Approval Status"
+                          styles={customSelectStyles}
+                          isClearable={true}
+                          instanceId="approval-status-select-mappings"
+                          value={filterValues.approvalStatus ? approvalStatusOptions.find(opt => opt.value === filterValues.approvalStatus) : null}
+                          onChange={(selectedOption) => handleFilterChange('approvalStatus', selectedOption)}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <select
+                          className="form-control"
+                          value={filterValues.category}
+                          onChange={(e) => handleFilterChange('category', e.target.value)}
+                        >
+                          <option value="">Filter by Category</option>
+                          {categories.map(category => (
+                            <option key={category.value} value={category.value}>
+                              {category.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <select
+                          className="form-control"
+                          value={filterValues.addedBy}
+                          onChange={(e) => handleFilterChange('addedBy', e.target.value)}
+                        >
+                          <option value="">Filter by Added By</option>
+                          {addedByOptions.map(user => (
+                            <option key={user.value} value={user.value}>
+                              {user.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      {/* Date Filters */}
+                      <div className="col-sm-3 mb-3">
+                        <div className="date-input-container">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Start Date"
+                            onFocus={(e) => (e.target.type = 'date')}
+                            onBlur={(e) => {
+                              if (!e.target.value) {
+                                e.target.type = 'text'
+                              }
+                            }}
+                            value={filterValues.dateFrom}
+                            onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="col-sm-3 mb-3">
+                        <div className="date-input-container">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="End Date"
+                            onFocus={(e) => (e.target.type = 'date')}
+                            onBlur={(e) => {
+                              if (!e.target.value) {
+                                e.target.type = 'text'
+                              }
+                            }}
+                            value={filterValues.dateTo}
+                            onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                          />
+                        </div>
                       </div>
                       
                       <div className="col-sm-3 mb-3">
@@ -2526,8 +2731,12 @@ const ProductManagement = () => {
                               <th>Vendor</th>
                               <th>Vendor Email</th>
                               <th>Category</th>
-                              <th>Status</th>
+                              <th>Approval Status</th>
+                              <th>Created By</th>
+                              <th>Updated By</th>
                               <th>Mapped On</th>
+                              <th>Updated At</th>
+                              <th>Approved At</th>
                               <th>Actions</th>
                             </tr>
                           </thead>
@@ -2551,15 +2760,84 @@ const ProductManagement = () => {
                                     </span>
                                   </td>
                                   <td>
-                                    {/* Approval controls similar to products and variants */}
-                                    {mapping.is_mapped ? (
-                                      <span className="badge badge-success">Mapped</span>
-                                    ) : (
-                                      <span className="badge badge-danger">Not Mapped</span>
-                                    )}
+                                    {/* Changes by Agnij July 25, 2024 [Added approval controls for mappings] */}
+                                    {(userType && userType != 6) && (
+                                      mapping?.is_approve === 1 ? (
+                                        <OverlayTrigger
+                                          placement="top"
+                                          overlay={
+                                            <Tooltip id="tooltip1">
+                                              Click to Disapprove
+                                            </Tooltip>
+                                          }
+                                        >
+                                          <button
+                                            className="btn btn-secondary bg-danger btn-sm mb-2"
+                                            onClick={() => openRejectModal(`mapping_${mapping.mapping_id}`)}
+                                          >
+                                            Disapprove
+                                          </button>
+                                        </OverlayTrigger>
+                                      ) : (
+                                        <div className="d-flex flex-row align-items-center">
+                                          <OverlayTrigger
+                                            placement="top"
+                                            overlay={
+                                              <Tooltip id="tooltip1">Click to approve</Tooltip>
+                                            }
+                                          >
+                                            <button
+                                              className="btn btn-secondary bg-success btn-sm mb-2"
+                                              onClick={() => handleAcceptRejectProduct(`mapping_${mapping.mapping_id}`, '1')}
+                                            >
+                                              Approve
+                                            </button>
+                                          </OverlayTrigger>
+
+                                          {mapping?.is_approve === 0 && mapping?.reject_reason &&
+                                            <OverlayTrigger
+                                              placement="top"
+                                              overlay={
+                                                <Tooltip id="tooltip1">
+                                                  {mapping?.reject_reason}
+                                                </Tooltip>
+                                              }
+                                            >
+                                              <span className="fa fa-info-circle ml-2"></span>
+                                            </OverlayTrigger>}
+                                        </div>
+                                      ))}
+                                  </td>
+                                  <td>
+                                    {/* Changes by Agnij July 25, 2024 [Added created by display] */}
+                                    {mapping.created_by ? 
+                                      addedByOptions.find(user => user.value === parseInt(mapping.created_by))?.label || mapping.created_by 
+                                      : "-"}
+                                  </td>
+                                  <td>
+                                    {/* Changes by Agnij July 25, 2024 [Added updated by display] */}
+                                    {mapping.updated_by ? 
+                                      addedByOptions.find(user => user.value === parseInt(mapping.updated_by))?.label || mapping.updated_by 
+                                      : "-"}
                                   </td>
                                   <td>
                                     {mapping.mapped_at_formatted || "-"}
+                                  </td>
+                                  <td>
+                                    {mapping.updated_at ? 
+                                      new Date(mapping.updated_at).toLocaleDateString("en-GB", {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                      }) : "-"}
+                                  </td>
+                                  <td>
+                                    {mapping.approved_at ? 
+                                      new Date(mapping.approved_at).toLocaleDateString("en-GB", {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                      }) : "-"}
                                   </td>
                                   <td>
                                     <button
@@ -2575,7 +2853,7 @@ const ProductManagement = () => {
                               ))
                             ) : (
                               <tr>
-                                <td colSpan="8" className="text-center">
+                                <td colSpan="10" className="text-center">
                                   No mappings found
                                 </td>
                               </tr>

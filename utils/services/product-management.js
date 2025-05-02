@@ -193,29 +193,39 @@ export const deleteProduct = (id) => {
   });
 }
 
-export const acceptProduct = (id, status) => {
-  // Changes by Agnij May 01, 2025 [Fixed payload format for product approval]
-  let payload = {};
-  if (typeof status === 'object') {
-    // If status is already an object (for rejection with reason)
-    payload = status;
-  } else {
-    // Make sure status is a string and is in the payload object
-    payload = { status: status.toString() };
-  }
-  
+export const acceptProduct = (id, status, reject_reason_id = null) => {
   return new Promise(async (resolve, reject) => {
     try {
-      let response = await axiosInstance.put(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/accept-product/${id}`,
-        payload
-      );
-      resolve(response);
+      // Changes by Agnij August 19, 2024 [Fixed approval functionality]
+      console.log("Processing approval for:", { id, status, reject_reason_id });
+      
+      // Create payload with status and optional reject reason
+      const payload = { status };
+      if (reject_reason_id) {
+        payload.reject_reason_id = reject_reason_id;
+      }
+      
+      // Determine if this is a mapping ID (prefixed with 'mapping_')
+      const isMappingId = typeof id === 'string' && id.startsWith('mapping_');
+      
+      // Extract the actual ID if it has a prefix
+      const actualId = isMappingId ? id.replace('mapping_', '') : id;
+      
+      console.log("Using endpoint for:", { isMappingId, actualId });
+      
+      // Choose the appropriate endpoint
+      const endpoint = isMappingId 
+        ? `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/mapping-approve/${actualId}`
+        : `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/accept-product/${actualId}`;
+      
+      let response = await axiosInstance.put(endpoint, payload);
+      resolve(response.data || { message: "Operation successful" });
     } catch (error) {
+      console.error("Error in acceptProduct:", error);
       reject({ error });
     }
   });
-}
+};
 
 export const rejectListProduct = () => {
   return new Promise(async (resolve, reject) => {
@@ -488,22 +498,32 @@ export const mapVariantWithVendor = (values) => {
 };
 
 // Changes by Agnij April 30, 2025 [Added direct variant search function]
-export const searchAllVariants = (id, searchTerm, startDate, endDate) => {
+export const searchAllVariants = (searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij May 01, 2025 [Added date range parameters]
+      // Changes by Agnij July 25, 2024 [Added all filter parameters]
       // Add a timestamp to prevent 304 responses
       const timestamp = Date.now();
-      let queryParams = `id=${id}`
       
       // Build query params
-      if(searchTerm)
-        queryParams = `&search_term=${encodeURIComponent(searchTerm || "")}`;
+      let queryParams = `search_term=${encodeURIComponent(searchTerm || "")}`;
       if (startDate) {
         queryParams += `&start_date=${encodeURIComponent(startDate)}`;
       }
       if (endDate) {
         queryParams += `&end_date=${encodeURIComponent(endDate)}`;
+      }
+      if (vendorId) {
+        queryParams += `&vendor_id=${encodeURIComponent(vendorId)}`;
+      }
+      if (categoryId) {
+        queryParams += `&category_id=${encodeURIComponent(categoryId)}`;
+      }
+      if (addedBy) {
+        queryParams += `&added_by=${encodeURIComponent(addedBy)}`;
+      }
+      if (approvalStatus !== undefined && approvalStatus !== null && approvalStatus !== "") {
+        queryParams += `&is_approve=${encodeURIComponent(approvalStatus)}`;
       }
       queryParams += `&_t=${timestamp}`;
       
@@ -536,6 +556,7 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate) => {
         });
       }
     } catch (error) {
+      console.error("Error in searchAllVariants:", error);
       // Return empty data on error instead of rejecting
       resolve({
         status: 200,
@@ -549,10 +570,10 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate) => {
 };
 
 // Changes by Agnij May 18, 2025 [Added function to get variant-vendor mappings]
-export const getVariantMappings = (searchTerm, startDate, endDate) => {
+export const getVariantMappings = (searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij May 01, 2025 [Added date range parameters]
+      // Changes by Agnij July 25, 2024 [Added all filter parameters]
       // Add a timestamp to prevent 304 responses
       const timestamp = Date.now();
       
@@ -563,6 +584,18 @@ export const getVariantMappings = (searchTerm, startDate, endDate) => {
       }
       if (endDate) {
         queryParams += `&end_date=${encodeURIComponent(endDate)}`;
+      }
+      if (vendorId) {
+        queryParams += `&vendor_id=${encodeURIComponent(vendorId)}`;
+      }
+      if (categoryId) {
+        queryParams += `&category_id=${encodeURIComponent(categoryId)}`;
+      }
+      if (addedBy) {
+        queryParams += `&added_by=${encodeURIComponent(addedBy)}`;
+      }
+      if (approvalStatus !== undefined && approvalStatus !== null && approvalStatus !== "") {
+        queryParams += `&is_approve=${encodeURIComponent(approvalStatus)}`;
       }
       queryParams += `&_t=${timestamp}`;
       
@@ -591,10 +624,11 @@ export const getVariantMappings = (searchTerm, startDate, endDate) => {
           data: {
             status: 1,
             data: []
-        }
-      });
+          }
+        });
       }
     } catch (error) {
+      console.error("Error in getVariantMappings:", error);
       // Return empty data on error instead of rejecting
       resolve({
         status: 200,
