@@ -2843,7 +2843,7 @@ const ProductManagement = () => {
                                     <button
                                       className="btn btn-sm btn-info"
                                       onClick={() => {
-                                        router.push(`/product-management/mapping/${mapping.id}`);
+                                        router.push(`/product-management/mapping/${mapping.mapping_id}`);
                                       }}
                                     >
                                       <i className="fas fa-edit"></i> Edit
