@@ -14,6 +14,7 @@ import { vendorList } from "@/utils/services/rfq";
 import { getAdminProfile } from "@/utils/services/login";
 import AddVariantModal from '../modal/AddVariantModal';
 import { getProductVariants } from '../../utils/services/product-management';
+import MapVariantVendorModal from "../modal/MapVariantVendorModal";
 
 // Custom styles for Product Select Component
 const customStyles = {
@@ -825,7 +826,6 @@ const ProductManagement = () => {
 
   const handleOpenProductMap = () => {
     // Save the current state before opening modal
-    const prevTab = activeTab;
     const currentTabContent = document.querySelector('.tab-pane.active');
     if (currentTabContent) {
       currentTabContent.style.display = 'block';
@@ -1073,12 +1073,6 @@ const ProductManagement = () => {
   
   // Changes by Agnij Aprill 30, 2025 [Added tab switching function]
   const handleTabChange = (tabName) => {
-    // Store current tabs content in DOM
-    const currentTab = document.querySelector('.tab-pane.active');
-    if (currentTab) {
-      currentTab.style.display = 'none';
-    }
-
     setActiveTab(tabName);
     updateUrlParams({ tab: tabName });
     
@@ -2029,7 +2023,11 @@ const ProductManagement = () => {
                 {/* Products Tab */}
                 <div className={`tab-pane fade ${activeTab === 'products' ? 'active show' : ''}`} id="products-tab" role="tabpanel" aria-labelledby="products-tab">
                   {/* Filter controls for products */}
-            {!enableBulkUpload && !enableBulkProdUpload && !openProductMap && (
+                    <MapVariantVendorModal isVisible={openProductMap} onCancel={() => setOpenProductMap(false)} onSuccess={() => {
+                      toast.success("Variant has been mapped with vendor!")
+                      setOpenProductMap(false)
+                    }} />
+            {!enableBulkUpload && !enableBulkProdUpload && (
                     <div className="card card-body">
               <div className="row g-3">
                 {/* Search and Primary Filters */}

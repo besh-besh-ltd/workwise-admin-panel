@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { mapVariantWithVendor } from '../../utils/services/product-management';
-import { getAllVendors } from '../../utils/services/vendor-management';
 import { toast } from 'react-toastify';
+import { vendorList } from '@/utils/services/rfq';
 
 // Simple modal component that doesn't use antd
 const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
@@ -47,10 +47,11 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     try {
       console.log("Fetching vendors for mapping modal");
       setLoading(true);
-      const vendorsResponse = await getAllVendors();
-      if (vendorsResponse?.data?.data) {
-        console.log(`Fetched ${vendorsResponse.data.data.length} vendors`);
-        setVendors(vendorsResponse.data.data);
+      const vendorsResponse = await vendorList();
+      console.log("VENDOR RESPONSE -------- ", vendorsResponse)
+      if (vendorsResponse?.data) {
+        console.log(`Fetched ${vendorsResponse.data.length} vendors`);
+        setVendors(vendorsResponse.data);
       } else {
         console.error("Invalid vendor response:", vendorsResponse);
         toast.error('Failed to load vendors: Invalid response');
