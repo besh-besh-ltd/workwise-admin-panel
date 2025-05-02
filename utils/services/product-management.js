@@ -498,7 +498,7 @@ export const mapVariantWithVendor = (values) => {
 };
 
 // Changes by Agnij April 30, 2025 [Added direct variant search function]
-export const searchAllVariants = (searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus) => {
+export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Changes by Agnij July 25, 2024 [Added all filter parameters]
@@ -506,7 +506,9 @@ export const searchAllVariants = (searchTerm, startDate, endDate, vendorId, cate
       const timestamp = Date.now();
       
       // Build query params
-      let queryParams = `search_term=${encodeURIComponent(searchTerm || "")}`;
+      let queryParams = `id=${id}`
+      if (searchTerm)
+        queryParams = `search_term=${encodeURIComponent(searchTerm || "")}`;
       if (startDate) {
         queryParams += `&start_date=${encodeURIComponent(startDate)}`;
       }
