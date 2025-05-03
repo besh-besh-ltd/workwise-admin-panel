@@ -2524,7 +2524,7 @@ const ProductManagement = () => {
                               <th>Product</th>
                               <th>Category</th>
                               <th>Status</th>
-                              {/* Changes by Agnij Jun 26 2024 [Combine created/updated columns in Variants tab] */}
+                              {/* Changes by Agnij May 3, 2025 [Combine created/updated columns in Variants tab] */}
                               <th>Created By / At</th>
                               <th>Updated By / At</th>
                               {/* Removed Created At, Updated At, Approved At */}
@@ -2607,7 +2607,7 @@ const ProductManagement = () => {
                                         </div>
                                       ))}
                                   </td>
-                                  {/* Changes by Agnij Jun 26 2024 [Combine created/updated columns in Variants tab] */}
+                                  {/* Changes by Agnij May 3, 2025 [Combine created/updated columns in Variants tab] */}
                                   <td>
                                     {/* Combined Created By and Created At */}
                                     <div>
@@ -2663,7 +2663,7 @@ const ProductManagement = () => {
                               ))
                             ) : (
                               <tr>
-                                {/* Changes by Agnij Jun 26 2024 [Adjust colspan after combining columns in Variants tab] */}
+                                {/* Changes by Agnij May 3, 2025 [Adjust colspan after combining columns in Variants tab] */}
                                 <td colSpan="8" className="text-center"> {/* Adjusted colspan from 11 to 8 */}
                                   No variants found
                                 </td>
@@ -2894,7 +2894,7 @@ const ProductManagement = () => {
                                   </td>
                                   <td>{mapping.vendor_email || "-"}</td>
                                   <td>
-                                    {/* Changes by Agnij Jun 26 2024 [Fix category display to use category_info] */}
+                                    {/* Changes by Agnij May 3, 2025 [Fix category display to use category_info] */}
                                     <span className="badge badge-warning">
                                       {mapping.category_info || "-"} {/* Use category_info string directly */}
                                     </span>
@@ -2948,7 +2948,7 @@ const ProductManagement = () => {
                                         </div>
                                       ))}
                                   </td>
-                                  {/* Changes by Agnij Jun 26 2024 [Combine created/mapped and updated columns] */}
+                                  {/* Changes by Agnij May 3, 2025 [Combine created/mapped and updated columns] */}
                                   <td>
                                     {/* Combined Created By and Mapped On */}
                                     <div>
@@ -2991,7 +2991,7 @@ const ProductManagement = () => {
                               ))
                             ) : (
                               <tr>
-                                {/* Changes by Agnij Jun 26 2024 [Adjust colspan after combining columns] */}
+                                {/* Changes by Agnij May 3, 2025 [Adjust colspan after combining columns] */}
                                 <td colSpan="9" className="text-center"> {/* Adjusted colspan from 12 to 9 */}
                                   No mappings found
                                 </td>
