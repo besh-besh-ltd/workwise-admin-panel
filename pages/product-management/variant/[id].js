@@ -167,7 +167,7 @@ const VariantView = () => {
   };
 
   return (
-    <Layout>
+    <section className="content">
       <div className="content-header">
         <div className="container-fluid">
           <div className="row mb-2">
@@ -268,19 +268,6 @@ const VariantView = () => {
                         {variant.updated_at ? new Date(variant.updated_at).toLocaleString() : "N/A"}
                       </div>
                     </div>
-                    {/* Debug info - show raw variant data */}
-                    {process.env.NODE_ENV === 'development' && (
-                      <div className="row mt-4">
-                        <div className="col-12">
-                          <details>
-                            <summary>Debug - Variant Data</summary>
-                            <pre className="bg-light p-3 mt-2" style={{maxHeight: '300px', overflow: 'auto'}}>
-                              {JSON.stringify(variant, null, 2)}
-                            </pre>
-                          </details>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -353,7 +340,7 @@ const VariantView = () => {
           )}
         </div>
       </section>
-    </Layout>
+    </section>
   );
 };
 

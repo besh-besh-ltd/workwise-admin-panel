@@ -2524,11 +2524,10 @@ const ProductManagement = () => {
                               <th>Product</th>
                               <th>Category</th>
                               <th>Status</th>
-                              <th>Created By</th>
-                              <th>Updated By</th>
-                              <th>Created At</th>
-                              <th>Updated At</th>
-                              <th>Approved At</th>
+                              {/* Changes by Agnij Jun 26 2024 [Combine created/updated columns in Variants tab] */}
+                              <th>Created By / At</th>
+                              <th>Updated By / At</th>
+                              {/* Removed Created At, Updated At, Approved At */}
                               <th>Actions</th>
                             </tr>
                           </thead>
@@ -2608,42 +2607,40 @@ const ProductManagement = () => {
                                         </div>
                                       ))}
                                   </td>
+                                  {/* Changes by Agnij Jun 26 2024 [Combine created/updated columns in Variants tab] */}
                                   <td>
-                                    {/* Changes by Agnij May 02, 2025 [Added created by display] */}
-                                    {variant.created_by ? 
-                                      addedByOptions.find(user => user.value === parseInt(variant.created_by))?.label || variant.created_by 
-                                      : "-"}
+                                    {/* Combined Created By and Created At */}
+                                    <div>
+                                      {variant.created_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(variant.created_by))?.label || variant.created_by 
+                                        : "-"}
+                                    </div>
+                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                                      {variant.created_at ? 
+                                        new Date(variant.created_at).toLocaleDateString("en-GB", {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        }) : "-"}
+                                    </div>
                                   </td>
                                   <td>
-                                    {/* Changes by Agnij May 02, 2025 [Added updated by display] */}
-                                    {variant.updated_by ? 
-                                      addedByOptions.find(user => user.value === parseInt(variant.updated_by))?.label || variant.updated_by 
-                                      : "-"}
+                                    {/* Combined Updated By and Updated At */}
+                                    <div>
+                                      {variant.updated_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(variant.updated_by))?.label || variant.updated_by 
+                                        : "-"}
+                                    </div>
+                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                                      {variant.updated_at ? 
+                                        new Date(variant.updated_at).toLocaleDateString("en-GB", {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        }) : "-"}
+                                    </div>
                                   </td>
-                                  <td>
-                                    {variant.created_at ? 
-                                      new Date(variant.created_at).toLocaleDateString("en-GB", {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                      }) : "-"}
-                                  </td>
-                                  <td>
-                                    {variant.updated_at ? 
-                                      new Date(variant.updated_at).toLocaleDateString("en-GB", {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                      }) : "-"}
-                                  </td>
-                                  <td>
-                                    {variant.approved_at ? 
-                                      new Date(variant.approved_at).toLocaleDateString("en-GB", {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                      }) : "-"}
-                                  </td>
+                                  {/* Removed Created At, Updated At, Approved At TDs */}
                                   <td>
                                     <button
                                       className="btn btn-sm btn-primary me-2"
@@ -2666,7 +2663,8 @@ const ProductManagement = () => {
                               ))
                             ) : (
                               <tr>
-                                <td colSpan="11" className="text-center">
+                                {/* Changes by Agnij Jun 26 2024 [Adjust colspan after combining columns in Variants tab] */}
+                                <td colSpan="8" className="text-center"> {/* Adjusted colspan from 11 to 8 */}
                                   No variants found
                                 </td>
                               </tr>
@@ -2877,11 +2875,9 @@ const ProductManagement = () => {
                               <th>Vendor Email</th>
                               <th>Category</th>
                               <th>Approval Status</th>
-                              <th>Created By</th>
-                              <th>Updated By</th>
-                              <th>Mapped On</th>
-                              <th>Updated At</th>
-                              <th>Approved At</th>
+                              <th>Created By / Mapped On</th> 
+                              <th>Updated By / At</th>
+                              {/* Removed Mapped On, Updated At, Approved At */}
                               <th>Actions</th>
                             </tr>
                           </thead>
@@ -2898,10 +2894,9 @@ const ProductManagement = () => {
                                   </td>
                                   <td>{mapping.vendor_email || "-"}</td>
                                   <td>
+                                    {/* Changes by Agnij Jun 26 2024 [Fix category display to use category_info] */}
                                     <span className="badge badge-warning">
-                                      {mapping.category_names && mapping.category_names.length > 0 
-                                        ? mapping.category_names[0] 
-                                        : "-"}
+                                      {mapping.category_info || "-"} {/* Use category_info string directly */}
                                     </span>
                                   </td>
                                   <td>
@@ -2953,37 +2948,35 @@ const ProductManagement = () => {
                                         </div>
                                       ))}
                                   </td>
+                                  {/* Changes by Agnij Jun 26 2024 [Combine created/mapped and updated columns] */}
                                   <td>
-                                    {/* Changes by Agnij May 02, 2025 [Added created by display] */}
-                                    {mapping.created_by ? 
-                                      addedByOptions.find(user => user.value === parseInt(mapping.created_by))?.label || mapping.created_by 
-                                      : "-"}
+                                    {/* Combined Created By and Mapped On */}
+                                    <div>
+                                      {mapping.created_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(mapping.created_by))?.label || mapping.created_by 
+                                        : "-"}
+                                    </div>
+                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                                      {mapping.mapped_at_formatted || "-"}
+                                    </div>
                                   </td>
                                   <td>
-                                    {/* Changes by Agnij May 02, 2025 [Added updated by display] */}
-                                    {mapping.updated_by ? 
-                                      addedByOptions.find(user => user.value === parseInt(mapping.updated_by))?.label || mapping.updated_by 
-                                      : "-"}
+                                    {/* Combined Updated By and Updated At */}
+                                    <div>
+                                      {mapping.updated_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(mapping.updated_by))?.label || mapping.updated_by 
+                                        : "-"}
+                                    </div>
+                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                                      {mapping.updated_at ? 
+                                        new Date(mapping.updated_at).toLocaleDateString("en-GB", {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        }) : "-"}
+                                    </div>
                                   </td>
-                                  <td>
-                                    {mapping.mapped_at_formatted || "-"}
-                                  </td>
-                                  <td>
-                                    {mapping.updated_at ? 
-                                      new Date(mapping.updated_at).toLocaleDateString("en-GB", {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                      }) : "-"}
-                                  </td>
-                                  <td>
-                                    {mapping.approved_at ? 
-                                      new Date(mapping.approved_at).toLocaleDateString("en-GB", {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                      }) : "-"}
-                                  </td>
+                                  {/* Removed Mapped On, Updated At, Approved At TDs */}
                                   <td>
                                     <button
                                       className="btn btn-sm btn-info"
@@ -2998,7 +2991,8 @@ const ProductManagement = () => {
                               ))
                             ) : (
                               <tr>
-                                <td colSpan="10" className="text-center">
+                                {/* Changes by Agnij Jun 26 2024 [Adjust colspan after combining columns] */}
+                                <td colSpan="9" className="text-center"> {/* Adjusted colspan from 12 to 9 */}
                                   No mappings found
                                 </td>
                               </tr>

@@ -87,93 +87,102 @@ const MappingDetail = () => {
     try {
       console.log("Fetching mapping details for ID:", id);
       
+      // Changes by Agnij Jun 26 2024 [Fixed mapping ID detection to properly find mappings]
       // Convert ID to different formats for flexible matching
       const numericId = parseInt(id);
       const stringId = id.toString();
       
-      // Fetch all mappings
-      const mappingsResponse = await getVariantMappings(id, "", null, null);
-      console.log("Mappings response:", mappingsResponse?.data);
+      // Fetch all mappings without any filter to get a larger pool to search through
+      const mappingsResponse = await getVariantMappings(null, "", null, null, null, null, null, null, 1, 100);
+      console.log("Mappings response received");
       
+      let mappingsData = [];
+      
+      // Handle different potential response formats
       if (mappingsResponse?.data?.data && Array.isArray(mappingsResponse.data.data)) {
-        const mappingsData = mappingsResponse.data.data;
-        
-        // Save all mappings for debugging
-        setAllMappings(mappingsData);
-        
-        // Try multiple fields and formats for matching to find the exact mapping
-        let foundMapping = null;
-        
-        // First try to find exact match by mapping_id or id
-        foundMapping = mappingsData.find(m => 
-          m.mapping_id === numericId || 
-          m.mapping_id === stringId || 
-          m.id === numericId || 
-          m.id === stringId
-        );
-        
-        // If not found, try by searching for it in the list of normalized IDs
-        if (!foundMapping) {
-          // Check in the first 100 displayed mappings, which are visible to user
-          const topMappings = mappingsData.slice(0, 100);
-          const normalizedSearchId = id.toLowerCase().trim();
-          
-          for (const m of topMappings) {
-            // Try to match any field that could potentially be displayed in the UI
-            if (
-              (m.id && m.id.toString() === normalizedSearchId) ||
-              (m.mapping_id && m.mapping_id.toString() === normalizedSearchId) ||
-              (m.variant_id && m.variant_id.toString() === normalizedSearchId) ||
-              (m.variant_name && m.variant_name.toLowerCase().includes(normalizedSearchId)) ||
-              (m.product_name && m.product_name.toLowerCase().includes(normalizedSearchId))
-            ) {
-              foundMapping = m;
-              break;
-            }
-          }
-        }
-        
-        // Log the found mapping for debugging
-        console.log("Found mapping:", foundMapping);
-        
-        if (foundMapping) {
-          setMapping(foundMapping);
-          
-          // Find the current vendor in our vendor data
-          if (foundMapping.vendor_id && vendorData.length > 0) {
-            const currentVendor = vendorData.find(v => v.value === foundMapping.vendor_id);
-            console.log("Setting selected vendor:", currentVendor);
-            setSelectedVendor(currentVendor || null);
-          }
-          
-          // Also get variant details
-          if (foundMapping.variant_id) {
-            // Get variant details
-            console.log("Fetching variant details for variant ID:", foundMapping.variant_id);
-            const variantResponse = await searchAllVariants(foundMapping.variant_id);
-            console.log("Variant response:", variantResponse?.data);
-            
-            if (variantResponse?.data?.data && Array.isArray(variantResponse.data.data)) {
-              const variantData = variantResponse.data.data.find(v => 
-                v.id === parseInt(foundMapping.variant_id) || v.id === foundMapping.variant_id
-              );
-              
-              if (variantData) {
-                console.log("Found variant:", variantData);
-                setVariant(variantData);
-              }
-            }
-          }
-          
-          setLoading(false);
-          return;
+        mappingsData = mappingsResponse.data.data;
+      } else if (Array.isArray(mappingsResponse?.data)) {
+        mappingsData = mappingsResponse.data;
+      } else if (mappingsResponse?.data) {
+        // Handle nested data
+        if (mappingsResponse.data.data && Array.isArray(mappingsResponse.data.data)) {
+          mappingsData = mappingsResponse.data.data;
+        } else {
+          mappingsData = [mappingsResponse.data];
         }
       }
       
-      // If we get here, mapping not found
+      // Save all mappings for reference (but we'll remove this debug info later)
+      setAllMappings(mappingsData);
+      
+      // Try multiple fields and formats for matching to find the exact mapping
+      let foundMapping = null;
+      
+      console.log(`Searching for mapping with ID ${id} in ${mappingsData.length} mappings`);
+      
+      // First try to find exact match by any ID field
+      foundMapping = mappingsData.find(m => 
+        (m.mapping_id !== undefined && (m.mapping_id === numericId || m.mapping_id === stringId)) || 
+        (m.id !== undefined && (m.id === numericId || m.id === stringId)) ||
+        (m.variant_mapping_id !== undefined && (m.variant_mapping_id === numericId || m.variant_mapping_id === stringId))
+      );
+      
+      if (foundMapping) {
+        console.log("Found mapping by direct ID match");
+      } else {
+        // If not found by direct ID, look harder
+        for (const m of mappingsData) {
+          // Check all possible ID fields and string representations
+          if (
+            String(m.mapping_id) === stringId || 
+            String(m.id) === stringId ||
+            String(m.variant_mapping_id) === stringId ||
+            (m.variant_id && String(m.variant_id) === stringId) ||
+            (m.vendor_id && String(m.vendor_id) === stringId) 
+          ) {
+            foundMapping = m;
+            console.log("Found mapping by string comparison");
+            break;
+          }
+        }
+      }
+      
+      if (foundMapping) {
+        console.log("Found mapping:", foundMapping.id);
+        setMapping(foundMapping);
+        
+        // Find the current vendor in our vendor data
+        if (foundMapping.vendor_id && vendorData.length > 0) {
+          const currentVendor = vendorData.find(v => v.value === parseInt(foundMapping.vendor_id) || v.value === foundMapping.vendor_id);
+          console.log("Setting selected vendor:", currentVendor?.label || "Not found");
+          setSelectedVendor(currentVendor || null);
+        }
+        
+        // Also get variant details
+        if (foundMapping.variant_id) {
+          // Get variant details
+          console.log("Fetching variant details for variant ID:", foundMapping.variant_id);
+          const variantResponse = await searchAllVariants(foundMapping.variant_id);
+          
+          if (variantResponse?.data?.data && Array.isArray(variantResponse.data.data)) {
+            const variantData = variantResponse.data.data.find(v => 
+              v.id === parseInt(foundMapping.variant_id) || v.id === foundMapping.variant_id
+            );
+            
+            if (variantData) {
+              console.log("Found variant:", variantData.id);
+              setVariant(variantData);
+            }
+          }
+        }
+        
+        setLoading(false);
+        return;
+      }
+      
+      // If we get here, no mapping was found
       console.log("No mapping found with ID:", id);
       setLoading(false);
-      toast.error("Mapping not found with ID: " + id);
       
     } catch (error) {
       console.error("Error fetching mapping details:", error);
@@ -332,20 +341,6 @@ const MappingDetail = () => {
                         )}
                       </div>
                     </div>
-                    
-                    {/* Debug info - show raw mapping data */}
-                    {process.env.NODE_ENV === 'development' && (
-                      <div className="row mt-4">
-                        <div className="col-12">
-                          <details>
-                            <summary>Debug - Mapping Data</summary>
-                            <pre className="bg-light p-3 mt-2" style={{maxHeight: '300px', overflow: 'auto'}}>
-                              {JSON.stringify(mapping, null, 2)}
-                            </pre>
-                          </details>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -434,48 +429,20 @@ const MappingDetail = () => {
                     </div>
                   </div>
                 )}
-                
-                {/* Debug info for all mappings */}
-                {process.env.NODE_ENV === 'development' && (
-                  <div className="card mt-4">
-                    <div className="card-header">
-                      <h3 className="card-title">Debug - All Mappings</h3>
-                    </div>
-                    <div className="card-body">
-                      <details>
-                        <summary>Show All Mappings Data ({allMappings.length})</summary>
-                        <div style={{maxHeight: '300px', overflow: 'auto'}}>
-                          <table className="table table-sm table-bordered">
-                            <thead>
-                              <tr>
-                                <th>ID</th>
-                                <th>Variant ID</th>
-                                <th>Vendor ID</th>
-                                <th>Variant Name</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {allMappings.map((m, index) => (
-                                <tr key={index} className={(m.mapping_id === parseInt(id) || m.id === parseInt(id)) ? 'bg-warning' : ''}>
-                                  <td>{m.mapping_id || m.id}</td>
-                                  <td>{m.variant_id}</td>
-                                  <td>{m.vendor_id}</td>
-                                  <td>{m.variant_name}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </details>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           ) : (
             <div className="alert alert-danger">
-              <h5><i className="icon fas fa-ban"></i> Error!</h5>
-              <p>Mapping not found with ID: {id}. It may have been deleted or you don't have permission to view it.</p>
+              <h5><i className="icon fas fa-ban"></i> Mapping Not Found</h5>
+              <p>
+                We couldn't find the mapping with ID: {id}.<br/>
+                This could be because:
+              </p>
+              <ul>
+                <li>The mapping ID doesn't exist in the system</li>
+                <li>The mapping was recently deleted</li>
+                <li>There might be an issue with the server connection</li>
+              </ul>
               <button
                 type="button"
                 className="btn btn-primary mt-3"
