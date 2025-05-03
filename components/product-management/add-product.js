@@ -23,14 +23,6 @@ const AddProduct = () => {
 	const [groupedCategories, setgroupedCategories] = useState(new Map());
 
 	const [vendorApprovedList, setVendorApprovedList] = useState([]);
-	const [selectedGalleryFilesReset, setSelectedGalleryFilesReset] = useState(false);
-	const [selectedGalleryFiles, setSelectedGalleryFiles] = useState([]);
-	const [selectedFeaturedFilesReset, setSelectedFeaturedFilesReset] = useState(false);
-	const [selectedFeaturedFiles, setSelectedFeaturedFiles] = useState([]);
-	const [selectedTdsFilesReset, setSelectedTdsFilesReset] = useState(false);
-	const [selectedTdsFiles, setSelectedTdsFiles] = useState([]);
-	const [selectedQapFilesReset, setSelectedQapFilesReset] = useState(false);
-	const [selectedQapFiles, setSelectedQapFiles] = useState([]);
 	const [mainLoading, setMainLoading] = useState(false);
 	const [vendorData, setVendorData] = useState([]);
 	const router = useRouter();
