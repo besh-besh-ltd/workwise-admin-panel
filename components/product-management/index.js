@@ -848,10 +848,10 @@ const ProductManagement = () => {
 
   const handleOpenProductMap = () => {
     // Save the current state before opening modal
-    const currentTabContent = document.querySelector('.tab-pane.active');
-    if (currentTabContent) {
-      currentTabContent.style.display = 'block';
-    }
+    // const currentTabContent = document.querySelector('.tab-pane.active');
+    // if (currentTabContent) {
+    //   currentTabContent.style.display = 'block'; 
+    // }
 
     setOpenProductMap(true);
     setIsVariantMapping(true); // Always set to true for variant mapping
@@ -1092,16 +1092,18 @@ const ProductManagement = () => {
       setPage(1);
     } else if (tabName === 'variants') {
       setVariantsPage(1);
-      // Fetch variants if not already loaded
-      if (variants.length === 0) {
-        getAllVariants();
-      }
+      // Changes by Agnij May 04, 2025 [Remove fetch logic, rely on useEffect]
+      // // Fetch variants if not already loaded
+      // if (variants.length === 0) {
+      //   getAllVariants();
+      // }
     } else if (tabName === 'mappings') {
       setMappingsPage(1);
-      // Fetch mappings if not already loaded
-      if (mappings.length === 0) {
-        getAllMappings();
-      }
+      // Changes by Agnij May 04, 2025 [Remove fetch logic, rely on useEffect]
+      // // Fetch mappings if not already loaded
+      // if (mappings.length === 0) {
+      //   getAllMappings();
+      // }
     }
   };
   
@@ -1109,10 +1111,11 @@ const ProductManagement = () => {
   const getAllVariants = () => {
     setLoadingVariants(true);
     
+    // Parameters for API call including pagination
     const params = {
       page: variantsPage,
       limit: variantsLimit,
-      search: searchString || filterValues.searchString,
+      search: filterValues.searchString, // Use filterValues for consistency
       category_id: filterValues.category,
       added_by: filterValues.addedBy,
       date_from: filterValues.dateFrom,
@@ -1121,62 +1124,68 @@ const ProductManagement = () => {
     };
     
     try {
-      // Use the existing searchAllVariants function to get variants
+      // Call the updated searchAllVariants function with pagination params
       searchAllVariants(
-        "",                          // id parameter (empty string)
-        params.search,               // Search string
-        params.date_from,            // Start date
-        params.date_to,              // End date
-        null,                        // Removed vendor_id
-        params.category_id,          // Category ID 
-        params.added_by,             // Added by
-        params.is_approve            // Approval status - ensure this is passed correctly
+        null, // id (null for general search)
+        params.search,
+        params.date_from,
+        params.date_to,
+        null, // vendorId (not used in this variant search)
+        params.category_id,
+        params.added_by,
+        params.is_approve,
+        params.page, // Pass page
+        params.limit // Pass limit
       )
         .then(response => {
-          if (response?.data?.data) {
-            const variantsData = response.data.data;
+          // Backend now returns { data: [], pagination: {} }
+          if (response && response.data && response.pagination) {
+            const variantsData = response.data;
+            const paginationData = response.pagination;
             
             if (variantsData && Array.isArray(variantsData)) {
-              // Format variants to include more information
+              // Format variants (similar to before, but no slicing)
               const formattedVariants = variantsData.map(variant => ({
                 ...variant,
-                variant_name: variant.name, // Ensure variant_name is available
+                // Use name from DB directly if available, otherwise construct
+                variant_name: variant.name || `Variant #${variant.id}`, 
                 product_name: variant.product_name || 'Unknown Product',
-                category_info: Array.isArray(variant.category_names) ? variant.category_names.join(', ') : '',
-                created_at_formatted: new Date(variant.created_at).toLocaleString()
+                // Ensure category_names exists and is an array before joining
+                category_info: Array.isArray(variant.category_names) ? variant.category_names.join(', ') : 'No Category',
+                created_at_formatted: variant.created_at ? new Date(variant.created_at).toLocaleString() : 'N/A'
               }));
               
-              // Calculate total items
-              const totalItems = formattedVariants.length;
+              setVariants(formattedVariants); // Set data directly from API response
               
-              // Calculate indices for pagination
-              const startIndex = (params.page - 1) * params.limit;
-              const endIndex = Math.min(startIndex + params.limit, totalItems);
+              // Set total pages from backend pagination info
+              setVariantsTotalPages(paginationData.pages || 1); // Use pages count from backend
               
-              // Get the current page of variants
-              const paginatedVariants = formattedVariants.slice(startIndex, endIndex);
-              
-              setVariants(paginatedVariants);
-              setVariantsTotalPages(Math.ceil(totalItems / params.limit));
             } else {
+              console.warn('Variant data received is not an array:', variantsData);
               setVariants([]);
-              setVariantsTotalPages(0);
+              setVariantsTotalPages(1);
             }
           } else {
+            console.error('Invalid response structure from searchAllVariants:', response);
             setVariants([]);
-            setVariantsTotalPages(0);
+            setVariantsTotalPages(1);
+            toast.error('Failed to load variants due to invalid response format.');
           }
         })
         .catch(error => {
+          console.error("Error fetching variants:", error);
+          toast.error('Failed to load variants.');
           setVariants([]);
-          setVariantsTotalPages(0);
+          setVariantsTotalPages(1);
         })
         .finally(() => {
           setLoadingVariants(false);
         });
     } catch (error) {
+      console.error("Error calling searchAllVariants:", error);
+      toast.error('An unexpected error occurred while fetching variants.');
       setVariants([]);
-      setVariantsTotalPages(0);
+      setVariantsTotalPages(1);
       setLoadingVariants(false);
     }
   };
@@ -1319,57 +1328,58 @@ const ProductManagement = () => {
       endDate: filterValues.endDate
     });
     
-    // Fetch data with new page
-    setLoadingVariants(true);
-    
-    // Changes by Agnij May 01, 2025 [Added date range parameters]
-    const params = {
-      page: selectedPage,
-      limit: variantsLimit,
-      search: searchString || "",
-      start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
-      end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null
-    };
-    
-    searchAllVariants(params.search, params.start_date, params.end_date)
-      .then(response => {
-        if (response?.data?.data) {
-          const variantsData = response.data.data;
-          
-          if (variantsData && Array.isArray(variantsData)) {
-            // Format variants to include more information
-            const formattedVariants = variantsData.map(variant => ({
-              ...variant,
-              variant_name: variant.name, // Ensure variant_name is available
-              product_name: variant.product_name || 'Unknown Product',
-              category_info: Array.isArray(variant.category_names) ? variant.category_names.join(', ') : '',
-              created_at_formatted: new Date(variant.created_at).toLocaleString()
-            }));
-            
-            // Calculate total items (might need to be provided by API)
-            const totalItems = formattedVariants.length;
-            
-            // Calculate indices for pagination
-            const startIndex = (params.page - 1) * params.limit;
-            const endIndex = Math.min(startIndex + params.limit, totalItems);
-            
-            // Get the current page of variants
-            const paginatedVariants = formattedVariants.slice(startIndex, endIndex);
-            
-            setVariants(paginatedVariants);
-            setVariantsTotalPages(Math.ceil(totalItems / params.limit));
-          }
-        }
-      })
-      .catch(error => {
-        // Changes by Agnij May 02, 2025 [Removed toast error message]
-        console.error("Error fetching variants:", error);
-        setVariants([]);
-        setVariantsTotalPages(0);
-      })
-      .finally(() => {
-        setLoadingVariants(false);
-      });
+    // Changes by Agnij May 04, 2025 [Remove direct data fetch; rely on useEffect]
+    // // Fetch data with new page 
+    // setLoadingVariants(true);
+    // 
+    // // Changes by Agnij May 01, 2025 [Added date range parameters]
+    // const params = {
+    //   page: selectedPage,
+    //   limit: variantsLimit,
+    //   search: searchString || \"\",
+    //   start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
+    //   end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null
+    // };
+    // 
+    // searchAllVariants(params.search, params.start_date, params.end_date)
+    //   .then(response => {
+    //     if (response?.data?.data) {
+    //       const variantsData = response.data.data;
+    //       
+    //       if (variantsData && Array.isArray(variantsData)) {
+    //         // Format variants to include more information
+    //         const formattedVariants = variantsData.map(variant => ({
+    //           ...variant,
+    //           variant_name: variant.name, // Ensure variant_name is available
+    //           product_name: variant.product_name || 'Unknown Product',
+    //           category_info: Array.isArray(variant.category_names) ? variant.category_names.join(', ') : '',
+    //           created_at_formatted: new Date(variant.created_at).toLocaleString()
+    //         }));
+    //         
+    //         // Calculate total items (might need to be provided by API)
+    //         const totalItems = formattedVariants.length;
+    //         
+    //         // Calculate indices for pagination
+    //         const startIndex = (params.page - 1) * params.limit;
+    //         const endIndex = Math.min(startIndex + params.limit, totalItems);
+    //         
+    //         // Get the current page of variants
+    //         const paginatedVariants = formattedVariants.slice(startIndex, endIndex);
+    //         
+    //         setVariants(paginatedVariants);
+    //         setVariantsTotalPages(Math.ceil(totalItems / params.limit));
+    //       }
+    //     }
+    //   })
+    //   .catch(error => {
+    //     // Changes by Agnij May 02, 2025 [Removed toast error message]
+    //     console.error(\"Error fetching variants:\", error);
+    //     setVariants([]);
+    //     setVariantsTotalPages(0);
+    //   })
+    //   .finally(() => {
+    //     setLoadingVariants(false);
+    //   });
   };
   
   // Changes by Agnij May 31, 2025 [Updated mappings pagination to handle different response formats]
@@ -1926,6 +1936,37 @@ const ProductManagement = () => {
     // Close the modal
     setShowAddVariantModal(false);
   };
+
+  // Changes by Agnij May 04, 2025 [Add useEffect to fetch variants on page/filter change]
+  // This hook now handles fetching variants when the page or filters change
+  useEffect(() => {
+    // Only fetch if the variants tab is active
+    if (activeTab === 'variants') {
+      // Changes by Agnij May 04, 2025 [Remove debug log]
+      // console.log(`useEffect triggered for variants: page=${variantsPage}, filters=`, filterValues);
+      getAllVariants(); 
+    }
+  }, [activeTab, variantsPage, filterValues]); // Dependencies: activeTab, variantsPage, filterValues
+
+  // Changes by Agnij May 04, 2025 [Add useEffect for Products Tab]
+  useEffect(() => {
+    if (activeTab === 'products') {
+      getProducts();
+    }
+    // Dependencies include filters used by getProducts
+  }, [activeTab, page, searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, dateFrom, dateTo, selectedApprovalStatus]);
+  
+  // Changes by Agnij May 04, 2025 [Add useEffect for Mappings Tab]
+  useEffect(() => {
+    if (activeTab === 'mappings') {
+      getAllMappings();
+    }
+  }, [activeTab, mappingsPage, filterValues]);
+
+  useEffect(() => {
+    getReasonList();
+    getVendorApproveList();
+  }, []);
 
   return (
     <>

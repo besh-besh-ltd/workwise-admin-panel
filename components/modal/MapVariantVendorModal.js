@@ -154,11 +154,8 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
         null        // approval status
       );
       
-      
-      if (response?.data?.data) {
-        const variantsData = Array.isArray(response.data.data) 
-          ? response.data.data 
-          : [];
+      if (response?.data && Array.isArray(response.data)) {
+        const variantsData = response.data;
         
         // Format the variants for display
         const formattedVariants = variantsData.map(variant => ({

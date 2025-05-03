@@ -842,7 +842,9 @@ export const mapVariantWithVendor = (values) => {
 
 // Changes by Agnij April 30, 2025 [Added direct variant search function]
 // Changes by Agnij May 01, 2025 [Enhanced variant search with more detailed information]
-export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus) => {
+// Changes by Agnij May 03, 2025 [Added pagination parameters]
+// Changes by Agnij May 03, 2025 [Normalize response structure]
+export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus, page = 1, limit = 10) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Changes by Agnij May 03, 2025 [Fixed approval status filter and removed logs]
@@ -850,34 +852,31 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
       const timestamp = Date.now();
       
       // Build query params
-      let queryParams = `id=${id}`
-      if (searchTerm)
-        queryParams = `search_term=${encodeURIComponent(searchTerm || "")}`;
-      if (startDate) {
-        queryParams += `&start_date=${encodeURIComponent(startDate)}`;
-      }
-      if (endDate) {
-        queryParams += `&end_date=${encodeURIComponent(endDate)}`;
-      }
-      if (vendorId) {
-        queryParams += `&vendor_id=${encodeURIComponent(vendorId)}`;
-      }
-      if (categoryId) {
-        queryParams += `&category_id=${encodeURIComponent(categoryId)}`;
-      }
-      if (addedBy) {
-        queryParams += `&added_by=${encodeURIComponent(addedBy)}`;
-      }
+      let queryParams = new URLSearchParams(); // Use URLSearchParams for cleaner construction
+
+      if (id) queryParams.set('id', id);
+      if (searchTerm) queryParams.set('search_term', searchTerm);
+      if (startDate) queryParams.set('start_date', startDate);
+      if (endDate) queryParams.set('end_date', endDate);
+      if (vendorId) queryParams.set('vendor_id', vendorId);
+      if (categoryId) queryParams.set('category_id', categoryId);
+      if (addedBy) queryParams.set('added_by', addedBy);
       if (approvalStatus !== undefined && approvalStatus !== null && approvalStatus !== "") {
-        queryParams += `&is_approve=${encodeURIComponent(approvalStatus)}`;
+        queryParams.set('is_approve', approvalStatus);
       }
-      // Add include_details to get more comprehensive data
-      queryParams += `&include_details=true`;
-      queryParams += `&_t=${timestamp}`;
+      // Add pagination parameters
+      if (page) queryParams.set('page', page);
+      if (limit) queryParams.set('limit', limit);
+
+      // Add include_details (if still needed, check backend) and cache busting
+      queryParams.set('include_details', 'true'); 
+      queryParams.set('_t', timestamp);
+
+      const queryString = queryParams.toString();
       
-      // Try using a special endpoint that avoids the v_rank error
+      // Use the safe endpoint which now supports pagination
       let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/search-variants-safe?${queryParams}`,
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/search-variants-safe?${queryString}`,
         { 
           validateStatus: status => (status >= 200 && status < 300) || status === 304,
           headers: {
@@ -888,55 +887,47 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
         }
       );
       
-      // Process and enhance the response data
-      let enhancedData = [];
-      
-      // Handle various response formats
-      if (response?.data?.data && Array.isArray(response.data.data)) {
-        enhancedData = response.data.data;
-      } else if (Array.isArray(response?.data)) {
-        enhancedData = response.data;
-      } else if (response?.data) {
-        enhancedData = [response.data];
+      // console.log("searchAllVariants: Raw Axios response object:", response); 
+
+      // Handle 304 Not Modified or empty responses - resolve with default structure
+      if (response.status === 304 || !response.data) {
+        console.warn('Search variants returned 304 or no data.');
+        resolve({ data: [], pagination: { total: 0, page, limit, pages: 1 } });
+        return;
       }
-      
-      // Enhance each variant with additional information if needed
-      enhancedData = enhancedData.map(variant => {
-        // Ensure variant has standard fields
-        return {
-          ...variant,
-          // Format fields with consistent naming
-          id: variant.id,
-          name: variant.variant_name || variant.name || `Variant #${variant.id}`,
-          variant_name: variant.variant_name || variant.name || `Variant #${variant.id}`,
-          product_name: variant.product_name || 'Unknown Product',
-          // Format category information
-          category_info: variant.category_info || 
-            (variant.categories && Array.isArray(variant.categories) ? 
-              variant.categories.map(c => c.name || c.category_name).join(', ') : 
-              (variant.category_name || '')),
-          // Format created_at date if it exists
-          created_at_formatted: variant.created_at ? new Date(variant.created_at).toLocaleString() : ''
-        };
-      });
-      
-      // Return the enhanced data in a standard format
+
+      // The response object itself has .data (array) and .pagination (object)
+      const conditionMet = Boolean(response.data && Array.isArray(response.data) && response.pagination);
+      // console.log("searchAllVariants: Checking condition (response.data && Array.isArray(response.data) && response.pagination):", conditionMet); 
+
+      // Normalize the response before resolving
+      if (conditionMet) {
+        // Expected structure: The response object itself has .data (array) and .pagination (object)
+        // console.log("searchAllVariants: Condition met. Resolving with expected structure.");
         resolve({
-          status: 200,
-          data: {
-            status: 1,
-          data: enhancedData
-          }
+           data: response.data, 
+           pagination: response.pagination
         });
+      } else if (Array.isArray(response.data)) {
+         // Data is just an array - wrap it with dummy pagination
+         console.warn("searchAllVariants API returned an array directly. Creating dummy pagination.");
+         const dataArray = response.data;
+         const totalItems = dataArray.length;
+         // Note: This pagination is estimated and might not reflect the true total if the array was already paginated by the backend incorrectly.
+         resolve({
+           data: dataArray,
+           pagination: { total: totalItems, page: page, limit: limit, pages: Math.ceil(totalItems / limit) || 1 }
+         });
+      } else {
+         // Unknown structure
+         console.error("searchAllVariants: Condition NOT met and response.data is NOT an array. Received unexpected structure. Resolving with empty.");
+         resolve({ data: [], pagination: { total: 0, page, limit, pages: 1 } });
+      }
+
     } catch (error) {
-      // Return empty data on error instead of rejecting
-      resolve({
-        status: 200,
-        data: {
-          status: 1,
-          data: []
-        }
-      });
+      console.error('Error searching variants:', error);
+      // Resolve with empty valid structure on error
+      resolve({ data: [], pagination: { total: 0, page, limit, pages: 1 } });
     }
   });
 };
