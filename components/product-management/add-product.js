@@ -405,59 +405,6 @@ const AddProduct = () => {
 																</div>
 															)} */}
 
-															<div className="col-md-12">
-																<div className="row">
-																	<UploadFiles
-																		accept=".png, .jpg, .jpeg, .gif"
-																		upload={setSelectedGalleryFiles}
-																		reset={selectedGalleryFilesReset}
-																		label="Upload Product Images"
-																	/>
-																</div>
-															</div>
-
-															<div className="col-md-12">
-																<div className="row">
-																	<UploadFiles
-																		accept=".png, .jpg, .jpeg, .gif"
-																		upload={setSelectedFeaturedFiles}
-																		reset={selectedFeaturedFilesReset}
-																		label="Upload Featured Image"
-																		isMultiple={false}
-																		touched={touched}
-																		errors={errors}
-																	/>
-																	{/* {touched.featured && errors.featured && <div className="form-error">{errors.featured}</div>} */}
-																</div>
-															</div>
-
-															<div className="col-md-12">
-																<div className="row">
-																	<UploadFiles
-																		accept=".pdf"
-																		upload={setSelectedQapFiles}
-																		reset={selectedQapFilesReset}
-																		label="Upload QAP File"
-																		isMultiple={false}
-																		touched={touched}
-																		errors={errors}
-																	/>
-																</div>
-															</div>
-															<div className="col-md-12">
-																<div className="row">
-																	<UploadFiles
-																		accept=".pdf"
-																		upload={setSelectedTdsFiles}
-																		reset={selectedTdsFilesReset}
-																		label="Upload TDS File"
-																		isMultiple={false}
-																		touched={touched}
-																		errors={errors}
-																	/>
-																</div>
-															</div>
-
 															<div className="prod-spec-sec p-0">
 																<div className="col-md-12">
 																	<div className="specification ">
