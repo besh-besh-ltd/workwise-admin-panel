@@ -29,23 +29,18 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   
   // Create portal element for modal
   useEffect(() => {
-    console.log("MapVariantVendorModal: Initializing portal element");
-    
     // Only create the element if it doesn't already exist
     if (!document.getElementById('variant-vendor-modal-root')) {
-      console.log("Creating new portal element");
       const el = document.createElement('div');
       el.id = 'variant-vendor-modal-root';
       document.body.appendChild(el);
       setModalElement(el);
     } else {
-      console.log("Using existing portal element");
       setModalElement(document.getElementById('variant-vendor-modal-root'));
     }
 
     // Cleanup function to remove the element when component unmounts
     return () => {
-      console.log("Cleaning up modal portal element");
       const el = document.getElementById('variant-vendor-modal-root');
       if (el && el.parentNode) {
         el.parentNode.removeChild(el);
@@ -56,7 +51,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   // Fetch vendors and approved_by options when modal becomes visible
   useEffect(() => {
     if (isVisible) {
-      console.log("Modal is visible, initializing data");
       setError(null);
       fetchVendors();
       fetchApprovedBy();
@@ -64,14 +58,12 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
       
       // If a variant was passed to the modal, set it as selected
       if (variant) {
-        console.log("Variant provided to modal:", variant);
         setSelectedVariant(variant);
         setFormData(prev => ({
           ...prev,
           variant_id: variant.id
         }));
       } else {
-        console.log("No variant provided, clearing selection");
         setSelectedVariant(null);
       }
     }
@@ -79,13 +71,10 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
 
   const fetchVendors = async () => {
     try {
-      console.log("Fetching vendors for mapping modal");
       setLoading(true);
       const vendorsResponse = await vendorList();
-      console.log("Vendor API response:", vendorsResponse);
       
       if (vendorsResponse?.data) {
-        console.log(`Fetched ${vendorsResponse.data.length} vendors`);
         setVendors(vendorsResponse.data);
         
         // Format vendors for Select component
@@ -112,9 +101,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
 
   const fetchApprovedBy = async () => {
     try {
-      console.log("Fetching approved-by options");
       const response = await vendorApproveList();
-      console.log("Approved-by API response:", response);
       
       if (response?.data) {
         const approvedOptions = response.data.map((s) => ({
@@ -133,7 +120,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
 
   // Reset form
   const resetForm = () => {
-    console.log("Resetting form data");
     setFormData({
       variant_id: variant?.id || '',
       vendor: null,
@@ -155,7 +141,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     
     setLoadingVariants(true);
     try {
-      console.log("Searching variants with term:", searchTerm);
       
       // Call the variants search API
       const response = await searchAllVariants(
@@ -169,7 +154,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
         null        // approval status
       );
       
-      console.log("Variant search response:", response);
       
       if (response?.data?.data) {
         const variantsData = Array.isArray(response.data.data) 
@@ -189,10 +173,8 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
           created_at: variant.created_at
         }));
         
-        console.log(`Found ${formattedVariants.length} variants matching "${searchTerm}"`);
         setSearchVariantResults(formattedVariants);
       } else {
-        console.log("No variants found or invalid response format");
         setSearchVariantResults([]);
       }
     } catch (error) {
@@ -215,7 +197,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   }, [searchVariants]);
 
   const handleSelectVariant = (variant) => {
-    console.log("Selected variant:", variant);
     setSelectedVariant(variant);
     setFormData(prev => ({
       ...prev,
@@ -228,7 +209,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   };
 
   const handleInputChange = (selectedOption, { name }) => {
-    console.log(`Updating ${name} to:`, selectedOption);
     setFormData(prev => ({
       ...prev,
       [name]: selectedOption
@@ -246,7 +226,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
       return;
     }
     
-    console.log("Adding mapping:", { vendor: formData.vendor, variant: selectedVariant });
     
     // Add the current mapping to the list
     setMappings(prev => [...prev, {
@@ -266,7 +245,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   };
 
   const handleRemoveMapping = (id) => {
-    console.log("Removing mapping with ID:", id);
     setMappings(prev => prev.filter(mapping => mapping.id !== id));
     toast.success('Vendor removed from mapping list');
   };
@@ -295,14 +273,12 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
       });
     }
     
-    console.log("Processing mappings:", allMappings);
     let success = true;
     let failureCount = 0;
     let errorMessages = [];
 
     for (const mapping of allMappings) {
       try {
-        console.log("Submitting mapping values:", mapping);
         
         const payload = {
           variant_id: mapping.variant_id,
@@ -310,10 +286,8 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
           approved_by: mapping.approved_by?.map(item => item.value) || null
         };
         
-        console.log("API payload:", payload);
         const response = await mapVariantWithVendor(payload);
         
-        console.log("Mapping response:", response);
         
         if (!(response?.data?.status === 1 || response?.status === 1)) {
           success = false;

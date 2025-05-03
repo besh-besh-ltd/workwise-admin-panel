@@ -22,14 +22,10 @@ const ProductDetails = () => {
         setError(null);
         
         try {
-            console.log("Fetching product details for ID:", id);
             const response = await getProductDetailsById(id);
-            
-            console.log("API Response:", response);
             
             // Check for proper data structure
             if (response?.data?.data) {
-                console.log("Setting product data:", response.data.data);
                 setProductData(response.data.data);
             } else {
                 console.error("Invalid response format:", response);
@@ -43,12 +39,10 @@ const ProductDetails = () => {
                 }
                 
                 if (response?.data?.data) {
-                    console.log("Using fallback data from response");
                     setProductData(response.data.data);
                 }
             }
         } catch (error) {
-            console.error("Error fetching product details:", error);
             setError(`Failed to load product details: ${error.message || "Unknown error"}`);
         } finally {
             setLoading(false);

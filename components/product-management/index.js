@@ -281,13 +281,12 @@ const ProductManagement = () => {
   };
 
   const openRejectModal = (id) => {
-    // Changes by Agnij August 19, 2024 [Improved handling for variants and mappings]
+    // Changes by Agnij May 01, 2025 [Improved handling for variants and mappings]
     // Process ID to ensure consistent format with mapping_ prefix for mappings
     const processedId = typeof id === 'string' && id.startsWith('mapping_') 
       ? id 
       : (typeof id === 'number' && activeTab === 'mappings' ? `mapping_${id}` : id);
     
-    console.log("Opening reject modal for:", processedId);
     setShowRejectModal(true);
     setselectedProductsId(processedId);
   }
@@ -421,8 +420,8 @@ const ProductManagement = () => {
   }
 
   const handleAcceptRejectProduct = (id, status, reject_reason_id = null) => {
-    // Changes by Agnij August 19, 2024 [Improved mapping ID handling]
-    console.log("Approving/rejecting:", { id, status, reject_reason_id });
+    // Changes by Agnij May 01, 2025 [Improved mapping ID handling]
+
     
     // For mappings, ensure we add the mapping_ prefix if it's not already there
     const processedId = typeof id === 'string' && id.startsWith('mapping_') 
@@ -845,14 +844,13 @@ const ProductManagement = () => {
     
     // Changes by Agnij May 30, 2025 [Load all variants to populate the dropdown]
     setLoadingVariants(true);
-    console.log("Loading variants for mapping modal");
+
     
     // Use the searchAllVariants function to get all available variants
     searchAllVariants("")
       .then(response => {
         if (response?.data?.data) {
           const variants = response.data.data || [];
-          console.log(`Found ${variants.length} variants for mapping`);
           
           // Format variants for select component
           const formattedVariants = variants.map(variant => ({
@@ -863,7 +861,6 @@ const ProductManagement = () => {
           
           setVariantsList(formattedVariants);
         } else {
-          console.log("No variants found or invalid data format");
           setVariantsList([]);
         }
       })
@@ -881,18 +878,11 @@ const ProductManagement = () => {
     // Changes by Agnij April 30, 2025 [Updated to support searching variants]
     setLoadingVariants(true);
     
-    if (searchTerm) {
-      console.log(`Searching for variants with term: ${searchTerm}`);
-    } else {
-      console.log("Loading all variants");
-    }
-    
     try {
       // Get all products
       const products = productData || [];
       
       if (products.length === 0) {
-        console.log("No products found, can't fetch variants");
         setVariantsList([]);
         setLoadingVariants(false);
         return;
@@ -946,7 +936,6 @@ const ProductManagement = () => {
         const filteredVariants = allVariants.filter(variant => {
           return variant.label.toLowerCase().includes(searchTerm.toLowerCase());
         });
-        console.log(`Found ${filteredVariants.length} variants matching "${searchTerm}" out of ${allVariants.length} total variants`);
         allVariants = filteredVariants;
       }
       
@@ -986,7 +975,6 @@ const ProductManagement = () => {
             approved_by: approved_by?.map((item) => item.value) || null
           };
           
-          console.log("Mapping variant with vendor using payload:", payload);
           const res = await mapVariantWithVendor(payload);
           toast.success(res.message || "Variant mapped successfully");
         } else {
@@ -1177,7 +1165,7 @@ const ProductManagement = () => {
   const getAllMappings = () => {
     setLoadingMappings(true);
     
-    // Changes by Agnij August 15, 2024 [Updated to use all filters from active states like getProducts does]
+    // Changes by Agnij May 02, 2025 [Updated to use all filters from active states like getProducts does]
     const params = {
       page: mappingsPage,
       limit: mappingsLimit,
@@ -1206,14 +1194,6 @@ const ProductManagement = () => {
         params.limit               // Page size
       )
         .then(response => {
-          // Changes by Agnij May 2, 2025 [Fixed response data handling]
-          console.log("Mappings response structure:", {
-            responseType: typeof response,
-            hasData: !!response,
-            isArray: Array.isArray(response),
-            length: Array.isArray(response) ? response.length : 'not an array',
-            firstItem: Array.isArray(response) && response.length > 0 ? response[0] : 'no items'
-          });
           
           // Handle different response formats
           let mappingsData = [];
@@ -1241,10 +1221,6 @@ const ProductManagement = () => {
             }
           }
           
-          console.log("Processed mappings data:", {
-            count: mappingsData.length,
-            pagination: paginationData
-          });
           
           if (mappingsData && mappingsData.length > 0) {
             // Format mappings for display
@@ -1288,16 +1264,13 @@ const ProductManagement = () => {
               totalPages = Math.max(1, Math.ceil(formattedMappings.length / params.limit) * 10);
             }
             
-            console.log("Setting total mapping pages:", totalPages);
             setMappingsTotalPages(totalPages);
           } else {
-            console.log("No mappings found or invalid format");
             setMappings([]);
             setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
           }
         })
         .catch(error => {
-          console.error("Error fetching mappings:", error);
           toast.error("Failed to fetch mappings");
           setMappings([]);
           setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
@@ -1306,7 +1279,6 @@ const ProductManagement = () => {
           setLoadingMappings(false);
         });
     } catch (error) {
-      console.error("Exception in getAllMappings:", error);
       setLoadingMappings(false);
       setMappings([]);
       setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
@@ -1434,12 +1406,7 @@ const ProductManagement = () => {
         )
           .then(response => {
             // Changes by Agnij May 3, 2025 [Fixed response processing for page changes]
-            console.log("Mappings page change response structure:", {
-              responseType: typeof response,
-              hasData: !!response,
-              isArray: Array.isArray(response),
-              length: Array.isArray(response) ? response.length : 'not an array'
-            });
+            
             
             // Handle different response formats
             let mappingsData = [];
@@ -1466,12 +1433,7 @@ const ProductManagement = () => {
                 paginationData = response.data.pagination || {};
               }
             }
-            
-            console.log("Processed page change data:", {
-              count: mappingsData.length,
-              pagination: paginationData
-            });
-            
+              
             if (mappingsData && mappingsData.length > 0) {
               // Format mappings for display
               let formattedMappings = mappingsData.map(mapping => {
@@ -1514,16 +1476,14 @@ const ProductManagement = () => {
                 totalPages = Math.max(1, Math.ceil(formattedMappings.length / params.limit) * 10);
               }
               
-              console.log("Setting total pages:", totalPages);
               setMappingsTotalPages(totalPages);
             } else {
-              console.log("No mappings found in page response");
+
               setMappings([]);
               setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
             }
           })
           .catch(error => {
-            console.error("Error changing mappings page:", error);
             toast.error("Failed to change page. Trying to refresh mappings...");
             // Try to reload the current data
             getAllMappings();
@@ -1539,7 +1499,7 @@ const ProductManagement = () => {
     }
   };
 
-  // Changes by Agnij August 15, 2024 [Added ellipsis handling for mappings pagination]
+  // Changes by Agnij May 02, 2025 [Added ellipsis handling for mappings pagination]
   const handleMappingsEllipsisClick = (isNext) => {
     const totalPageCount = mappingsTotalPages;
     const currentPage = mappingsPage; // Current page (1-based index)
@@ -1882,11 +1842,9 @@ const ProductManagement = () => {
   const fetchProductVariants = useCallback(async (productId) => {
     // Changes by Agnij April 30, 2025 [Fixed variant fetching for a specific product]
     if (!productId) {
-      console.log("Cannot fetch variants: No product ID provided");
       return;
     }
     
-    console.log(`Fetching variants for product ID: ${productId}`);
     setLoadingVariants(true);
     
     try {
@@ -1894,7 +1852,6 @@ const ProductManagement = () => {
       
       if (response?.data?.status === 1) {
         const variants = response.data.data || [];
-        console.log(`Found ${variants.length} variants for product ${productId}`);
         
         // Format variants for select component, handling both name and variant_name fields
         const formattedVariants = variants.map(variant => ({
@@ -1922,7 +1879,6 @@ const ProductManagement = () => {
   // Add handlers for variant management
   const handleAddVariantSuccess = (data) => {
     // Changes by Agnij April 30, 2025 [Fixed variant list refresh after adding variant]
-    console.log('Add variant success with data:', data);
     
     // Reset any stored original variant list for search
     if (window._originalVariantsList) {
@@ -1935,19 +1891,15 @@ const ProductManagement = () => {
     if (data && data.product_id) {
       // Use the product_id from the response
       refreshProductId = data.product_id;
-      console.log(`Using product_id from response: ${refreshProductId}`);
     } else {
       // Fallback to the last selected product
       refreshProductId = selectedProduct?.id;
-      console.log(`No product_id in response, using selected product: ${refreshProductId}`);
     }
     
     // Only refresh if we have a valid product ID
     if (refreshProductId) {
-      console.log(`Refreshing variants for product ${refreshProductId}`);
       fetchProductVariants(refreshProductId);
     } else {
-      console.error('Cannot refresh variants: No product ID available');
       toast.warning('Added variant, but could not refresh variant list');
     }
     
@@ -1963,7 +1915,7 @@ const ProductManagement = () => {
 
       <section className="content">
         <div className="container-fluid">
-          {/* Changes by Agnij June 14, 2024 [Added tab navigation] */}
+          {/* Changes by Agnij April 30, 2025 [Added tab navigation] */}
           <div className="card card-primary card-outline card-tabs">
             <div className="card-header p-0 pt-1 border-bottom-0">
               <ul className="nav nav-tabs" role="tablist" id="productTabs">
@@ -2629,13 +2581,13 @@ const ProductManagement = () => {
                                       ))}
                                   </td>
                                   <td>
-                                    {/* Changes by Agnij June 14, 2024 [Added created by display] */}
+                                    {/* Changes by Agnij May 02, 2025 [Added created by display] */}
                                     {variant.created_by ? 
                                       addedByOptions.find(user => user.value === parseInt(variant.created_by))?.label || variant.created_by 
                                       : "-"}
                                   </td>
                                   <td>
-                                    {/* Changes by Agnij June 14, 2024 [Added updated by display] */}
+                                    {/* Changes by Agnij May 02, 2025 [Added updated by display] */}
                                     {variant.updated_by ? 
                                       addedByOptions.find(user => user.value === parseInt(variant.updated_by))?.label || variant.updated_by 
                                       : "-"}
@@ -2767,7 +2719,7 @@ const ProductManagement = () => {
                         />
                       </div>
                       
-                      {/* Changes by Agnij July 25, 2024 [Added complete filters to mappings tab to match products tab] */}
+                      {/* Changes by Agnij May 02, 2025 [Added complete filters to mappings tab to match products tab] */}
                       <div className="col-sm-3 mb-3">
                         <Select
                           options={vendorData}
@@ -2925,7 +2877,7 @@ const ProductManagement = () => {
                                     </span>
                                   </td>
                                   <td>
-                                    {/* Changes by Agnij July 25, 2024 [Added approval controls for mappings] */}
+                                    {/* Changes by Agnij April 30, 2025 [Added approval controls for mappings] */}
                                     {(userType && userType != 6) && (
                                       mapping?.is_approve === 1 ? (
                                         <OverlayTrigger
@@ -2974,13 +2926,13 @@ const ProductManagement = () => {
                                       ))}
                                   </td>
                                   <td>
-                                    {/* Changes by Agnij July 25, 2024 [Added created by display] */}
+                                    {/* Changes by Agnij May 02, 2025 [Added created by display] */}
                                     {mapping.created_by ? 
                                       addedByOptions.find(user => user.value === parseInt(mapping.created_by))?.label || mapping.created_by 
                                       : "-"}
                                   </td>
                                   <td>
-                                    {/* Changes by Agnij July 25, 2024 [Added updated by display] */}
+                                    {/* Changes by Agnij May 02, 2025 [Added updated by display] */}
                                     {mapping.updated_by ? 
                                       addedByOptions.find(user => user.value === parseInt(mapping.updated_by))?.label || mapping.updated_by 
                                       : "-"}

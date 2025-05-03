@@ -36,10 +36,8 @@ const AddProductVariantModal = ({ isVisible, onCancel, productId, productName, o
         variant_name: variantName.trim() // This is what the form collects, ensure it's trimmed
       };
       
-      console.log('Submitting variant:', payload);
 
       const response = await addProductVariant(payload);
-      console.log('Variant response:', response);
       
       if (response?.data?.status === 1) {
         toast.success('Product variant added successfully');
@@ -50,15 +48,12 @@ const AddProductVariantModal = ({ isVisible, onCancel, productId, productName, o
           product_id: productId,
           variant_name: payload.variant_name // Include variant_name in success data
         };
-        console.log('Calling onSuccess with:', successData);
         onSuccess && onSuccess(successData);
         onCancel();
       } else {
-        console.error('Failed response:', response);
         toast.error(response?.data?.message || 'Failed to add product variant');
       }
     } catch (error) {
-      console.error('Error adding product variant:', error);
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else if (error.message) {

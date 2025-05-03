@@ -404,7 +404,7 @@ export const deleteProduct = (id) => {
 export const acceptProduct = (id, status, reject_reason_id = null) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij August 19, 2024 [Fixed approval functionality]
+      // Changes by Agnij May 01, 2025 [Fixed approval functionality]
       console.log("Processing approval for:", { id, status, reject_reason_id });
       
       // Create payload with status and optional reject reason
@@ -891,11 +891,11 @@ export const mapVariantWithVendor = (values) => {
 };
 
 // Changes by Agnij April 30, 2025 [Added direct variant search function]
-// Changes by Agnij May 4, 2025 [Enhanced variant search with more detailed information]
+// Changes by Agnij May 01, 2025 [Enhanced variant search with more detailed information]
 export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij July 25, 2024 [Added all filter parameters]
+      // Changes by Agnij May 01, 2025 [Added all filter parameters]
       // Add a timestamp to prevent 304 responses
       const timestamp = Date.now();
       
@@ -999,12 +999,12 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
   });
 };
 
-// Changes by Agnij May 18, 2025 [Added function to get variant-vendor mappings]
-// Changes by Agnij August 15, 2024 [Fixed pagination issues]
+// Changes by Agnij May 01, 2025 [Added function to get variant-vendor mappings]
+// Changes by Agnij May 02, 2025 [Fixed pagination issues]
 export const getVariantMappings = (id = null, searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus, page, limit) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij July 25, 2024 [Added all filter parameters]
+      // Changes by Agnij May 02, 2025 [Added all filter parameters]
       // Add a timestamp to prevent 304 responses
       const timestamp = Date.now();
       
@@ -1039,7 +1039,7 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
         queryParams += `&is_approve=${encodeURIComponent(approvalStatus)}`;
       }
       
-      // Changes by Agnij August 15, 2024 [Always include pagination parameters]
+      // Changes by Agnij May 02, 2025 [Always include pagination parameters]
       queryParams += `&page=${pageNum}`;
       queryParams += `&limit=${limitNum}`;
       queryParams += `&_t=${timestamp}`;
@@ -1052,7 +1052,7 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
         { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
       );
       
-      // Changes by Agnij August 15, 2024 [Enhanced response handling]
+      // Changes by Agnij May 02, 2025 [Enhanced response handling]
       console.log("Mapping API response:", response?.data);
       
       if (response?.data) {

@@ -243,7 +243,6 @@ const AddProduct = () => {
 												})}
 												onSubmit={(values, { resetForm }) => {
 													submitHandler(values);
-													console.log(values, "values *");
 												}}
 											>
 												{({

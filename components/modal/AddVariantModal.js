@@ -117,7 +117,6 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
         variant_name: formData.variant_name.trim(),
       };
       
-      console.log('Submitting variant with payload:', payload);
       
       const response = await addProductVariant(payload);
       
