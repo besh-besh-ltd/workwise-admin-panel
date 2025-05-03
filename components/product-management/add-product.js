@@ -67,9 +67,6 @@ const AddProduct = () => {
 		// manufacturer: "",
 		// availability: "",
 		categories: [],
-		featured: [],
-		tds: [],
-		qap: [],
 		status: 1,
 		approved_id: "",
 		approved_name: "",
@@ -166,10 +163,6 @@ const AddProduct = () => {
 			categories: selectedValues
 				.filter(cat => cat != null)
 				.map(cat => cat.value),
-			gallery: selectedGalleryFiles,
-			featured: selectedFeaturedFiles,
-			qap: selectedQapFiles,
-			tds: selectedTdsFiles
 		}
 
 		setMainLoading(true);
