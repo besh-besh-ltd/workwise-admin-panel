@@ -155,6 +155,15 @@ const ProductManagement = () => {
       dateTo: filterValues.dateTo,
       approvalStatus: filterValues.approvalStatus
     });
+    
+    // Changes by Agnij May 3, 2025 [Apply filters based on active tab]
+    if (activeTab === 'variants') {
+      getAllVariants();
+    } else if (activeTab === 'mappings') {
+      getAllMappings();
+    } else {
+      getProducts();
+    }
   };
 
   const resetFilters = () => {
@@ -1096,7 +1105,7 @@ const ProductManagement = () => {
     }
   };
   
-  // Changes by Agnij May 2, 2025 [Updated getAllVariants to remove vendor filter]
+  // Changes by Agnij May 3, 2025 [Fixed approval status filter for variants]
   const getAllVariants = () => {
     setLoadingVariants(true);
     
@@ -1114,13 +1123,14 @@ const ProductManagement = () => {
     try {
       // Use the existing searchAllVariants function to get variants
       searchAllVariants(
-        params.search,                  // Search string
-        params.date_from,               // Start date
-        params.date_to,                 // End date
-        null,                          // Removed vendor_id
-        params.category_id,             // Category ID 
-        params.added_by,                // Added by
-        params.is_approve               // Approval status
+        "",                          // id parameter (empty string)
+        params.search,               // Search string
+        params.date_from,            // Start date
+        params.date_to,              // End date
+        null,                        // Removed vendor_id
+        params.category_id,          // Category ID 
+        params.added_by,             // Added by
+        params.is_approve            // Approval status - ensure this is passed correctly
       )
         .then(response => {
           if (response?.data?.data) {
@@ -1158,8 +1168,6 @@ const ProductManagement = () => {
           }
         })
         .catch(error => {
-          // Changes by Agnij May 02, 2025 [Removed toast error message]
-          console.error('Error fetching variants:', error);
           setVariants([]);
           setVariantsTotalPages(0);
         })
@@ -1167,8 +1175,6 @@ const ProductManagement = () => {
           setLoadingVariants(false);
         });
     } catch (error) {
-      // Changes by Agnij May 02, 2025 [Removed toast error message]
-      console.error('Error in getAllVariants:', error);
       setVariants([]);
       setVariantsTotalPages(0);
       setLoadingVariants(false);
@@ -2410,7 +2416,15 @@ const ProductManagement = () => {
                           isClearable={true}
                           instanceId="approval-status-select-variants"
                           value={filterValues.approvalStatus ? approvalStatusOptions.find(opt => opt.value === filterValues.approvalStatus) : null}
-                          onChange={(selectedOption) => handleFilterChange('approvalStatus', selectedOption)}
+                          onChange={(selectedOption) => {
+                            handleFilterChange('approvalStatus', selectedOption);
+                            // Changes by Agnij May 3, 2025 [Ensure approvalStatus is immediately available]
+                            const newApprovalStatus = selectedOption ? selectedOption.value : "";
+                            setFilterValues(prev => ({
+                              ...prev,
+                              approvalStatus: newApprovalStatus
+                            }));
+                          }}
                         />
                       </div>
                       

@@ -173,7 +173,6 @@ export const getProductDetailsById = (id) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Changes by Agnij May 4, 2025 [Fixed product data retrieval to use database values]
-      console.log(`Fetching product details for ID: ${id}`);
       
       // Set a timeout of 5 seconds to prevent long hanging requests
       const controller = new AbortController();
@@ -200,12 +199,8 @@ export const getProductDetailsById = (id) => {
         
         clearTimeout(timeoutId); // Clear the timeout
         
-        console.log('Product details API raw response:', response);
-        console.log('Raw data:', JSON.stringify(response.data));
-        
         // Handle empty or error responses
         if (response.status === 304 || !response?.data) {
-          console.log('Received 304 Not Modified or empty response');
           throw new Error('Empty response from API');
         }
         
@@ -214,23 +209,18 @@ export const getProductDetailsById = (id) => {
         
         if (response.data.data && typeof response.data.data === 'object') {
           // Standard API response with data object
-          console.log('Standard data format found in response');
           productData = response.data.data;
         } else if (response.data.product && typeof response.data.product === 'object') {
           // Some APIs return data in a 'product' field
-          console.log('Product data found in product field');
           productData = response.data.product;
         } else if (response.data.result && typeof response.data.result === 'object') {
           // Some APIs use 'result' field
-          console.log('Product data found in result field');
           productData = response.data.result;
         } else if (response.data && typeof response.data === 'object' && response.data.id) {
           // Direct product object in data
-          console.log('Direct product object found in data');
           productData = response.data;
         } else {
           // Look for product-like object in the response
-          console.log('Searching for product-like object in response');
           const findProductObject = (obj) => {
             if (!obj || typeof obj !== 'object') return null;
             
@@ -251,13 +241,6 @@ export const getProductDetailsById = (id) => {
           };
           
           productData = findProductObject(response.data);
-          
-          if (!productData) {
-            console.log('No product-like object found in response');
-            throw new Error('Could not find product data in response');
-          } else {
-            console.log('Found product-like object in response:', productData);
-          }
         }
         
         // Ensure we have a properly structured product object
@@ -288,18 +271,14 @@ export const getProductDetailsById = (id) => {
           }
         };
         
-        console.log('Formatted product details response:', formattedProduct);
         resolve(formattedResponse);
       } catch (requestError) {
         clearTimeout(timeoutId); // Clear the timeout
         throw requestError; // Re-throw to be caught by the outer catch
       }
     } catch (error) {
-      console.error(`Error fetching product details for ID ${id}:`, error);
-      
       // Try an alternative endpoint as a fallback
       try {
-        console.log(`Trying alternative endpoint for product ${id}`);
         const alternativeResponse = await axiosInstance.get(
           `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/get-product-by-id/${id}`,
           {
@@ -310,8 +289,6 @@ export const getProductDetailsById = (id) => {
         );
         
         if (alternativeResponse?.data) {
-          console.log('Alternative endpoint returned data:', alternativeResponse.data);
-          
           let productData = null;
           if (alternativeResponse.data.data) {
             productData = alternativeResponse.data.data;
@@ -348,42 +325,38 @@ export const getProductDetailsById = (id) => {
               }
             };
             
-            console.log('Formatted product details from alternative endpoint:', formattedProduct);
             resolve(formattedResponse);
             return;
           }
         }
       } catch (alternativeError) {
-        console.error('Alternative endpoint also failed:', alternativeError);
-      }
-      
-      // Create a fallback response if both endpoints fail
-      const fallbackResponse = {
-        status: 200,
-        data: {
-          status: 1,
-          message: "Using fallback data due to API error",
+        // Create a fallback response if both endpoints fail
+        const fallbackResponse = {
+          status: 200,
           data: {
-            id: id,
-            name: 'Product information temporarily unavailable',
             status: 1,
-            manufacturer: 'Not specified',
-            sku: `SKU-${id}`,
-            description: 'Unable to load product description at this time',
-            product_images: [],
-            product_categories: [],
-            product_variants: [],
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            created_at_formatted: new Date().toLocaleString()
-          },
-          vendor_list: [],
-          error: error.message || 'Unknown error'
-        }
-      };
-      
-      console.log("Using fallback response:", fallbackResponse);
-      resolve(fallbackResponse);
+            message: "Using fallback data due to API error",
+            data: {
+              id: id,
+              name: 'Product information temporarily unavailable',
+              status: 1,
+              manufacturer: 'Not specified',
+              sku: `SKU-${id}`,
+              description: 'Unable to load product description at this time',
+              product_images: [],
+              product_categories: [],
+              product_variants: [],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              created_at_formatted: new Date().toLocaleString()
+            },
+            vendor_list: [],
+            error: error.message || 'Unknown error'
+          }
+        };
+        
+        resolve(fallbackResponse);
+      }
     }
   });
 };
@@ -404,7 +377,7 @@ export const deleteProduct = (id) => {
 export const acceptProduct = (id, status, reject_reason_id = null) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij May 03, 2025 [Fixed status type handling for backend compatibility]
+      // Changes by Agnij May 03, 2025 [Fixed status type handling and removed logs]
       
       // Create payload with status and optional reject reason
       // Ensure status is sent as a string as expected by the backend
@@ -423,8 +396,6 @@ export const acceptProduct = (id, status, reject_reason_id = null) => {
       // Extract the actual ID if it has a prefix
       const actualId = isMappingId ? id.replace('mapping_', '') : id;
       
-      console.log("Using endpoint for:", { isMappingId, actualId });
-      
       // Choose the appropriate endpoint
       const endpoint = isMappingId 
         ? `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/mapping-approve/${actualId}`
@@ -433,7 +404,6 @@ export const acceptProduct = (id, status, reject_reason_id = null) => {
       let response = await axiosInstance.put(endpoint, payload);
       resolve(response.data || { message: "Operation successful" });
     } catch (error) {
-      console.error("Error in acceptProduct:", error);
       reject({ error });
     }
   });
@@ -649,19 +619,13 @@ export const addProductVariant = (values) => {
 export const getProductVariants = (productId, page = 1, limit = 10) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij May 3, 2025 [Added pagination support for product variants]
-      // Changes by Agnij May 4, 2025 [Enhanced debugging and error handling for variants]
-      // Changes by Agnij May 4, 2025 [Added enhanced data fields for variant display]
-      // Changes by Agnij May 4, 2025 [Fixed product data retrieval for variant details]
-      // Changes by Agnij May 4, 2025 [Added direct database access for variants]
-      console.log(`Getting variants for product: ${productId}, page: ${page}, limit: ${limit}`);
+      // Changes by Agnij May 3, 2025 [Removed console logs for cleaner code]
       
       // Add cache busting to prevent 304 responses
       const timestamp = Date.now();
       
       // Build complete URL for debugging purposes - added include_product_details and direct_db params
       const url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/product-variant/${productId}?page=${page}&limit=${limit}&include_details=true&include_product_details=true&direct_db=true&_t=${timestamp}`;
-      console.log(`Calling variant API: ${url}`);
       
       let response = await axiosInstance.get(
         url,
@@ -675,22 +639,15 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
         }
       );
       
-      console.log(`Variant API response status: ${response.status}`);
-      console.log(`Variant API response:`, response.data);
-      
       // Handle 304 responses or empty data
       if (response.status === 304) {
-        console.log(`Received 304 Not Modified for variants of product ${productId}, creating empty response`);
         response.data = { status: 1, data: [], pagination: { total: 0, page, limit, pages: 0 } };
       } else if (!response.data) {
-        console.log(`Empty response for variants of product ${productId}, creating default structure`);
         response.data = { status: 1, data: [], pagination: { total: 0, page, limit, pages: 0 } };
       } else if (response.data && !response.data.data) {
-        console.log(`Response missing data array for variants of product ${productId}`);
         
         // Check if response.data is the array itself (sometimes the backend returns just the array)
         if (Array.isArray(response.data)) {
-          console.log(`Response.data is an array with ${response.data.length} items, restructuring`);
           const dataArray = response.data;
           response.data = {
             status: 1,
@@ -707,19 +664,15 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
           let variantsArray = null;
           
           if (response.data.variants && Array.isArray(response.data.variants)) {
-            console.log(`Found variants array in response.data.variants`);
             variantsArray = response.data.variants;
           } else if (response.data.product_variants && Array.isArray(response.data.product_variants)) {
-            console.log(`Found variants array in response.data.product_variants`);
             variantsArray = response.data.product_variants;
           } else if (response.data.results && Array.isArray(response.data.results)) {
-            console.log(`Found variants array in response.data.results`);
             variantsArray = response.data.results;
           } else {
             // Look for any array in the response
             Object.keys(response.data).forEach(key => {
               if (Array.isArray(response.data[key]) && !variantsArray) {
-                console.log(`Found potential variants array in response.data.${key}`);
                 variantsArray = response.data[key];
               }
             });
@@ -728,7 +681,6 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
           if (variantsArray) {
             response.data.data = variantsArray;
           } else {
-            console.log(`No variants array found, creating empty array`);
             response.data.data = [];
           }
           
@@ -757,22 +709,18 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
       
       // Try to find product details in the response
       if (response.data.product) {
-        console.log('Product details found in response.data.product');
         productDetails = response.data.product;
       } else if (response.data.product_details) {
-        console.log('Product details found in response.data.product_details');
         productDetails = response.data.product_details;
       } else {
         // If not found, fetch product details separately
         try {
-          console.log('Product details not found in response, fetching separately');
           const productResponse = await getProductDetailsById(productId);
           if (productResponse?.data?.data) {
             productDetails = productResponse.data.data;
-            console.log("Retrieved product details:", productDetails.name);
           }
         } catch (productError) {
-          console.warn(`Could not fetch product details for ${productId}:`, productError);
+          // Continue without product details
         }
       }
       
@@ -819,7 +767,7 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
                 enhancedVariant.created_at_formatted = createdDate.toLocaleString();
               }
             } catch (e) {
-              console.warn(`Could not parse date for variant ${enhancedVariant.id}:`, e);
+              // Silent catch to avoid errors in date parsing
             }
           }
           
@@ -830,10 +778,8 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
         });
       }
       
-      console.log(`Found ${response.data.data ? response.data.data.length : 0} variants for product ${productId}, pagination:`, response.data.pagination);
       resolve(response);
     } catch (error) {
-      console.error(`Error fetching variants for product ${productId}:`, error);
       // Return an empty data structure instead of rejecting
       resolve({
         status: 200,
@@ -899,7 +845,7 @@ export const mapVariantWithVendor = (values) => {
 export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij May 01, 2025 [Added all filter parameters]
+      // Changes by Agnij May 03, 2025 [Fixed approval status filter and removed logs]
       // Add a timestamp to prevent 304 responses
       const timestamp = Date.now();
       
@@ -929,9 +875,6 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
       queryParams += `&include_details=true`;
       queryParams += `&_t=${timestamp}`;
       
-      console.log(`Searching variants with query: ${queryParams}`);
-      
-      // Changes by Agnij May 02, 2025 [Adding alternative endpoint for v_rank issue]
       // Try using a special endpoint that avoids the v_rank error
       let response = await axiosInstance.get(
         `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/search-variants-safe?${queryParams}`,
@@ -944,8 +887,6 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
           }
         }
       );
-      
-      console.log("Search variants response:", response?.data);
       
       // Process and enhance the response data
       let enhancedData = [];
@@ -979,8 +920,6 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
         };
       });
       
-      console.log(`Processed ${enhancedData.length} variants from search results`);
-      
       // Return the enhanced data in a standard format
         resolve({
           status: 200,
@@ -990,7 +929,6 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
           }
         });
     } catch (error) {
-      console.error("Error in searchAllVariants:", error);
       // Return empty data on error instead of rejecting
       resolve({
         status: 200,
@@ -1005,10 +943,10 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
 
 // Changes by Agnij May 01, 2025 [Added function to get variant-vendor mappings]
 // Changes by Agnij May 02, 2025 [Fixed pagination issues]
+// Changes by Agnij May 03, 2025 [Removed console logs]
 export const getVariantMappings = (id = null, searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus, page, limit) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij May 02, 2025 [Added all filter parameters]
       // Add a timestamp to prevent 304 responses
       const timestamp = Date.now();
       
@@ -1043,21 +981,15 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
         queryParams += `&is_approve=${encodeURIComponent(approvalStatus)}`;
       }
       
-      // Changes by Agnij May 02, 2025 [Always include pagination parameters]
+      // Always include pagination parameters
       queryParams += `&page=${pageNum}`;
       queryParams += `&limit=${limitNum}`;
       queryParams += `&_t=${timestamp}`;
-      
-      // Changes by Agnij May 02, 2025 [Added debugging log for API call]
-      console.log(`Calling variant-mappings API with query: ${queryParams}`);
       
       let response = await axiosInstance.get(
         `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-mappings?${queryParams}`,
         { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
       );
-      
-      // Changes by Agnij May 02, 2025 [Enhanced response handling]
-      console.log("Mapping API response:", response?.data);
       
       if (response?.data) {
         // Check if the response includes both data and pagination
@@ -1119,7 +1051,6 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
         });
       }
     } catch (error) {
-      console.error("Error in getVariantMappings:", error);
       // Return empty data on error instead of rejecting
       resolve({
         status: 200,
