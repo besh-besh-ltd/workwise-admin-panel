@@ -404,12 +404,16 @@ export const deleteProduct = (id) => {
 export const acceptProduct = (id, status, reject_reason_id = null) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij May 01, 2025 [Fixed approval functionality]
-      console.log("Processing approval for:", { id, status, reject_reason_id });
+      // Changes by Agnij May 03, 2025 [Fixed status type handling for backend compatibility]
       
       // Create payload with status and optional reject reason
-      const payload = { status };
+      // Ensure status is sent as a string as expected by the backend
+      const payload = { 
+        status: typeof status === 'number' ? status.toString() : status 
+      };
+      
       if (reject_reason_id) {
+        // Ensure reject_reason_id is included correctly
         payload.reject_reason_id = reject_reason_id;
       }
       

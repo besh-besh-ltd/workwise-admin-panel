@@ -420,21 +420,35 @@ const ProductManagement = () => {
   }
 
   const handleAcceptRejectProduct = (id, status, reject_reason_id = null) => {
-    // Changes by Agnij May 01, 2025 [Improved mapping ID handling]
-
+    // Changes by Agnij May 3, 2025 [Fixed status handling for compatibility with backend]
     
     // For mappings, ensure we add the mapping_ prefix if it's not already there
     const processedId = typeof id === 'string' && id.startsWith('mapping_') 
       ? id 
       : (typeof id === 'number' && activeTab === 'mappings' ? `mapping_${id}` : id);
     
-    acceptProduct(processedId, status, reject_reason_id)
+    // Handle both string status and payload object with status
+    let statusValue = status;
+    let rejectReasonId = reject_reason_id;
+    
+    // If status is an object (from DisapproveModal), extract values
+    if (typeof status === 'object' && status !== null) {
+      statusValue = status.status;
+      rejectReasonId = status.reject_reason_id || null;
+    }
+    
+    // Ensure statusValue is a string as expected by the backend
+    if (typeof statusValue === 'number') {
+      statusValue = statusValue.toString();
+    }
+    
+    acceptProduct(processedId, statusValue, rejectReasonId)
       .then((res) => {
         setShowRejectModal(false);
         setselectedProductsId("")
         setInputValue("")
         setSelectValue("")
-        toast.success(res.message || `Product ${status === '1' ? 'approved' : 'rejected'} successfully`);
+        toast.success(res.message || `Product ${statusValue === '1' || statusValue === 1 ? 'approved' : 'rejected'} successfully`);
         // Refresh different tables based on the ID type
         if (typeof processedId === 'string' && processedId.startsWith('mapping_')) {
           // This was a mapping approval
