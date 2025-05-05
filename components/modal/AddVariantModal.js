@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
-import { addProductVariant, searchProductsV2 } from '../../utils/services/product-management';
+import { addProductVariant, getAllProducts, searchProductsV2 } from '../../utils/services/product-management';
 
 const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,23 +39,20 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
     setProductsList([]); // Clear previous product list
     
     // Use searchProductsV2 which makes a call to rfq/search-product API
-    searchProductsV2({
-      search_key: search_key,
-      cat_id: "",
-      vendor_name: ""
-    }, "products")
+    // Update by Kushal: rfq/search-product API will only show products for which there is atleast one vendor mapped, here we dont want that
+    getAllProducts(
+      100,
+      1,
+      search_key,
+    )
       .then((res) => {
         // Format the products to display in the UI
         const products = res.data || [];
         const formattedProducts = products.map(item => ({
-          value: item.product_id,
-          label: item.product_name,
+          value: item.id,
+          label: item.name,
           description: item.description,
-          categories: item.category_name,
-          similarity_score: item.similarity_score,
-          rank: item.rank
         }));
-        
         setProductsList(formattedProducts);
       })
       .catch((error) => {
