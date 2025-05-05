@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants, getVariantMappings } from "@/utils/services/product-management";
+import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants, getVariantMappings, acceptVariant } from "@/utils/services/product-management";
 import axiosFormData from "@/utils/axios/form-data";
 import FullLoading from "../loading/FullLoading";
 import { ToastContainer, toast } from "react-toastify";
@@ -439,6 +439,69 @@ const ProductManagement = () => {
     // Handle both string status and payload object with status
     let statusValue = status;
     let rejectReasonId = reject_reason_id;
+    let rejectReason = null;
+    
+    // If status is an object (from DisapproveModal), extract values
+    if (typeof status === 'object' && status !== null) {
+      statusValue = status.status;
+      rejectReasonId = status.reject_reason_id || null;
+      rejectReason = status.reject_reason
+    }
+    
+    // Ensure statusValue is a string as expected by the backend
+    if (typeof statusValue === 'number') {
+      statusValue = statusValue.toString();
+    }
+    
+    acceptProduct(processedId, statusValue, rejectReasonId, rejectReason)
+      .then((res) => {
+        setShowRejectModal(false);
+        setselectedProductsId("")
+        setInputValue("")
+        setSelectValue("")
+        toast.success(res.message || `Product ${statusValue === '1' || statusValue === 1 ? 'approved' : 'rejected'} successfully`);
+        // Refresh different tables based on the ID type
+        if (typeof processedId === 'string' && processedId.startsWith('mapping_')) {
+          // This was a mapping approval
+          getAllMappings();
+        } else if (activeTab === 'variants') {
+          // This was a variant approval from variants tab
+          getAllVariants();
+        } else {
+          // This was a regular product approval
+          getProducts();
+        }
+        getReasonList();
+      })
+      .catch((error) => {
+        console.error("Error in handleAcceptRejectProduct:", error);
+        let txt = "";
+        if (error.error?.response?.data?.errors) {
+          for (let x in error.error.response.data.errors) {
+            txt = error.error.response.data.errors[x];
+          }
+        } else if (error.error?.response?.data?.message) {
+          txt = error.error.response.data.message;
+        } else if (error.error?.message) {
+          txt = error.error.message;
+        } else {
+          txt = "An error occurred during approval/rejection";
+        }
+        toast.error(txt);
+      })
+  }
+
+  const handleAcceptRejectVariant = (id, status, reject_reason_id = null) => {
+    // Changes by Agnij May 3, 2025 [Fixed status handling for compatibility with backend]
+    
+    // For mappings, ensure we add the mapping_ prefix if it's not already there
+    const processedId = typeof id === 'string' && id.startsWith('mapping_') 
+      ? id 
+      : (typeof id === 'number' && activeTab === 'mappings' ? `mapping_${id}` : id);
+    
+    // Handle both string status and payload object with status
+    let statusValue = status;
+    let rejectReasonId = reject_reason_id;
     
     // If status is an object (from DisapproveModal), extract values
     if (typeof status === 'object' && status !== null) {
@@ -451,13 +514,13 @@ const ProductManagement = () => {
       statusValue = statusValue.toString();
     }
     
-    acceptProduct(processedId, statusValue, rejectReasonId)
+    acceptVariant(processedId, statusValue, rejectReasonId)
       .then((res) => {
         setShowRejectModal(false);
         setselectedProductsId("")
         setInputValue("")
         setSelectValue("")
-        toast.success(res.message || `Product ${statusValue === '1' || statusValue === 1 ? 'approved' : 'rejected'} successfully`);
+        toast.success(res.message || `Variant ${statusValue === '1' || statusValue === 1 ? 'approved' : 'rejected'} successfully`);
         // Refresh different tables based on the ID type
         if (typeof processedId === 'string' && processedId.startsWith('mapping_')) {
           // This was a mapping approval
@@ -1986,6 +2049,7 @@ const ProductManagement = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       handleTabChange('products');
+                      resetFilters();
                     }}
                     role="tab" 
                     aria-selected={activeTab === 'products'}
@@ -2002,6 +2066,7 @@ const ProductManagement = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       handleTabChange('variants');
+                      resetFilters();
                     }}
                     role="tab" 
                     aria-selected={activeTab === 'variants'}
@@ -2018,6 +2083,7 @@ const ProductManagement = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       handleTabChange('mappings');
+                      resetFilters();
                     }}
                     role="tab" 
                     aria-selected={activeTab === 'mappings'}
@@ -2613,7 +2679,8 @@ const ProductManagement = () => {
                                         >
                                           <button
                                             className="btn btn-secondary bg-danger btn-sm mb-2"
-                                            onClick={() => openRejectModal(variant.id)}
+                                            // onClick={() => openRejectModal(variant.id)}
+                                            onClick={() => handleAcceptRejectVariant(variant.id, '0')}
                                           >
                                             Disapprove
                                           </button>
@@ -2628,7 +2695,7 @@ const ProductManagement = () => {
                                           >
                                             <button
                                               className="btn btn-secondary bg-success btn-sm mb-2"
-                                              onClick={() => handleAcceptRejectProduct(variant.id, '1')}
+                                              onClick={() => handleAcceptRejectVariant(variant.id, '1')}
                                             >
                                               Approve
                                             </button>
@@ -2943,7 +3010,7 @@ const ProductManagement = () => {
                                   <td>
                                     {/* Changes by Agnij April 30, 2025 [Added approval controls for mappings] */}
                                     {(userType && userType != 6) && (
-                                      mapping?.is_approve === 1 ? (
+                                      mapping?.is_approve ? (
                                         <OverlayTrigger
                                           placement="top"
                                           overlay={

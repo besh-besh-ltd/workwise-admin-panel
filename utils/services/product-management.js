@@ -374,7 +374,46 @@ export const deleteProduct = (id) => {
   });
 }
 
-export const acceptProduct = (id, status, reject_reason_id = null) => {
+export const acceptProduct = (id, status, reject_reason_id = null, rejectReason) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Changes by Agnij May 03, 2025 [Fixed status type handling and removed logs]
+      
+      // Create payload with status and optional reject reason
+      // Ensure status is sent as a string as expected by the backend
+      const payload = { 
+        status: typeof status === 'number' ? status.toString() : status 
+      };
+      
+      if (reject_reason_id) {
+        // Ensure reject_reason_id is included correctly
+        payload.reject_reason_id = reject_reason_id;
+      }
+
+      if(rejectReason) {
+        payload.reject_reason = rejectReason
+      }
+      
+      // Determine if this is a mapping ID (prefixed with 'mapping_')
+      const isMappingId = typeof id === 'string' && id.startsWith('mapping_');
+      
+      // Extract the actual ID if it has a prefix
+      const actualId = isMappingId ? id.replace('mapping_', '') : id;
+      
+      // Choose the appropriate endpoint
+      const endpoint = isMappingId 
+        ? `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/mapping-approve/${actualId}`
+        : `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/accept-product/${actualId}`;
+      
+      let response = await axiosInstance.put(endpoint, payload);
+      resolve(response.data || { message: "Operation successful" });
+    } catch (error) {
+      reject({ error });
+    }
+  });
+};
+
+export const acceptVariant = (id, status, reject_reason_id = null) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Changes by Agnij May 03, 2025 [Fixed status type handling and removed logs]
@@ -397,9 +436,7 @@ export const acceptProduct = (id, status, reject_reason_id = null) => {
       const actualId = isMappingId ? id.replace('mapping_', '') : id;
       
       // Choose the appropriate endpoint
-      const endpoint = isMappingId 
-        ? `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/mapping-approve/${actualId}`
-        : `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/accept-product/${actualId}`;
+      const endpoint = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/accept-variant/${actualId}`;
       
       let response = await axiosInstance.put(endpoint, payload);
       resolve(response.data || { message: "Operation successful" });
