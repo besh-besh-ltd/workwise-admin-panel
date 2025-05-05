@@ -1139,11 +1139,6 @@ const ProductManagement = () => {
     // Update the URL without refreshing the page
     const newUrl = `${window.location.pathname}?${updatedSearchParams.toString()}`;
     
-    // Changes by Agnij Aprill 30, 2025 [Added tab parameter to URL]
-    // Add tab to URL if not in the params
-    if (!updatedSearchParams.has('tab') && activeTab) {
-      updatedSearchParams.set('tab', activeTab);
-    }
     
     router.push(
       { pathname: router.pathname, query: Object.fromEntries(updatedSearchParams) },
@@ -1152,29 +1147,20 @@ const ProductManagement = () => {
     );
   };
   
-  // Changes by Agnij Aprill 30, 2025 [Added tab switching function]
+  // Changes by Agnij April 30, 2025 [Added tab switching function]
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
-    updateUrlParams({ tab: tabName });
     
     // Reset page number when switching tabs
     if (tabName === 'products') {
       setPage(1);
     } else if (tabName === 'variants') {
       setVariantsPage(1);
-      // Changes by Agnij May 04, 2025 [Remove fetch logic, rely on useEffect]
-      // // Fetch variants if not already loaded
-      // if (variants.length === 0) {
-      //   getAllVariants();
-      // }
     } else if (tabName === 'mappings') {
       setMappingsPage(1);
-      // Changes by Agnij May 04, 2025 [Remove fetch logic, rely on useEffect]
-      // // Fetch mappings if not already loaded
-      // if (mappings.length === 0) {
-      //   getAllMappings();
-      // }
     }
+    // Call resetFilters here to ensure it happens after setting the new tab state
+    resetFilters();
   };
   
   // Changes by Agnij May 3, 2025 [Fixed approval status filter for variants]
@@ -2036,6 +2022,21 @@ const ProductManagement = () => {
       getVariantsForFilter();
     }
   }, [activeTab, mappingsPage, filterValues]);
+
+  // Changes by Agnij May 05, 2025 [Add useEffect to update URL when activeTab changes]
+  useEffect(() => {
+    // Only update URL if activeTab is set (avoid initial load issues)
+    if (activeTab) {
+      // Get current query parameters
+      const currentQuery = { ...router.query };
+      
+      // Create the new parameters object, ensuring tab is updated
+      const newParams = { ...currentQuery, tab: activeTab };
+      
+      // Call updateUrlParams with the combined parameters
+      updateUrlParams(newParams);
+    }
+  }, [activeTab]); // Dependency: only activeTab
 
   useEffect(() => {
     getReasonList();
