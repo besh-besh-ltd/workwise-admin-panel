@@ -972,7 +972,8 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
 // Changes by Agnij May 01, 2025 [Added function to get variant-vendor mappings]
 // Changes by Agnij May 02, 2025 [Fixed pagination issues]
 // Changes by Agnij May 03, 2025 [Removed console logs]
-export const getVariantMappings = (id = null, searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus, page, limit) => {
+// Changes by Agnij June 12, 2024 [Added variant_id parameter]
+export const getVariantMappings = (id = null, searchTerm, startDate, endDate, vendorId, categoryId, addedBy, approvalStatus, page, limit, variantId) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Add a timestamp to prevent 304 responses
@@ -1008,11 +1009,18 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
       if (approvalStatus !== undefined && approvalStatus !== null && approvalStatus !== "") {
         queryParams += `&is_approve=${encodeURIComponent(approvalStatus)}`;
       }
+      // Changes by Agnij June 12, 2024 [Add variant_id to query params if provided]
+      if (variantId) {
+        queryParams += `&variant_id=${encodeURIComponent(variantId)}`;
+      }
       
       // Always include pagination parameters
       queryParams += `&page=${pageNum}`;
       queryParams += `&limit=${limitNum}`;
       queryParams += `&_t=${timestamp}`;
+      
+      // Changes by Agnij June 12, 2024 [Log query parameters for debugging]
+      console.log('getVariantMappings API query params:', queryParams);
       
       let response = await axiosInstance.get(
         `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-mappings?${queryParams}`,

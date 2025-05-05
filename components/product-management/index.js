@@ -146,6 +146,8 @@ const ProductManagement = () => {
     setDateFrom(filterValues.dateFrom);
     setDateTo(filterValues.dateTo);
     setSelectedApprovalStatus(filterValues.approvalStatus);
+    // Changes by Agnij June 12, 2024 [Make sure selectedVariant is updated]
+    setSelectedVariant(filterValues.variant);
 
     // Update URL with all filter values
     updateUrlParams({
@@ -158,7 +160,9 @@ const ProductManagement = () => {
       addedBy: filterValues.addedBy,
       dateFrom: filterValues.dateFrom,
       dateTo: filterValues.dateTo,
-      approvalStatus: filterValues.approvalStatus
+      approvalStatus: filterValues.approvalStatus,
+      // Changes by Agnij June 12, 2024 [Add variant to URL params]
+      variant: filterValues.variant
     });
     
     // Changes by Agnij May 3, 2025 [Apply filters based on active tab]
@@ -1261,8 +1265,11 @@ const ProductManagement = () => {
       date_from: dateFrom,
       date_to: dateTo,
       approval_status: selectedApprovalStatus,
-      variant_id: selectedVariant // Changes by Agnij May 05, 2025 [Added variant filter parameter]
+      variant_id: selectedVariant // Changes by Agnij June 12, 2024 [Added variant filter parameter]
     };
+    
+    // Changes by Agnij June 12, 2024 [Log filter parameters for debugging]
+    console.log('Mapping filters being applied:', params);
     
     try {
       // Changes by Agnij May 02, 2025 [Fixed vendor filter to correctly pass vendor_id parameter]
@@ -1278,7 +1285,7 @@ const ProductManagement = () => {
         params.approval_status,    // Approval status
         params.page,               // Page number
         params.limit,              // Page size
-        params.variant_id          // Changes by Agnij May 05, 2025 [Added variant filter parameter]
+        params.variant_id          // Changes by Agnij June 12, 2024 [Added variant filter parameter]
       )
         .then(response => {
           
@@ -2913,7 +2920,7 @@ const ProductManagement = () => {
                 <div className={`tab-pane fade ${activeTab === 'mappings' ? 'active show' : ''}`} id="mappings-tab" role="tabpanel" aria-labelledby="mappings-tab">
                   <div className="card card-body">
                     <div className="row g-3">
-                      {/* Changes by Agnij May 05, 2025 [Replaced search input with variant dropdown] */}
+                      {/* Changes by Agnij June 12, 2024 [Replaced search input with variant dropdown] */}
                       <div className="col-sm-3 mb-3">
                         <Select
                           options={variantsFilterData}
@@ -3031,6 +3038,8 @@ const ProductManagement = () => {
                           <button
                             className="btn btn-primary"
                             onClick={() => {
+                              // Changes by Agnij June 12, 2024 [Pass selectedVariant explicitly]
+                              console.log('Search button clicked with variant:', selectedVariant);
                               getAllMappings();
                             }}
                           >
