@@ -107,15 +107,15 @@ const EditVariant = () => {
       
       console.log("Search response:", searchResponse?.data);
       
-      if (searchResponse?.data?.data && Array.isArray(searchResponse.data.data)) {
+      if (searchResponse?.data && Array.isArray(searchResponse.data)) {
         // First try exact match
-        let variantData = searchResponse.data.data.find(v => 
+        let variantData = searchResponse.data.find(v => 
           v.id === parseInt(id) || v.id === id
         );
         
         // If no exact match, try to find any variant (there should be at least one if API returned data)
-        if (!variantData && searchResponse.data.data.length > 0) {
-          variantData = searchResponse.data.data[0];
+        if (!variantData && searchResponse.data.length > 0) {
+          variantData = searchResponse.data[0];
           console.log("Using first available variant:", variantData);
         }
         
