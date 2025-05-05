@@ -15,6 +15,7 @@ import { getAdminProfile } from "@/utils/services/login";
 import AddVariantModal from '../modal/AddVariantModal';
 import { getProductVariants } from '../../utils/services/product-management';
 import MapVariantVendorModal from "../modal/MapVariantVendorModal";
+import axiosInstance from "@/utils/axios";
 
 // Custom styles for Product Select Component
 const customStyles = {
@@ -87,6 +88,9 @@ const ProductManagement = () => {
   const [dateFrom, setDateFrom] = useState(router.query.dateFrom || "");
   const [dateTo, setDateTo] = useState(router.query.dateTo || "");
   const [selectedApprovalStatus, setSelectedApprovalStatus] = useState(router.query.approvalStatus || "");
+  // Changes by Agnij May 05, 2025 [Added variant filter state for mappings]
+  const [variantsFilterData, setVariantsFilterData] = useState([]);
+  const [selectedVariant, setSelectedVariant] = useState(router.query.variant || "");
 
   // Filter values state for pending filters (before search)
   const [filterValues, setFilterValues] = useState({
@@ -100,7 +104,8 @@ const ProductManagement = () => {
     dateTo: router.query.dateTo || "",
     approvalStatus: router.query.approvalStatus || "",
     startDate: router.query.startDate || "",
-    endDate: router.query.endDate || ""
+    endDate: router.query.endDate || "",
+    variant: router.query.variant || ""
   });
 
   const [productSearchTerm, setProductSearchTerm] = useState('');
@@ -179,7 +184,8 @@ const ProductManagement = () => {
       dateTo: "",
       approvalStatus: "",
       startDate: "",
-      endDate: ""
+      endDate: "",
+      variant: "" // Changes by Agnij May 05, 2025 [Added variant to the reset filters]
     });
 
     // Reset states
@@ -192,6 +198,7 @@ const ProductManagement = () => {
     setDateFrom("");                 
     setDateTo("");                   
     setSelectedApprovalStatus("");
+    setSelectedVariant(""); // Changes by Agnij May 05, 2025 [Reset variant filter state]
     setPage(1);                      
     setVariantsPage(1);
     setMappingsPage(1);
@@ -1267,7 +1274,8 @@ const ProductManagement = () => {
       added_by: selectedAddedBy,
       date_from: dateFrom,
       date_to: dateTo,
-      approval_status: selectedApprovalStatus
+      approval_status: selectedApprovalStatus,
+      variant_id: selectedVariant // Changes by Agnij May 05, 2025 [Added variant filter parameter]
     };
     
     try {
@@ -1283,7 +1291,8 @@ const ProductManagement = () => {
         params.added_by,           // Added by
         params.approval_status,    // Approval status
         params.page,               // Page number
-        params.limit               // Page size
+        params.limit,              // Page size
+        params.variant_id          // Changes by Agnij May 05, 2025 [Added variant filter parameter]
       )
         .then(response => {
           
@@ -2023,6 +2032,8 @@ const ProductManagement = () => {
   useEffect(() => {
     if (activeTab === 'mappings') {
       getAllMappings();
+      // Changes by Agnij May 05, 2025 [Load variants for filter dropdown when mappings tab is active]
+      getVariantsForFilter();
     }
   }, [activeTab, mappingsPage, filterValues]);
 
@@ -2030,6 +2041,65 @@ const ProductManagement = () => {
     getReasonList();
     getVendorApproveList();
   }, []);
+
+  // Changes by Agnij May 05, 2025 [Added function to get all variants for the filter dropdown]
+  const getVariantsForFilter = () => {
+    // If we already have variants data, format it for the dropdown
+    if (variantsFilterData.length > 0) { // Check if filter data already exists
+      // Optionally re-format if needed, or just return
+      // formatVariantsForDropdown(variantsFilterData); // Assuming already formatted
+      return; 
+    }
+    
+    // Otherwise fetch variants data
+    setLoadingVariants(true);
+    
+    // Changes by Agnij May 05, 2025 [Using searchAllVariants with a large limit]
+    // Reverting to searchAllVariants but requesting a very high limit
+    searchAllVariants(
+      null,    // id
+      "",      // searchTerm
+      null,    // startDate
+      null,    // endDate
+      null,    // vendorId
+      null,    // categoryId
+      null,    // addedBy
+      null,    // approvalStatus
+      1,       // page
+      10000    // limit (very large number to fetch all)
+    )
+      .then(response => {
+        console.log('searchAllVariants response for dropdown:', response); // Log the raw response
+        
+        // The function now returns { data: [], pagination: {} }
+        if (response && response.data) {
+          const variantsData = response.data; // Use the data array directly
+          console.log('Total variants fetched for dropdown:', variantsData.length); // Log count
+          formatVariantsForDropdown(variantsData);
+        } else {
+          console.warn('No data received from searchAllVariants for dropdown.');
+          setVariantsFilterData([]);
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching variants for dropdown:", error);
+        setVariantsFilterData([]);
+      })
+      .finally(() => {
+        setLoadingVariants(false);
+      });
+  };
+  
+  // Changes by Agnij May 05, 2025 [Helper to format variants for dropdown]
+  const formatVariantsForDropdown = (variantsData) => {
+    if (variantsData && Array.isArray(variantsData)) {
+      const formattedVariants = variantsData.map(variant => ({
+        value: variant.id,
+        label: variant.name || variant.variant_name || `Variant #${variant.id}`
+      }));
+      setVariantsFilterData(formattedVariants);
+    }
+  };
 
   return (
     <>
@@ -2842,14 +2912,20 @@ const ProductManagement = () => {
                 <div className={`tab-pane fade ${activeTab === 'mappings' ? 'active show' : ''}`} id="mappings-tab" role="tabpanel" aria-labelledby="mappings-tab">
                   <div className="card card-body">
                     <div className="row g-3">
-                      {/* Search and filters for mappings */}
+                      {/* Changes by Agnij May 05, 2025 [Replaced search input with variant dropdown] */}
                       <div className="col-sm-3 mb-3">
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Search Mappings"
-                          value={filterValues.searchString}
-                          onChange={handleSearch}
+                        <Select
+                          options={variantsFilterData}
+                          placeholder="Filter by Variant"
+                          styles={customSelectStyles}
+                          isClearable={true}
+                          instanceId="variant-select-mappings"
+                          value={filterValues.variant ? variantsFilterData.find(opt => opt.value === filterValues.variant) : null}
+                          onChange={(selectedOption) => {
+                            handleFilterChange('variant', selectedOption);
+                            // Also update selectedVariant state
+                            setSelectedVariant(selectedOption ? selectedOption.value : "");
+                          }}
                         />
                       </div>
                       
