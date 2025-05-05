@@ -339,7 +339,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
         <br />
         <p className="row">
           <small>{props?.data?.email}</small>
-          <small className="ms-3">{props?.data?.phone}</small>
+          <small>{props?.data?.phone}</small>
         </p>
       </div>
     </components.Option>
@@ -475,14 +475,16 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
       alignItems: 'center', 
       justifyContent: 'center' 
     }}>
-      <div className="modal-dialog modal-lg" onClick={e => e.stopPropagation()}>
+      <div className="modal-dialog modal-lg" style={{
+        maxHeight: 900,
+        overflow: 'auto'
+      }} onClick={e => e.stopPropagation()}>
         <div className="modal-content">
-          <div className="modal-header bg-primary text-white">
+          <div className="modal-header">
             <h5 className="modal-title">
-              <i className="fas fa-link mr-2"></i>
               Map Variant with Vendor
             </h5>
-            <button type="button" className="close text-white" onClick={onCancel}>
+            <button type="button" className="close" onClick={onCancel}>
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
@@ -503,8 +505,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
 
             {/* Variant Search Section */}
             <div className="mb-4">
-              <h6 className="mb-3 font-weight-bold text-primary">
-                <i className="fas fa-search mr-2"></i>
+              <h6 className="mb-3 font-weight-bold">
                 Search and Select Variant
               </h6>
               
@@ -530,8 +531,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
 
             <hr className="my-4" />
 
-            <h6 className="mb-3 font-weight-bold text-primary">
-              <i className="fas fa-building mr-2"></i>
+            <h6 className="mb-3 font-weight-bold">
               Select Vendor
             </h6>
 
@@ -575,7 +575,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
                 onClick={handleAddMapping}
                 disabled={!formData.vendor || !selectedVariant || loading}
               >
-                <i className="fas fa-plus mr-1"></i> Add Vendor to List
+                Add Vendor to List
               </button>
             </div>
             
