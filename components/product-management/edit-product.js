@@ -87,15 +87,6 @@ const EditProduct = () => {
 		getGalleryImage();
 	}, [productDetailsData]);
 
-	// Track vendor approval data structure for debugging
-	useEffect(() => {
-		if (productDetailsData?.vendor_approved_by) {
-			console.log("Vendor approved_by structure:", productDetailsData.vendor_approved_by);
-			if (Array.isArray(productDetailsData.vendor_approved_by)) {
-				console.log("Vendor IDs:", productDetailsData.vendor_approved_by.map(vendor => vendor.id));
-			}
-		}
-	}, [productDetailsData]);
 
 	// Special handling for vendor list data to combine vendor_list and vendor_approved_by
 	useEffect(() => {
@@ -105,15 +96,13 @@ const EditProduct = () => {
 			vendorListData.forEach(vendor => {
 				if (vendor.vendor_approved_by && vendor.vendor_approved_by.length > 0) {
 					vendor.vendor_approved_by.forEach(approval => {
-						if (!allApprovals.includes(approval.id)) {
+						if (approval && approval.id && !allApprovals.includes(approval.id)) {
 							allApprovals.push(approval.id);
 						}
 					});
 				}
 			});
-			
-			console.log("All approvals extracted from vendor list:", allApprovals);
-			
+						
 			// If we have approvals but the form doesn't, update the form
 			if (allApprovals.length > 0) {
 				// This will be picked up by the Formik component's useEffect
@@ -202,16 +191,22 @@ const EditProduct = () => {
 	const getVendor = () => {
 		vendorList()
 			.then((rsp) => {
-				let lists = rsp.data.map((s) => ({
-					label: s.name,
-					value: s.id,
-				}));
-				lists.unshift({ label: "Select Vendor list", value: "" });
-				lists.push({ label: "Other", value: "o" });
-				setVendorData(lists);
+				// Changes by Agnij May 02, 2025 [Improved vendor data handling]
+				if (rsp && rsp.data && Array.isArray(rsp.data)) {
+					let lists = rsp.data.map((s) => ({
+						label: s.organization_name ? s.organization_name : s.name,
+						value: s.id,
+						email: s.email || "Email Not Available",
+						phone: s.mobile || "Phone Not Available",
+					}));
+					setVendorData(lists);
+				} else {
+					setVendorData([]);
+				}
 			})
 			.catch((error) => {
-				setcatloading(false);
+				toast.error("Failed to load vendors");
+				setVendorData([]);
 			});
 	};
 	const getVendorApproveList = () => {
@@ -233,11 +228,6 @@ const EditProduct = () => {
 			// Set editability based on conditions
 			const isEditableProduct = (data.added_by === 1 || data.added_by === 111) && !data.vendor;
 			setIsEditable(isEditableProduct);
-
-			// Log the raw data to verify what we're getting
-			console.log("Product Details Data:", data);
-			console.log("Vendor List Data:", vendor_list);
-			console.log("Vendor Approved By:", data.vendor_approved_by);
 
 			setProductDetailsData(data);
 			setVendorListData(vendor_list);
@@ -317,7 +307,6 @@ const EditProduct = () => {
 				if (approvedIds.length > 0) {
 					// Convert the array to a comma-separated string
 					formData.append('approved_id', approvedIds.join(','));
-					console.log('Sending approved vendors as string:', approvedIds.join(','));
 				} else {
 					formData.append('approved_id', '');
 				}
@@ -358,7 +347,6 @@ const EditProduct = () => {
 				if (approvedIds.length > 0) {
 					// Convert the array to a comma-separated string
 					formData.append('approved_id', approvedIds.join(','));
-					console.log('Sending approved vendors as string:', approvedIds.join(','));
 				} else {
 					formData.append('approved_id', '');
 				}
@@ -404,11 +392,6 @@ const EditProduct = () => {
 				}
 			}
 
-			// For debugging - log the FormData contents
-			console.log('Form Data Contents:');
-			for (let [key, value] of formData.entries()) {
-				console.log(`${key}: ${value}`);
-			}
 
 			setMainLoading(true);
 			handleUpdateProduct(formData, id)
@@ -421,8 +404,6 @@ const EditProduct = () => {
 						const { data, vendor_list } = response;
 						setProductDetailsData(data);
 						setVendorListData(vendor_list);
-						console.log("Updated product details:", data);
-						console.log("Updated vendor list:", vendor_list);
 						setMainLoading(false);
 						setVendorApprovalChanged(false); // Reset the change flag
 						
@@ -552,8 +533,6 @@ const EditProduct = () => {
 													// Initialize vendor approvals when productDetailsData changes
 													useEffect(() => {
 														if (productDetailsData?.vendor_approved_by) {
-															console.log("Re-initializing vendor approvals from:", productDetailsData.vendor_approved_by);
-															
 															// Handle different data structures that might come from the API
 															let approvedIds = [];
 															
@@ -570,8 +549,6 @@ const EditProduct = () => {
 															// Filter out any invalid values
 															approvedIds = approvedIds.filter(id => id !== undefined && id !== null);
 															
-															console.log("Setting vendor approvals to:", approvedIds);
-															
 															// Only update if there are actual IDs and they're different from current values
 															if (approvedIds.length > 0 && JSON.stringify(approvedIds) !== JSON.stringify(values.approved_id)) {
 																setFieldValue('approved_id', approvedIds);
@@ -579,10 +556,6 @@ const EditProduct = () => {
 														}
 													}, [productDetailsData, setFieldValue]);
 
-													// Log when values change
-													useEffect(() => {
-														console.log("Current approved_id values:", values.approved_id);
-													}, [values.approved_id]);
 
 													return (
 														<Form>
@@ -794,11 +767,6 @@ const EditProduct = () => {
 																							const selectedValues = selectedOptions
 																								? selectedOptions.map((option) => option.value)
 																								: [];
-																							
-																							// Log detailed information about the selection
-																							console.log('Selected vendor options:', selectedOptions);
-																							console.log('Mapped to values:', selectedValues);
-																							
 																							// Set the field value immediately
 																							setFieldValue("approved_id", selectedValues);
 																							setVendorApprovalChanged(true);
