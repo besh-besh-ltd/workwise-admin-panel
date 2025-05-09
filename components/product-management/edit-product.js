@@ -15,7 +15,7 @@ import { ToastContainer, toast } from "react-toastify";
 import Select from "react-select";
 import { useRouter } from "next/router";
 
-// Changes by Agnij May 02, 2025 [Cleaned up edit product page]
+// Changes by Agnij May 09, 2025 [Cleaned up edit product page]
 const EditProduct = () => {
 	const [catloading, setcatloading] = useState(false);
 	const [categories, setCategories] = useState([]);
