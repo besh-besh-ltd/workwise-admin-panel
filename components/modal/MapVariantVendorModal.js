@@ -79,11 +79,12 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
         
         // Format vendors for Select component
         const options = vendorsResponse.data.map((vendor) => ({
-          label: vendor.organization_name ? vendor.organization_name : vendor.name,
+          label: vendor.organization_name ?? '-',
           value: vendor.id,
           email: vendor.email || "Email Not Available",
           phone: vendor.mobile || "Phone Not Available"
         }));
+        console.log(options)
         setVendorOptions(options);
       } else {
         console.error("Invalid vendor response:", vendorsResponse);
