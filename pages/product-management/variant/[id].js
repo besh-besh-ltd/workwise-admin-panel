@@ -275,33 +275,13 @@ const VariantView = () => {
               <div className="col-md-4">
                 <div className="card">
                   <div className="card-header">
-                    <h3 className="card-title">Mapped Vendors</h3>
+                    <h3 className="card-title">Map New Vendor</h3>
                   </div>
                   <div className="card-body">
-                    {currentVendors && currentVendors.length > 0 ? (
-                      <ul className="list-group">
-                        {currentVendors.map((vendor, index) => (
-                          <li key={index} className="list-group-item">
-                            <div className="d-flex justify-content-between align-items-center">
-                              <div>
-                                <strong>{vendor.vendor_name || "Unknown"}</strong>
-                                <br />
-                                <small>{vendor.vendor_email || "No email"}</small>
-                              </div>
-                              <span className="badge badge-primary">
-                                {vendor.mapped_at ? new Date(vendor.mapped_at).toLocaleDateString() : "Unknown date"}
-                              </span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>No vendors mapped to this variant.</p>
-                    )}
 
                     {/* Map New Vendor Section */}
-                    <div className="mt-4">
-                      <h5>Map New Vendor</h5>
+                    <div>
+                      <h5>Select a Vendor</h5>
                       <div className="form-group">
                         <Select
                           options={vendorData}
