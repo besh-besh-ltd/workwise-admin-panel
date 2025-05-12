@@ -30,7 +30,7 @@ export const getProducts = (value) => {
 export const handleUpdateProduct = (values, data) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			let response = await axiosFormData.put(
+			let response = await axiosInstance.put(
 				`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/admin-product-edit/${data}`,
 				values
 			);
