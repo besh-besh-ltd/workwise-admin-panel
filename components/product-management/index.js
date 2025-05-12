@@ -244,7 +244,7 @@ const ProductManagement = () => {
     vendor: null,
     approved_by: null
   });
-  const [totalCount, setTotalCount] = useState({ total_count: 0, disapprove_count: 0, approve_count: 0 });
+  const [totalCount, setTotalCount] = useState({ page: 0, total: 0, total_count: 0 });
   const [pageSearchInput, setPageSearchInput] = useState("");
 
   const approvalStatusOptions = [
@@ -696,12 +696,14 @@ const ProductManagement = () => {
         
         // Update total counts with filtered data
         setTotalCount({
-          total_count: res.total_count || 0,
-          approve_count: res.approve_count || 0,
-          disapprove_count: res.disapprove_count || 0,
+          page: res.page || 0,
+          total: res.pages || 0,
+          total_count: res.filtered_count || 0,
+          // approve_count: res.approve_count || 0,
+          // disapprove_count: res.disapprove_count || 0,
           filtered_count: res.filtered_count || 0,
-          filtered_approve_count: res.filtered_approve_count || 0,
-          filtered_disapprove_count: res.filtered_disapprove_count || 0,
+          // filtered_approve_count: res.filtered_approve_count || 0,
+          // filtered_disapprove_count: res.filtered_disapprove_count || 0,
           is_filtered: Boolean(searchString || selectedApproveVendor || selectedVendor || 
             selectedFeatured || selectedCategory || selectedAddedBy || dateFrom || 
             dateTo || selectedApprovalStatus)
@@ -717,12 +719,10 @@ const ProductManagement = () => {
         setloading(false);
         setproducts([]);
         setTotalCount({
+          page: 0,
+          total: 0,
           total_count: 0,
-          approve_count: 0,
-          disapprove_count: 0,
           filtered_count: 0,
-          filtered_approve_count: 0,
-          filtered_disapprove_count: 0,
           is_filtered: false
         });
         settotalPages(0);
@@ -2499,15 +2499,15 @@ const ProductManagement = () => {
               <div>
                 {/* Always show database totals */}
                 <p><b>Total Products: </b>{totalCount.total_count}</p>
-                <p><b>Total Approved Products: </b>{totalCount.approve_count}</p>
-                <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p>
+                <p><b>Page: </b>{totalCount.page} of {totalCount.total}</p>
+                {/* <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p> */}
                 
                 {/* Show filtered counts when filtering is applied */}
                 {totalCount.is_filtered && (
                   <div className="mt-2 pt-2 border-top">
                     <p><b>Filtered Results: </b>{totalCount.filtered_count}</p>
-                    <p><b>Filtered Approved: </b>{totalCount.filtered_approve_count}</p>
-                    <p><b>Filtered Disapproved: </b>{totalCount.filtered_disapprove_count}</p>
+                    {/* <p><b>Filtered Approved: </b>{totalCount.filtered_approve_count}</p>
+                    <p><b>Filtered Disapproved: </b>{totalCount.filtered_disapprove_count}</p> */}
                   </div>
                 )}
               </div>
