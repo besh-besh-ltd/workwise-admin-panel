@@ -64,13 +64,6 @@
         "class": "",
         "icon": "",
         "active": false
-      },
-      {
-        "title": "Product Preview",
-        "link": "/product-preview",
-        "class": "",
-        "icon": "",
-        "active": false
       }
     ]
   },

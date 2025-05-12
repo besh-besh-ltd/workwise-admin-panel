@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, getCategories, getAdminUsersList, searchProductsV2 } from "@/utils/services/product-management";
+import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants, getVariantMappings, acceptVariant } from "@/utils/services/product-management";
 import axiosFormData from "@/utils/axios/form-data";
 import FullLoading from "../loading/FullLoading";
 import { ToastContainer, toast } from "react-toastify";
@@ -12,6 +12,10 @@ import Select, { components } from "react-select";
 import { vendorApproveList } from "@/utils/services/rfq";
 import { vendorList } from "@/utils/services/rfq";
 import { getAdminProfile } from "@/utils/services/login";
+import AddVariantModal from '../modal/AddVariantModal';
+import { getProductVariants } from '../../utils/services/product-management';
+import MapVariantVendorModal from "../modal/MapVariantVendorModal";
+import axiosInstance from "@/utils/axios";
 
 // Custom styles for Product Select Component
 const customStyles = {
@@ -47,6 +51,7 @@ const ProductManagement = () => {
   const [prodFile, setProdFile] = useState(null);
   const [loading, setloading] = useState(false);
   const [products, setproducts] = useState([]);
+  const [productData, setProductData] = useState([]); // Added state for product data
   const [updateProduct, setUpdateProduct] = useState("");
   const [uploadProgress, setuploadProgress] = useState(0);
   const [limit, setlimit] = useState(10);
@@ -55,6 +60,19 @@ const ProductManagement = () => {
   const [selectedProductId, setselectedProductsId] = useState('');
   const [reasonList, setReasonList] = useState([]);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  
+  // Changes by Agnij Aprill 30, 2025 [Added tabular navigation state]
+  const [activeTab, setActiveTab] = useState(router.query.tab || 'products');
+  const [variantsPage, setVariantsPage] = useState(parseInt(router.query.variantsPage) || 1);
+  const [variantsLimit, setVariantsLimit] = useState(10);
+  const [variantsTotalPages, setVariantsTotalPages] = useState(null);
+  const [variants, setVariants] = useState([]);
+  const [loadingVariants, setLoadingVariants] = useState(false);
+  const [mappingsPage, setMappingsPage] = useState(parseInt(router.query.mappingsPage) || 1);
+  const [mappingsLimit, setMappingsLimit] = useState(10);
+  const [mappingsTotalPages, setMappingsTotalPages] = useState(null);
+  const [mappings, setMappings] = useState([]);
+  const [loadingMappings, setLoadingMappings] = useState(false);
   
   // Filter states for current active filters
   const [searchString, setSearchString] = useState(router.query.search || '');
@@ -70,6 +88,9 @@ const ProductManagement = () => {
   const [dateFrom, setDateFrom] = useState(router.query.dateFrom || "");
   const [dateTo, setDateTo] = useState(router.query.dateTo || "");
   const [selectedApprovalStatus, setSelectedApprovalStatus] = useState(router.query.approvalStatus || "");
+  // Changes by Agnij May 05, 2025 [Added variant filter state for mappings]
+  const [variantsFilterData, setVariantsFilterData] = useState([]);
+  const [selectedVariant, setSelectedVariant] = useState(router.query.variant || "");
 
   // Filter values state for pending filters (before search)
   const [filterValues, setFilterValues] = useState({
@@ -81,7 +102,10 @@ const ProductManagement = () => {
     addedBy: router.query.addedBy || "",
     dateFrom: router.query.dateFrom || "",
     dateTo: router.query.dateTo || "",
-    approvalStatus: router.query.approvalStatus || ""
+    approvalStatus: router.query.approvalStatus || "",
+    startDate: router.query.startDate || "",
+    endDate: router.query.endDate || "",
+    variant: router.query.variant || ""
   });
 
   const [productSearchTerm, setProductSearchTerm] = useState('');
@@ -122,6 +146,8 @@ const ProductManagement = () => {
     setDateFrom(filterValues.dateFrom);
     setDateTo(filterValues.dateTo);
     setSelectedApprovalStatus(filterValues.approvalStatus);
+    // Changes by Agnij June 12, 2024 [Make sure selectedVariant is updated]
+    setSelectedVariant(filterValues.variant);
 
     // Update URL with all filter values
     updateUrlParams({
@@ -134,8 +160,19 @@ const ProductManagement = () => {
       addedBy: filterValues.addedBy,
       dateFrom: filterValues.dateFrom,
       dateTo: filterValues.dateTo,
-      approvalStatus: filterValues.approvalStatus
+      approvalStatus: filterValues.approvalStatus,
+      // Changes by Agnij June 12, 2024 [Add variant to URL params]
+      variant: filterValues.variant
     });
+    
+    // Changes by Agnij May 3, 2025 [Apply filters based on active tab]
+    if (activeTab === 'variants') {
+      getAllVariants();
+    } else if (activeTab === 'mappings') {
+      getAllMappings();
+    } else {
+      getProducts();
+    }
   };
 
   const resetFilters = () => {
@@ -149,7 +186,10 @@ const ProductManagement = () => {
       addedBy: "",
       dateFrom: "",
       dateTo: "",
-      approvalStatus: ""
+      approvalStatus: "",
+      startDate: "",
+      endDate: "",
+      variant: "" // Changes by Agnij May 05, 2025 [Added variant to the reset filters]
     });
 
     // Reset states
@@ -162,15 +202,29 @@ const ProductManagement = () => {
     setDateFrom("");                 
     setDateTo("");                   
     setSelectedApprovalStatus("");
+    setSelectedVariant(""); // Changes by Agnij May 05, 2025 [Reset variant filter state]
     setPage(1);                      
+    setVariantsPage(1);
+    setMappingsPage(1);
+    setPageSearchInput("");
+    setVariantsPageSearchInput("");
+    setMappingsPageSearchInput("");
     
-    // Remove all URL query parameters
+    // Reset URL parameters
+    const currentTabParam = activeTab || 'products';
     router.push({
-      pathname: router.pathname
+      pathname: router.pathname,
+      query: { tab: currentTabParam }
     }, undefined, { shallow: true });
     
-    // Call getProducts to fetch data without filters
-    getProducts();
+    // Call appropriate fetch based on active tab
+    if (activeTab === 'products') {
+      getProducts();
+    } else if (activeTab === 'variants') {
+      getAllVariants();
+    } else if (activeTab === 'mappings') {
+      getAllMappings();
+    }
   };
 
   const [inputValue, setInputValue] = useState("");
@@ -190,7 +244,7 @@ const ProductManagement = () => {
     vendor: null,
     approved_by: null
   });
-  const [totalCount, setTotalCount] = useState({ total_count: 0, disapprove_count: 0, approve_count: 0 });
+  const [totalCount, setTotalCount] = useState({ page: 0, total: 0, total_count: 0 });
   const [pageSearchInput, setPageSearchInput] = useState("");
 
   const approvalStatusOptions = [
@@ -247,8 +301,14 @@ const ProductManagement = () => {
   };
 
   const openRejectModal = (id) => {
-    setShowRejectModal(true)
-    setselectedProductsId(id)
+    // Changes by Agnij May 01, 2025 [Improved handling for variants and mappings]
+    // Process ID to ensure consistent format with mapping_ prefix for mappings
+    const processedId = typeof id === 'string' && id.startsWith('mapping_') 
+      ? id 
+      : (typeof id === 'number' && activeTab === 'mappings' ? `mapping_${id}` : id);
+    
+    setShowRejectModal(true);
+    setselectedProductsId(processedId);
   }
 
   const handlePageClick = (e) => {
@@ -379,21 +439,125 @@ const ProductManagement = () => {
       })
   }
 
-  const handleAcceptRejectProduct = (id, status) => {
-    acceptProduct(id, status)
+  const handleAcceptRejectProduct = (id, status, reject_reason_id = null) => {
+    // Changes by Agnij May 3, 2025 [Fixed status handling for compatibility with backend]
+    
+    // For mappings, ensure we add the mapping_ prefix if it's not already there
+    const processedId = typeof id === 'string' && id.startsWith('mapping_') 
+      ? id 
+      : (typeof id === 'number' && activeTab === 'mappings' ? `mapping_${id}` : id);
+    
+    // Handle both string status and payload object with status
+    let statusValue = status;
+    let rejectReasonId = reject_reason_id;
+    let rejectReason = null;
+    
+    // If status is an object (from DisapproveModal), extract values
+    if (typeof status === 'object' && status !== null) {
+      statusValue = status.status;
+      rejectReasonId = status.reject_reason_id || null;
+      rejectReason = status.reject_reason
+    }
+    
+    // Ensure statusValue is a string as expected by the backend
+    if (typeof statusValue === 'number') {
+      statusValue = statusValue.toString();
+    }
+    
+    acceptProduct(processedId, statusValue, rejectReasonId, rejectReason)
       .then((res) => {
         setShowRejectModal(false);
         setselectedProductsId("")
         setInputValue("")
         setSelectValue("")
-        toast.success(res.message);
-        getProducts();
+        toast.success(res.message || `Product ${statusValue === '1' || statusValue === 1 ? 'approved' : 'rejected'} successfully`);
+        // Refresh different tables based on the ID type
+        if (typeof processedId === 'string' && processedId.startsWith('mapping_')) {
+          // This was a mapping approval
+          getAllMappings();
+        } else if (activeTab === 'variants') {
+          // This was a variant approval from variants tab
+          getAllVariants();
+        } else {
+          // This was a regular product approval
+          getProducts();
+        }
         getReasonList();
       })
       .catch((error) => {
+        console.error("Error in handleAcceptRejectProduct:", error);
         let txt = "";
-        for (let x in error.error.response.data.errors) {
-          txt = error.error.response.data.errors[x];
+        if (error.error?.response?.data?.errors) {
+          for (let x in error.error.response.data.errors) {
+            txt = error.error.response.data.errors[x];
+          }
+        } else if (error.error?.response?.data?.message) {
+          txt = error.error.response.data.message;
+        } else if (error.error?.message) {
+          txt = error.error.message;
+        } else {
+          txt = "An error occurred during approval/rejection";
+        }
+        toast.error(txt);
+      })
+  }
+
+  const handleAcceptRejectVariant = (id, status, reject_reason_id = null) => {
+    // Changes by Agnij May 3, 2025 [Fixed status handling for compatibility with backend]
+    
+    // For mappings, ensure we add the mapping_ prefix if it's not already there
+    const processedId = typeof id === 'string' && id.startsWith('mapping_') 
+      ? id 
+      : (typeof id === 'number' && activeTab === 'mappings' ? `mapping_${id}` : id);
+    
+    // Handle both string status and payload object with status
+    let statusValue = status;
+    let rejectReasonId = reject_reason_id;
+    
+    // If status is an object (from DisapproveModal), extract values
+    if (typeof status === 'object' && status !== null) {
+      statusValue = status.status;
+      rejectReasonId = status.reject_reason_id || null;
+    }
+    
+    // Ensure statusValue is a string as expected by the backend
+    if (typeof statusValue === 'number') {
+      statusValue = statusValue.toString();
+    }
+    
+    acceptVariant(processedId, statusValue, rejectReasonId)
+      .then((res) => {
+        setShowRejectModal(false);
+        setselectedProductsId("")
+        setInputValue("")
+        setSelectValue("")
+        toast.success(res.message || `Variant ${statusValue === '1' || statusValue === 1 ? 'approved' : 'rejected'} successfully`);
+        // Refresh different tables based on the ID type
+        if (typeof processedId === 'string' && processedId.startsWith('mapping_')) {
+          // This was a mapping approval
+          getAllMappings();
+        } else if (activeTab === 'variants') {
+          // This was a variant approval from variants tab
+          getAllVariants();
+        } else {
+          // This was a regular product approval
+          getProducts();
+        }
+        getReasonList();
+      })
+      .catch((error) => {
+        console.error("Error in handleAcceptRejectProduct:", error);
+        let txt = "";
+        if (error.error?.response?.data?.errors) {
+          for (let x in error.error.response.data.errors) {
+            txt = error.error.response.data.errors[x];
+          }
+        } else if (error.error?.response?.data?.message) {
+          txt = error.error.response.data.message;
+        } else if (error.error?.message) {
+          txt = error.error.message;
+        } else {
+          txt = "An error occurred during approval/rejection";
         }
         toast.error(txt);
       })
@@ -532,12 +696,14 @@ const ProductManagement = () => {
         
         // Update total counts with filtered data
         setTotalCount({
-          total_count: res.total_count || 0,
-          approve_count: res.approve_count || 0,
-          disapprove_count: res.disapprove_count || 0,
+          page: res.page || 0,
+          total: res.pages || 0,
+          total_count: res.filtered_count || 0,
+          // approve_count: res.approve_count || 0,
+          // disapprove_count: res.disapprove_count || 0,
           filtered_count: res.filtered_count || 0,
-          filtered_approve_count: res.filtered_approve_count || 0,
-          filtered_disapprove_count: res.filtered_disapprove_count || 0,
+          // filtered_approve_count: res.filtered_approve_count || 0,
+          // filtered_disapprove_count: res.filtered_disapprove_count || 0,
           is_filtered: Boolean(searchString || selectedApproveVendor || selectedVendor || 
             selectedFeatured || selectedCategory || selectedAddedBy || dateFrom || 
             dateTo || selectedApprovalStatus)
@@ -546,18 +712,17 @@ const ProductManagement = () => {
         // Apply the checked property to products
         const productsWithChecked = productsData.map(item => ({ ...item, isChecked: false }));
         setproducts(productsWithChecked);
+        setProductData(productsWithChecked); // Set product data for variant mapping
       })
       .catch((err) => {
         console.error("Error fetching products:", err);
         setloading(false);
         setproducts([]);
         setTotalCount({
+          page: 0,
+          total: 0,
           total_count: 0,
-          approve_count: 0,
-          disapprove_count: 0,
           filtered_count: 0,
-          filtered_approve_count: 0,
-          filtered_disapprove_count: 0,
           is_filtered: false
         });
         settotalPages(0);
@@ -755,17 +920,141 @@ const ProductManagement = () => {
     }));
   }  
 
-  const handleSubmitMapping = async () => {
+  const handleOpenProductMap = () => {
+    // Save the current state before opening modal
+    // const currentTabContent = document.querySelector('.tab-pane.active');
+    // if (currentTabContent) {
+    //   currentTabContent.style.display = 'block'; 
+    // }
 
-    if(!mapMultipleProductsWithVendor || mapMultipleProductsWithVendor?.length<=0)  {
-        toast.error("select products and vendors to add");
-        return 0
+    setOpenProductMap(true);
+    setIsVariantMapping(true); // Always set to true for variant mapping
+    
+    // Reset the form when opening the modal
+    setproductMapObj({
+      product: null,
+      vendor: null,
+      approved_by: null
+    });
+
+    setMapMultipleProductsWithVendor([]);
+    
+    // Changes by Agnij May 30, 2025 [Load all variants to populate the dropdown]
+    setLoadingVariants(true);
+
+    
+    // Use the searchAllVariants function to get all available variants
+    searchAllVariants("")
+      .then(response => {
+        if (response?.data?.data) {
+          const variants = response.data.data || [];
+          
+          // Format variants for select component
+          const formattedVariants = variants.map(variant => ({
+            value: variant.id,
+            label: `${variant.variant_name || variant.name} (${variant.product_name || 'Unknown Product'})`,
+            data: variant
+          }));
+          
+          setVariantsList(formattedVariants);
+        } else {
+          setVariantsList([]);
+        }
+      })
+      .catch(error => {
+        console.error("Error loading variants:", error);
+        toast.error("Failed to load variants");
+        setVariantsList([]);
+      })
+      .finally(() => {
+        setLoadingVariants(false);
+      });
+  };
+
+  const fetchAllProductVariants = useCallback(async (searchTerm = null) => {
+    // Changes by Agnij April 30, 2025 [Updated to support searching variants]
+    setLoadingVariants(true);
+    
+    try {
+      // Get all products
+      const products = productData || [];
+      
+      if (products.length === 0) {
+        setVariantsList([]);
+        setLoadingVariants(false);
+        return;
       }
+      
+      // First approach: get variants for each product individually
+      const variantPromises = products.map(product => 
+        getProductVariants(product.id)
+          .then(response => {
+            let variantData = [];
+            
+            // Try to extract data carefully to avoid undefined errors
+            if (response?.data) {
+              if (Array.isArray(response.data)) {
+                // Direct array response
+                variantData = response.data;
+              } else if (response.data.data && Array.isArray(response.data.data)) {
+                // Nested data object
+                variantData = response.data.data;
+              } else if (response.data.status === 1 && !response.data.data) {
+                // Empty data with success status
+                variantData = [];
+              }
+            }
+            
+            // Only map if we have variants
+            if (variantData.length > 0) {
+              return variantData.map(variant => ({
+                value: variant.id,
+                label: `${variant.variant_name || variant.name} (${product.name || 'Unknown Product'})`,
+                data: variant,
+                product_id: product.id
+              }));
+            }
+            return [];
+          })
+          .catch(error => {
+            console.error(`Error fetching variants for product ${product.id}:`, error);
+            return [];
+          })
+      );
+      
+      // Wait for all promises to resolve
+      const variantResults = await Promise.all(variantPromises);
+      
+      // Combine all results and filter out any undefined or null values
+      let allVariants = variantResults.flat().filter(Boolean);
+      
+      // If we have a search term, filter the variants
+      if (searchTerm && searchTerm.length >= 2) {
+        const filteredVariants = allVariants.filter(variant => {
+          return variant.label.toLowerCase().includes(searchTerm.toLowerCase());
+        });
+        allVariants = filteredVariants;
+      }
+      
+      // Update state with filtered variants
+      setVariantsList(allVariants);
+    } catch (error) {
+      // Changes by Agnij May 02, 2025 [Removed toast error message]
+      console.error('Error in fetchAllProductVariants:', error);
+    } finally {
+      setLoadingVariants(false);
+    }
+  }, [productData]);
 
-      setIsAddingDataProcessing(true);
+  const handleSubmitMapping = async () => {
+    if(!mapMultipleProductsWithVendor || mapMultipleProductsWithVendor?.length <= 0) {
+      toast.error("Select products and vendors to add");
+      return 0;
+    }
+
+    setIsAddingDataProcessing(true);
 
     for (const productMap of mapMultipleProductsWithVendor) {
-
     const { product, vendor, approved_by } = productMap;
     
     if (!product || !vendor) {
@@ -774,39 +1063,52 @@ const ProductManagement = () => {
     }
 
     try {
+        // Different API call based on if mapping a product or variant
+        if (isVariantMapping) {
+          // Changes by Agnij May 30, 2025 [Fixed parameter name from variant_id to product_variant_id]
+          const payload = {
+            product_variant_id: product.value,
+            vendor_id: vendor.value,
+            approved_by: approved_by?.map((item) => item.value) || null
+          };
+          
+          const res = await mapVariantWithVendor(payload);
+          toast.success(res.message || "Variant mapped successfully");
+        } else {
       const payload = {
         product_id: product.value,
         vendor_id: vendor.value,
         approved_by: approved_by?.map((item) => item.value) || null
-      }
+          };
+          
       const res = await mapVendorWithProduct(payload);
-      toast.success(res.message)
-      setproductMapObj({
-        product: null,
-        vendor: null,
-        approved_by: null
-      });
-      setOpenProductMap(false);
-      getProducts();
+          toast.success(res.message);
+        }
     } catch (error) {
-      console.log(error)
-      toast.error(error.message?.response?.data?.message)
+        console.log(error);
+        toast.error(error.message?.response?.data?.message || "An error occurred");
     }
   }
 
-  
+    // Reset form state
   setproductMapObj({
     product: null,
     vendor: null,
     approved_by: null
   });
 
-  setMapMultipleProductsWithVendor([])
+    setMapMultipleProductsWithVendor([]);
   setIsAddingDataProcessing(false);
-  }
+    setOpenProductMap(false);
+    getProducts();
+    
+    // Changes by Agnij May 30, 2025 [Refresh mappings tab data after adding new mappings]
+    if (activeTab === 'mappings') {
+      getAllMappings();
+    }
+  };
 
   const handleAddProductForBulk = async () => {
-
     const { product, vendor, approved_by } = productMapObj;
 
     if (!product || !vendor) {
@@ -816,8 +1118,8 @@ const ProductManagement = () => {
 
     setMapMultipleProductsWithVendor((prevState) => [...prevState, productMapObj]);
       
-    toast.success("Product added for bulk submission.");
-  }
+    toast.success(`${isVariantMapping ? "Variant" : "Product"} added for bulk submission.`);
+  };
 
   const handleRemoveProduct = (index) => {
     setMapMultipleProductsWithVendor((prevState) => prevState.filter((_, i) => i !== index));
@@ -825,13 +1127,579 @@ const ProductManagement = () => {
   };
 
   const updateUrlParams = (newParams) => {
-    const query = { ...router.query, ...newParams };
-    // Remove empty params
-    Object.keys(query).forEach(key => !query[key] && delete query[key]);
-    router.push({
-      pathname: router.pathname,
-      query
-    }, undefined, { shallow: true });
+    // Build a new URL with merged parameters
+    const url = new URL(window.location.href);
+    const updatedSearchParams = new URLSearchParams(url.search);
+    
+    // Update with new parameters
+    Object.entries(newParams).forEach(([key, value]) => {
+      if (value === "" || value === null || value === undefined) {
+        updatedSearchParams.delete(key);
+      } else {
+        updatedSearchParams.set(key, value);
+      }
+    });
+    
+    // Update the URL without refreshing the page
+    const newUrl = `${window.location.pathname}?${updatedSearchParams.toString()}`;
+    
+    
+    router.push(
+      { pathname: router.pathname, query: Object.fromEntries(updatedSearchParams) },
+      undefined,
+      { shallow: true }
+    );
+  };
+  
+  // Changes by Agnij April 30, 2025 [Added tab switching function]
+  const handleTabChange = (tabName) => {
+    setActiveTab(tabName);
+    
+    // Reset page number when switching tabs
+    if (tabName === 'products') {
+      setPage(1);
+    } else if (tabName === 'variants') {
+      setVariantsPage(1);
+    } else if (tabName === 'mappings') {
+      setMappingsPage(1);
+    }
+    // Call resetFilters here to ensure it happens after setting the new tab state
+    resetFilters();
+  };
+  
+  // Changes by Agnij May 3, 2025 [Fixed approval status filter for variants]
+  const getAllVariants = () => {
+    setLoadingVariants(true);
+    
+    // Parameters for API call including pagination
+    const params = {
+      page: variantsPage,
+      limit: variantsLimit,
+      search: filterValues.searchString, // Use filterValues for consistency
+      category_id: filterValues.category,
+      added_by: filterValues.addedBy,
+      date_from: filterValues.dateFrom,
+      date_to: filterValues.dateTo,
+      is_approve: filterValues.approvalStatus
+    };
+    
+    try {
+      // Call the updated searchAllVariants function with pagination params
+      searchAllVariants(
+        null, // id (null for general search)
+        params.search,
+        params.date_from,
+        params.date_to,
+        null, // vendorId (not used in this variant search)
+        params.category_id,
+        params.added_by,
+        params.is_approve,
+        params.page, // Pass page
+        params.limit // Pass limit
+      )
+        .then(response => {
+          // Backend now returns { data: [], pagination: {} }
+          if (response && response.data && response.pagination) {
+            const variantsData = response.data;
+            const paginationData = response.pagination;
+            
+            if (variantsData && Array.isArray(variantsData)) {
+              // Format variants (similar to before, but no slicing)
+              const formattedVariants = variantsData.map(variant => ({
+                ...variant,
+                // Use name from DB directly if available, otherwise construct
+                variant_name: variant.name || `Variant #${variant.id}`, 
+                product_name: variant.product_name || 'Unknown Product',
+                // Ensure category_names exists and is an array before joining
+                category_info: Array.isArray(variant.category_names) ? variant.category_names.join(', ') : 'No Category',
+                created_at_formatted: variant.created_at ? new Date(variant.created_at).toLocaleString() : 'N/A'
+              }));
+              
+              setVariants(formattedVariants); // Set data directly from API response
+              
+              // Set total pages from backend pagination info
+              setVariantsTotalPages(paginationData.pages || 1); // Use pages count from backend
+              
+            } else {
+              console.warn('Variant data received is not an array:', variantsData);
+              setVariants([]);
+              setVariantsTotalPages(1);
+            }
+          } else {
+            console.error('Invalid response structure from searchAllVariants:', response);
+            setVariants([]);
+            setVariantsTotalPages(1);
+            toast.error('Failed to load variants due to invalid response format.');
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching variants:", error);
+          toast.error('Failed to load variants.');
+          setVariants([]);
+          setVariantsTotalPages(1);
+        })
+        .finally(() => {
+          setLoadingVariants(false);
+        });
+    } catch (error) {
+      console.error("Error calling searchAllVariants:", error);
+      toast.error('An unexpected error occurred while fetching variants.');
+      setVariants([]);
+      setVariantsTotalPages(1);
+      setLoadingVariants(false);
+    }
+  };
+  
+  // Changes by Agnij May 2, 2025 [Fixed mappings data handling]
+  const getAllMappings = () => {
+    setLoadingMappings(true);
+    
+    // Changes by Agnij May 02, 2025 [Updated to use all filters from active states like getProducts does]
+    const params = {
+      page: mappingsPage,
+      limit: mappingsLimit,
+      search: searchString,
+      vendor_id: selectedVendor,
+      category_id: selectedCategory,
+      added_by: selectedAddedBy,
+      date_from: dateFrom,
+      date_to: dateTo,
+      approval_status: selectedApprovalStatus,
+      variant_id: selectedVariant // Changes by Agnij June 12, 2024 [Added variant filter parameter]
+    };
+    
+    // Changes by Agnij June 12, 2024 [Log filter parameters for debugging]
+    console.log('Mapping filters being applied:', params);
+    
+    try {
+      // Changes by Agnij May 02, 2025 [Fixed vendor filter to correctly pass vendor_id parameter]
+      // Use the variant mappings API with all filter parameters
+      getVariantMappings(
+        null,                      // id
+        params.search || "",       // Search string
+        params.date_from,          // Start date
+        params.date_to,            // End date
+        params.vendor_id,          // Vendor ID - corrected from previous implementation
+        params.category_id,        // Category ID
+        params.added_by,           // Added by
+        params.approval_status,    // Approval status
+        params.page,               // Page number
+        params.limit,              // Page size
+        params.variant_id          // Changes by Agnij June 12, 2024 [Added variant filter parameter]
+      )
+        .then(response => {
+          
+          // Handle different response formats
+          let mappingsData = [];
+          let paginationData = {};
+          
+          if (Array.isArray(response)) {
+            // Direct array response
+            mappingsData = response;
+            // Estimate pagination since we have array data
+            paginationData = {
+              total: mappingsData.length * 10, // Rough estimate
+              page: params.page,
+              limit: params.limit,
+              pages: Math.ceil(mappingsData.length * 10 / params.limit)
+            };
+          } else if (response?.data) {
+            if (Array.isArray(response.data)) {
+              // Response with data array
+              mappingsData = response.data;
+              paginationData = response.pagination || {};
+            } else if (response.data.data && Array.isArray(response.data.data)) {
+              // Nested data object
+              mappingsData = response.data.data;
+              paginationData = response.data.pagination || {};
+            }
+          }
+          
+          
+          if (mappingsData && mappingsData.length > 0) {
+            // Format mappings for display
+            let formattedMappings = mappingsData.map(mapping => {
+              // Use the vendor_display_name which combines organization name and name
+              const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
+              
+              return {
+                id: mapping.variant_id || mapping.id,
+                mapping_id: mapping.mapping_id || mapping.id,
+                name: mapping.variant_name || mapping.name || `Variant ID: ${mapping.variant_id || mapping.id}`,
+                product_name: mapping.product_name || 'Unknown Product',
+                category_info: mapping.category_names ? mapping.category_names.join(', ') : '',
+                vendor_id: mapping.vendor_id,
+                vendor_name: vendorName,
+                vendor_email: mapping.vendor_email || 'N/A',
+                mapped_at: mapping.mapped_at || mapping.created_at,
+                mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 
+                                      mapping.created_at ? new Date(mapping.created_at).toLocaleString() : 'Unknown',
+                is_mapped: true,
+                is_approve: mapping.is_approve || 0,
+                reject_reason: mapping.reject_reason,
+                created_by: mapping.created_by,
+                updated_by: mapping.updated_by
+              };
+            });
+            
+            setMappings(formattedMappings);
+            
+            // Calculate total pages from pagination data or estimated from data length
+            let totalPages = 1; // Default to at least 1 page
+            
+            if (paginationData.pages && paginationData.pages > 0) {
+              // Use server-provided page count if available
+              totalPages = paginationData.pages;
+            } else if (paginationData.total) {
+              // Calculate from total count if available
+              totalPages = Math.ceil(paginationData.total / params.limit);
+            } else if (formattedMappings.length > 0) {
+              // Estimate based on current page data
+              totalPages = Math.max(1, Math.ceil(formattedMappings.length / params.limit) * 10);
+            }
+            
+            setMappingsTotalPages(totalPages);
+          } else {
+            setMappings([]);
+            setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
+          }
+        })
+        .catch(error => {
+          toast.error("Failed to fetch mappings");
+          setMappings([]);
+          setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
+        })
+        .finally(() => {
+          setLoadingMappings(false);
+        });
+    } catch (error) {
+      setLoadingMappings(false);
+      setMappings([]);
+      setMappingsTotalPages(1); // Set to 1 instead of 0 to ensure pagination control appears
+    }
+  };
+  
+  // Changes by Agnij May 31, 2025 [Updated variant page search and removed vendor filter]
+  const handleVariantsPageClick = (event) => {
+    const selectedPage = event.selected + 1;
+    setVariantsPage(selectedPage);
+    
+    // Update URL params
+    updateUrlParams({ 
+      variantsPage: selectedPage,
+      tab: 'variants',
+      search: searchString,
+      startDate: filterValues.startDate,
+      endDate: filterValues.endDate
+    });
+    
+    // Changes by Agnij May 04, 2025 [Remove direct data fetch; rely on useEffect]
+    // // Fetch data with new page 
+    // setLoadingVariants(true);
+    // 
+    // // Changes by Agnij May 01, 2025 [Added date range parameters]
+    // const params = {
+    //   page: selectedPage,
+    //   limit: variantsLimit,
+    //   search: searchString || \"\",
+    //   start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
+    //   end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null
+    // };
+    // 
+    // searchAllVariants(params.search, params.start_date, params.end_date)
+    //   .then(response => {
+    //     if (response?.data?.data) {
+    //       const variantsData = response.data.data;
+    //       
+    //       if (variantsData && Array.isArray(variantsData)) {
+    //         // Format variants to include more information
+    //         const formattedVariants = variantsData.map(variant => ({
+    //           ...variant,
+    //           variant_name: variant.name, // Ensure variant_name is available
+    //           product_name: variant.product_name || 'Unknown Product',
+    //           category_info: Array.isArray(variant.category_names) ? variant.category_names.join(', ') : '',
+    //           created_at_formatted: new Date(variant.created_at).toLocaleString()
+    //         }));
+    //         
+    //         // Calculate total items (might need to be provided by API)
+    //         const totalItems = formattedVariants.length;
+    //         
+    //         // Calculate indices for pagination
+    //         const startIndex = (params.page - 1) * params.limit;
+    //         const endIndex = Math.min(startIndex + params.limit, totalItems);
+    //         
+    //         // Get the current page of variants
+    //         const paginatedVariants = formattedVariants.slice(startIndex, endIndex);
+    //         
+    //         setVariants(paginatedVariants);
+    //         setVariantsTotalPages(Math.ceil(totalItems / params.limit));
+    //       }
+    //     }
+    //   })
+    //   .catch(error => {
+    //     // Changes by Agnij May 02, 2025 [Removed toast error message]
+    //     console.error(\"Error fetching variants:\", error);
+    //     setVariants([]);
+    //     setVariantsTotalPages(0);
+    //   })
+    //   .finally(() => {
+    //     setLoadingVariants(false);
+    //   });
+  };
+  
+  // Changes by Agnij May 31, 2025 [Updated mappings pagination to handle different response formats]
+  const handleMappingsPageClick = (event) => {
+    try {
+      if (event.selected === undefined) {
+        const isNext = event.nextSelectedPage !== undefined;
+        handleMappingsEllipsisClick(isNext);
+      } else {
+        const selectedPage = event.selected + 1;
+        setMappingsPage(selectedPage);
+        
+        // Update URL params with all relevant filters
+        updateUrlParams({ 
+          mappingsPage: selectedPage,
+          tab: 'mappings',
+          search: searchString,
+          vendor: selectedVendor,
+          category: selectedCategory,
+          addedBy: selectedAddedBy,
+          dateFrom: dateFrom,
+          dateTo: dateTo,
+          approvalStatus: selectedApprovalStatus
+        });
+        
+        // Fetch data with new page
+        setLoadingMappings(true);
+        
+        // Changes by Agnij May 02, 2025 [Added date range parameters and improved pagination]
+        const params = {
+          page: selectedPage,
+          limit: mappingsLimit,
+          search: searchString || "",
+          start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
+          end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null,
+          vendor_id: selectedVendor,
+          category_id: selectedCategory,
+          added_by: selectedAddedBy,
+          approval_status: selectedApprovalStatus
+        };
+        
+        // Changes by Agnij May 02, 2025 [Fixed vendor filter to correctly pass vendor_id parameter]
+        getVariantMappings(
+          null,                         // id
+          params.search || "",          // search term
+          params.start_date,            // start date
+          params.end_date,              // end date
+          params.vendor_id,             // vendor_id - correctly passed now
+          params.category_id,           // category_id
+          params.added_by,              // added_by
+          params.approval_status,       // approval status
+          params.page,                  // page number
+          params.limit                  // page size
+        )
+          .then(response => {
+            // Changes by Agnij May 3, 2025 [Fixed response processing for page changes]
+            
+            
+            // Handle different response formats
+            let mappingsData = [];
+            let paginationData = {};
+            
+            if (Array.isArray(response)) {
+              // Direct array response
+              mappingsData = response;
+              // Estimate pagination since we have array data
+              paginationData = {
+                total: mappingsData.length * 10, // Rough estimate
+                page: params.page,
+                limit: params.limit,
+                pages: Math.ceil(mappingsData.length * 10 / params.limit)
+              };
+            } else if (response?.data) {
+              if (Array.isArray(response.data)) {
+                // Response with data array
+                mappingsData = response.data;
+                paginationData = response.pagination || {};
+              } else if (response.data.data && Array.isArray(response.data.data)) {
+                // Nested data object
+                mappingsData = response.data.data;
+                paginationData = response.data.pagination || {};
+              }
+            }
+              
+            if (mappingsData && mappingsData.length > 0) {
+              // Format mappings for display
+              let formattedMappings = mappingsData.map(mapping => {
+                // Use the vendor_display_name which combines organization name and name
+                const vendorName = mapping.vendor_display_name || mapping.vendor_name || 'Unknown Vendor';
+                
+                return {
+                  id: mapping.variant_id || mapping.id,
+                  mapping_id: mapping.mapping_id || mapping.id,
+                  name: mapping.variant_name || mapping.name || `Variant ID: ${mapping.variant_id || mapping.id}`,
+                  product_name: mapping.product_name || 'Unknown Product',
+                  category_info: mapping.category_names ? mapping.category_names.join(', ') : '',
+                  vendor_id: mapping.vendor_id,
+                  vendor_name: vendorName,
+                  vendor_email: mapping.vendor_email || 'N/A',
+                  mapped_at: mapping.mapped_at || mapping.created_at,
+                  mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 
+                                     mapping.created_at ? new Date(mapping.created_at).toLocaleString() : 'Unknown',
+                  is_mapped: true,
+                  is_approve: mapping.is_approve || 0,
+                  reject_reason: mapping.reject_reason,
+                  created_by: mapping.created_by,
+                  updated_by: mapping.updated_by
+                };
+              });
+              
+              setMappings(formattedMappings);
+              
+              // Calculate total pages from pagination data or estimated from data length
+              let totalPages = 1; // Default to at least 1 page
+              
+              if (paginationData.pages && paginationData.pages > 0) {
+                // Use server-provided page count if available
+                totalPages = paginationData.pages;
+              } else if (paginationData.total) {
+                // Calculate from total count if available
+                totalPages = Math.ceil(paginationData.total / params.limit);
+              } else if (formattedMappings.length > 0) {
+                // Estimate based on current page data
+                totalPages = Math.max(1, Math.ceil(formattedMappings.length / params.limit) * 10);
+              }
+              
+              setMappingsTotalPages(totalPages);
+            } else {
+
+              setMappings([]);
+              setMappingsTotalPages(1); // Ensure at least 1 page for pagination controls
+            }
+          })
+          .catch(error => {
+            toast.error("Failed to change page. Trying to refresh mappings...");
+            // Try to reload the current data
+            getAllMappings();
+          })
+          .finally(() => {
+            setLoadingMappings(false);
+          });
+      }
+    } catch (error) {
+      console.error("Exception in handleMappingsPageClick:", error);
+      toast.error("Error changing page");
+      setLoadingMappings(false);
+    }
+  };
+
+  // Changes by Agnij May 02, 2025 [Added ellipsis handling for mappings pagination]
+  const handleMappingsEllipsisClick = (isNext) => {
+    const totalPageCount = mappingsTotalPages;
+    const currentPage = mappingsPage; // Current page (1-based index)
+    
+    if (isNext) {
+      // Right ellipsis: Go to middle between current page and last page
+      const middlePage = Math.floor((currentPage + totalPageCount) / 2);
+      setMappingsPage(middlePage);
+      updateUrlParams({ 
+        mappingsPage: middlePage,
+        tab: 'mappings',
+        search: searchString,
+        vendor: selectedVendor,
+        category: selectedCategory,
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        approvalStatus: selectedApprovalStatus
+      });
+    } else {
+      // Left ellipsis: Go to middle between first page (1) and current page
+      const middlePage = Math.floor((1 + currentPage) / 2);
+      setMappingsPage(middlePage);
+      updateUrlParams({ 
+        mappingsPage: middlePage,
+        tab: 'mappings',
+        search: searchString,
+        vendor: selectedVendor,
+        category: selectedCategory,
+        addedBy: selectedAddedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        approvalStatus: selectedApprovalStatus
+      });
+    }
+    
+    // Trigger data fetch with the new page
+    getAllMappings();
+  };
+
+  // Changes by Agnij May 31, 2025 [Added page search for variants tab]
+  const [variantsPageSearchInput, setVariantsPageSearchInput] = useState("");
+  
+  const handleVariantsPageSearchInput = (e) => {
+    const value = e.target.value;
+    // Allow only numbers and ensure it's within valid range
+    if (/^\d*$/.test(value)) {
+      setVariantsPageSearchInput(value);
+    }
+  };
+  
+  const handleVariantsPageSearchSubmit = () => {
+    const pageNum = parseInt(variantsPageSearchInput);
+    
+    if (pageNum && pageNum >= 1 && pageNum <= variantsTotalPages) {
+      setVariantsPage(pageNum);
+      
+      // Update URL params
+      updateUrlParams({ 
+        variantsPage: pageNum,
+        tab: 'variants',
+        search: searchString,
+        startDate: filterValues.startDate,
+        endDate: filterValues.endDate
+      });
+      
+      // Fetch data with new page
+      getAllVariants();
+    } else {
+      toast.error(`Please enter a valid page number between 1 and ${variantsTotalPages}`);
+    }
+  };
+
+  // Changes by Agnij May 31, 2025 [Added page search for mappings tab]
+  const [mappingsPageSearchInput, setMappingsPageSearchInput] = useState("");
+  
+  const handleMappingsPageSearchInput = (e) => {
+    const value = e.target.value;
+    // Allow only numbers and ensure it's within valid range
+    if (/^\d*$/.test(value)) {
+      setMappingsPageSearchInput(value);
+    }
+  };
+  
+  const handleMappingsPageSearchSubmit = () => {
+    const pageNum = parseInt(mappingsPageSearchInput);
+    
+    if (pageNum && pageNum >= 1 && pageNum <= mappingsTotalPages) {
+      setMappingsPage(pageNum);
+      
+      // Update URL params
+      updateUrlParams({ 
+        mappingsPage: pageNum,
+        tab: 'mappings',
+        search: searchString,
+        vendor: selectedVendor,
+        startDate: filterValues.startDate,
+        endDate: filterValues.endDate
+      });
+      
+      // Fetch data with new page
+      getAllMappings();
+    } else {
+      toast.error(`Please enter a valid page number between 1 and ${mappingsTotalPages}`);
+    }
   };
 
   // Handle filter changes
@@ -903,13 +1771,26 @@ const ProductManagement = () => {
 
   // Initial data loading
   useEffect(() => {
-    getUserProfile();
-    getVendor();
+    // Fetch initial data
+    getProducts();
     fetchCategories();
     fetchAddedByOptions();
+    getUserProfile();
+    getVendor();
+    getVendorApproveList();
+    getReasonList();
     
-    // Force initial data load
-    getProducts();
+    // Changes by Agnij Aprill 30, 2025 [Handle tab from URL]
+    if (router.query.tab) {
+      setActiveTab(router.query.tab);
+      
+      // Load data for the active tab
+      if (router.query.tab === 'variants') {
+        getAllVariants();
+      } else if (router.query.tab === 'mappings') {
+        getAllMappings();
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -1015,32 +1896,29 @@ const ProductManagement = () => {
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
-      .product-search-results {
-        scrollbar-width: thin;
-        scrollbar-color: #007bff #f8f9fa;
+      .tab-pane {
+        opacity: 0;
+        transition: opacity 0.15s ease-in-out;
       }
       
-      .product-search-results::-webkit-scrollbar {
-        width: 6px;
+      .tab-pane.active.show {
+        opacity: 1;
       }
       
-      .product-search-results::-webkit-scrollbar-track {
-        background: #f8f9fa;
+      .nav-tabs .nav-link {
+        transition: all 0.2s ease-in-out;
       }
-      
-      .product-search-results::-webkit-scrollbar-thumb {
-        background-color: #007bff;
-        border-radius: 6px;
+
+      .nav-tabs .nav-link.active {
+        border-color: transparent;
+        border-bottom: 2px solid #0046ad;
+        color: #0046ad;
+        font-weight: 500;
       }
-      
-      .product-search-results > div {
-        transition: background-color 0.2s ease;
-        padding: 8px;
-        border-radius: 4px;
-      }
-      
-      .product-search-results > div:hover {
-        background-color: #f8f9fa;
+
+      .nav-tabs .nav-link:not(.active):hover {
+        border-color: transparent;
+        border-bottom: 2px solid rgba(0, 70, 173, 0.3);
       }
     `;
     document.head.appendChild(style);
@@ -1050,21 +1928,264 @@ const ProductManagement = () => {
     };
   }, []);
 
+  // Inside the ProductManagement component, add state variables for variant management
+  const [showAddVariantModal, setShowAddVariantModal] = useState(false);
+  const [variantsList, setVariantsList] = useState([]);
+  const [isVariantMapping, setIsVariantMapping] = useState(false);
+
+  // Add a function to fetch product variants
+  const fetchProductVariants = useCallback(async (productId) => {
+    // Changes by Agnij April 30, 2025 [Fixed variant fetching for a specific product]
+    if (!productId) {
+      return;
+    }
+    
+    setLoadingVariants(true);
+    
+    try {
+      const response = await getProductVariants(productId);
+      
+      if (response?.data?.status === 1) {
+        const variants = response.data.data || [];
+        
+        // Format variants for select component, handling both name and variant_name fields
+        const formattedVariants = variants.map(variant => ({
+          value: variant.id,
+          label: `${variant.variant_name || variant.name} (${variant.product_name || 'Unknown Product'})`,
+          data: variant
+        }));
+        
+        setVariantsList(formattedVariants);
+        
+        // Reset the original list for search functionality
+        window._originalVariantsList = [...formattedVariants];
+      } else {
+        console.error(`Error response from API: ${response?.data?.message || 'Unknown error'}`);
+        toast.error('Failed to fetch variants');
+      }
+    } catch (error) {
+      console.error('Error fetching variants:', error);
+      toast.error('An error occurred while fetching variants');
+    } finally {
+      setLoadingVariants(false);
+    }
+  }, []);
+
+  // Add handlers for variant management
+  const handleAddVariantSuccess = (data) => {
+    // Changes by Agnij April 30, 2025 [Fixed variant list refresh after adding variant]
+    
+    // Reset any stored original variant list for search
+    if (window._originalVariantsList) {
+      window._originalVariantsList = null;
+    }
+    
+    // Determine which product ID to refresh variants for
+    let refreshProductId = null;
+    
+    if (data && data.product_id) {
+      // Use the product_id from the response
+      refreshProductId = data.product_id;
+    } else {
+      // Fallback to the last selected product
+      refreshProductId = selectedProduct?.id;
+    }
+    
+    // Only refresh if we have a valid product ID
+    if (refreshProductId) {
+      fetchProductVariants(refreshProductId);
+    } else {
+      toast.warning('Added variant, but could not refresh variant list');
+    }
+    
+    // Close the modal
+    setShowAddVariantModal(false);
+  };
+
+  // Changes by Agnij May 04, 2025 [Add useEffect to fetch variants on page/filter change]
+  // This hook now handles fetching variants when the page or filters change
+  useEffect(() => {
+    // Only fetch if the variants tab is active
+    if (activeTab === 'variants') {
+      // Changes by Agnij May 04, 2025 [Remove debug log]
+      // console.log(`useEffect triggered for variants: page=${variantsPage}, filters=`, filterValues);
+      getAllVariants(); 
+    }
+  }, [activeTab, variantsPage, filterValues]); // Dependencies: activeTab, variantsPage, filterValues
+
+  // Changes by Agnij May 04, 2025 [Add useEffect for Products Tab]
+  useEffect(() => {
+    if (activeTab === 'products') {
+      getProducts();
+    }
+    // Dependencies include filters used by getProducts
+  }, [activeTab, page, searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, dateFrom, dateTo, selectedApprovalStatus]);
+  
+  // Changes by Agnij May 04, 2025 [Add useEffect for Mappings Tab]
+  useEffect(() => {
+    if (activeTab === 'mappings') {
+      getAllMappings();
+      // Changes by Agnij May 05, 2025 [Load variants for filter dropdown when mappings tab is active]
+      getVariantsForFilter();
+    }
+  }, [activeTab, mappingsPage, filterValues]);
+
+  // Changes by Agnij May 05, 2025 [Add useEffect to update URL when activeTab changes]
+  useEffect(() => {
+    // Only update URL if activeTab is set (avoid initial load issues)
+    if (activeTab) {
+      // Get current query parameters
+      const currentQuery = { ...router.query };
+      
+      // Create the new parameters object, ensuring tab is updated
+      const newParams = { ...currentQuery, tab: activeTab };
+      
+      // Call updateUrlParams with the combined parameters
+      updateUrlParams(newParams);
+    }
+  }, [activeTab]); // Dependency: only activeTab
+
+  useEffect(() => {
+    getReasonList();
+    getVendorApproveList();
+  }, []);
+
+  // Changes by Agnij May 05, 2025 [Added function to get all variants for the filter dropdown]
+  const getVariantsForFilter = () => {
+    // If we already have variants data, format it for the dropdown
+    if (variantsFilterData.length > 0) { // Check if filter data already exists
+      // Optionally re-format if needed, or just return
+      // formatVariantsForDropdown(variantsFilterData); // Assuming already formatted
+      return; 
+    }
+    
+    // Otherwise fetch variants data
+    setLoadingVariants(true);
+    
+    // Changes by Agnij May 05, 2025 [Using searchAllVariants with a large limit]
+    // Reverting to searchAllVariants but requesting a very high limit
+    searchAllVariants(
+      null,    // id
+      "",      // searchTerm
+      null,    // startDate
+      null,    // endDate
+      null,    // vendorId
+      null,    // categoryId
+      null,    // addedBy
+      null,    // approvalStatus
+      1,       // page
+      10000    // limit (very large number to fetch all)
+    )
+      .then(response => {
+        console.log('searchAllVariants response for dropdown:', response); // Log the raw response
+        
+        // The function now returns { data: [], pagination: {} }
+        if (response && response.data) {
+          const variantsData = response.data; // Use the data array directly
+          console.log('Total variants fetched for dropdown:', variantsData.length); // Log count
+          formatVariantsForDropdown(variantsData);
+        } else {
+          console.warn('No data received from searchAllVariants for dropdown.');
+          setVariantsFilterData([]);
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching variants for dropdown:", error);
+        setVariantsFilterData([]);
+      })
+      .finally(() => {
+        setLoadingVariants(false);
+      });
+  };
+  
+  // Changes by Agnij May 05, 2025 [Helper to format variants for dropdown]
+  const formatVariantsForDropdown = (variantsData) => {
+    if (variantsData && Array.isArray(variantsData)) {
+      const formattedVariants = variantsData.map(variant => ({
+        value: variant.id,
+        label: variant.name || variant.variant_name || `Variant #${variant.id}`
+      }));
+      setVariantsFilterData(formattedVariants);
+    }
+  };
+
   return (
     <>
       <ToastContainer />
-      <div className="content-header">
-        <div className="container-fluid">
-          <div className="row">
-            <h1 className="m-0 text-dark">Product</h1>
-          </div>
-        </div>
-      </div>
+      {/* Changes by Agnij May 02, 2025 [Removed duplicate header] */}
+      {/* PRODUCT MANAGEMENT header is already shown from the layout component */}
 
       <section className="content">
         <div className="container-fluid">
-          <div className="card card-body">
-            {!enableBulkUpload && !enableBulkProdUpload && !openProductMap && (
+          {/* Changes by Agnij April 30, 2025 [Added tab navigation] */}
+          <div className="card card-primary card-outline card-tabs">
+            <div className="card-header p-0 pt-1 border-bottom-0">
+              <ul className="nav nav-tabs" role="tablist" id="productTabs">
+                <li className="nav-item">
+                  <a 
+                    className={`nav-link ${activeTab === 'products' ? 'active' : ''}`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleTabChange('products');
+                      resetFilters();
+                    }}
+                    role="tab" 
+                    aria-selected={activeTab === 'products'}
+                    href="#products-tab"
+                    data-bs-toggle="tab"
+                    data-bs-target="#products-tab"
+                  >
+                    Products
+                  </a>
+                </li>
+                <li className="nav-item">
+                  <a 
+                    className={`nav-link ${activeTab === 'variants' ? 'active' : ''}`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleTabChange('variants');
+                      resetFilters();
+                    }}
+                    role="tab" 
+                    aria-selected={activeTab === 'variants'}
+                    href="#variants-tab"
+                    data-bs-toggle="tab"
+                    data-bs-target="#variants-tab"
+                  >
+                    Variants
+                  </a>
+                </li>
+                <li className="nav-item">
+                  <a 
+                    className={`nav-link ${activeTab === 'mappings' ? 'active' : ''}`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleTabChange('mappings');
+                      resetFilters();
+                    }}
+                    role="tab" 
+                    aria-selected={activeTab === 'mappings'}
+                    href="#mappings-tab"
+                    data-bs-toggle="tab"
+                    data-bs-target="#mappings-tab"
+                  >
+                    Mappings
+                  </a>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="card-body">
+              <div className="tab-content" id="productTabsContent">
+                {/* Products Tab */}
+                <div className={`tab-pane fade ${activeTab === 'products' ? 'active show' : ''}`} id="products-tab" role="tabpanel" aria-labelledby="products-tab">
+                  {/* Filter controls for products */}
+                    <MapVariantVendorModal isVisible={openProductMap} onCancel={() => setOpenProductMap(false)} onSuccess={() => {
+                      toast.success("Variant has been mapped with vendor!")
+                      setOpenProductMap(false)
+                    }} />
+            {!enableBulkUpload && !enableBulkProdUpload && (
+                    <div className="card card-body">
               <div className="row g-3">
                 {/* Search and Primary Filters */}
                 <div className="col-sm-3 mb-3">
@@ -1199,12 +2320,18 @@ const ProductManagement = () => {
                     </button>
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      onClick={() => {
-                        setOpenProductMap(true);
-                      }}
+                      className="btn btn-primary me-2"
+                      onClick={() => handleOpenProductMap()}
+                      style={{ backgroundColor: '#0046ad', borderColor: '#0046ad' }}
                     >
-                      Map Product with Vendor
+                      Map Variant with Vendor
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary me-2"
+                      onClick={() => setShowAddVariantModal(true)}
+                    >
+                      Add Variant
                     </button>
                     {userType != 6 &&
                       <button
@@ -1224,302 +2351,912 @@ const ProductManagement = () => {
                   </div>
                 </div>
               </div>
-            )}
-            {enableBulkUpload && (
-              <div className="row">
-                <div className="col-md-8">
-                  <div className="input-group buyers-search">
-                    <input
-                      type="file"
-                      className="form-control"
-                      name="file"
-                      accept=".xlsx"
-                      onChange={uploadToClient}
-                    />
-                  </div>
-                  <div className="d-flex mt-4">
-                    <button
-                      type="button"
-                      className="btn btn-primary mr-2"
-                      onClick={() => uploadToServer()}
-                    >
-                      Upload Excel
-                    </button>
-                    <div className="d-flex justify-content-end">
-                      <button
-                        type="button"
-                        className="btn btn-secondary mr-2"
-                        onClick={() => {
-                          setuploadProgress(0);
-                          setEnableBulkUpload(false);
-                          setFile(null);
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                  {file && (
-                    <div className={`progress mt-4 progress-${uploadProgress}`}>
-                      <div
-                        className="progress-bar progress-bar-striped progress-bar-animated"
-                        role="progressbar"
-                        style={{ width: `${uploadProgress}%` }}
-                        aria-valuenow={uploadProgress}
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                      >{`${uploadProgress}%`}</div>
-                    </div>
-                  )}
-                </div>
-                <div className="col-md-4"></div>
               </div>
             )}
 
-            {enableBulkProdUpload && (
-              <div className="row">
-                <div className="col-md-8">
-                  <div className="input-group buyers-search">
-                    <input
-                      type="file"
-                      className="form-control"
-                      name="file"
-                      accept=".xlsx"
-                      onChange={uploadToClientProd}
-                    />
-                  </div>
-                  <div className="d-flex mt-4">
-                    <button
-                      type="button"
-                      className="btn btn-primary mr-2"
-                      onClick={() => uploadToServerProd()}
-                    >
-                      Upload Product Excel
-                    </button>
-                    <div className="d-flex justify-content-end">
-                      <button
-                        type="button"
-                        className="btn btn-secondary mr-2"
-                        onClick={() => {
-                          setuploadProgress(0);
-                          setEnableBulkProdUpload(false);
-                          setProdFile(null);
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                  {file && (
-                    <div className={`progress mt-4 progress-${uploadProgress}`}>
-                      <div
-                        className="progress-bar progress-bar-striped progress-bar-animated"
-                        role="progressbar"
-                        style={{ width: `${uploadProgress}%` }}
-                        aria-valuenow={uploadProgress}
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                      >{`${uploadProgress}%`}</div>
-                    </div>
-                  )}
-                </div>
-                <div className="col-md-4"></div>
-              </div>
-            )}
-            {openProductMap && (
-              <div className="row">
-                <div className="col-12 d-flex justify-content-between">
-                  <h2 className="fs-4 mb-3">Map Product with Vendor</h2>
-                  <button
-                    type="button"
-                    className="btn btn-danger mb-3"
-                    onClick={() => setOpenProductMap(false)}
-                  >
-                    Close
-                  </button>
-                </div>
-
-              <div className="row mb-4">
-                <div className="col-6 col-md-4">
-                  <label htmlFor="vendor" className="form-label fw-bold">Vendor *</label>
-                  <Select
-                    name="vendor"
-                    options={vendorData}
-                    value={productMapObj.vendor}
-                    isClearable={false}
-                    isSearchable
-                    placeholder="Select Vendor"
-                    onChange={(selectedOption) => handleMappingObj(selectedOption, { name: "vendor" })}
-                    components={{ Option: CustomSelectOption }}
-                    className="mb-3"
-                    />
-                  </div>
-
-                   <div className="col-6 col-md-4">
-                     <label htmlFor="product" className="form-label fw-bold">Product Name *</label>
-                     <div className="input-group mb-3">
-                       <span className="input-group-text">
-                         <i className="fa fa-search"></i>
-                       </span>
-                       <input
-                         type="text"
-                         name="product"
-                         className="form-control"
-                         placeholder="Search Products"
-                         onChange={(e) => debounceGetVendorProductList(e.target.value)}
-                         id="productSearchInput"
-                       />
-                     </div>
-                 
-                     <div className="border rounded p-3">
-                       <h5 className="mt-2 mb-3"> 
-                         {productLoading ? 
-                           <span>
-                             <i className="fa fa-spinner fa-spin me-2"></i>
-                             Searching Products...
-                           </span> 
-                           : productSearchTerm.length < 3 ? 
-                             "Type at least 3 characters to search" : 
-                             `Search Results (${vendorProductsList.length})`
-                         } 
-                       </h5>
-                  
-                       {!productLoading && vendorProductsList?.length > 0 ? (
-                         <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="product-search-results">
-                         {vendorProductsList.map((item, index) => (
-                           <div
-                             className="d-flex justify-content-between align-items-center border-bottom py-2"
-                             key={item.label + "_" + index}
-                           >
-                             <div>
-                               <p className="mb-0 fw-bold">{item.label}</p>
-                               <p className="text-muted">{item.categories}</p>
-                             </div>
-                             <button
-                               className={`btn ${productMapObj?.product?.value === item.value ? "btn-danger" : "btn-primary"} btn-sm`}
-                               onClick={() =>
-                                 productMapObj?.product?.value === item.value
-                                   ? handleMappingObj(null, { name: "product" })
-                                   : handleMappingObj(item, { name: "product" })
-                               }
-                             >
-                               {productMapObj?.product?.value === item.value ? "Remove" : "Select"}
-                             </button>
-                           </div>
-                         ))}
-                         </div>
-                       ) : (
-                         <p className="text-muted">
-                           {productSearchTerm.length < 3 ? 
-                             "Type to search for products" : 
-                             productLoading ? 
-                               "Searching..." : 
-                               "No products found matching your search criteria"}
-                         </p>
-                       )}
-                     </div>
-                   </div>
-
-                    <div className="col-6 col-md-4">
-                      <label htmlFor="approved_by" className="form-label fw-bold">Approved By</label>
-                  <Select
-                    name="approved_by"
-                    options={vendorApprovedList}
-                    isMulti
-                    isSearchable
-                    isClearable={false}
-                    onChange={(selectedOption) => handleMappingObj(selectedOption, { name: "approved_by" })}
-                    placeholder="Approved By"
-                        className="mb-3"
-                  />
-                    </div>
-                </div>
-
-               <div className="text-end">
-                    <button
-                      type="button"
-                      className="btn btn-primary px-4"
-                      onClick={handleAddProductForBulk}
-                      disabled={isAddingDataProcessing}
-                    >
-                      {isAddingDataProcessing ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2"></span>
-                          Uploading...
-                        </>
-                      ) : (
-                        "Add Product"
-                      )}
-                    </button>
-                  </div>
-
-                   
-                   {/* Display Mapped Products */}
-                   {mapMultipleProductsWithVendor.length > 0 && (
-                     <div className="mt-4">
-                       <h5 className="mb-3 fw-bold">Mapped Products</h5>
-                       <div className="border rounded p-3 bg-light">
-                         {mapMultipleProductsWithVendor.map((item, index) => (
-                           <div
-                             key={index}
-                             className="d-flex justify-content-between align-items-center border-bottom py-2"
-                           >
-                             <div>
-                               <p className="mb-0 fw-bold">{item.product.label}</p>
-                               <p className="text-muted">{item.product.categories}</p>
-                               <small><b>Vendor:</b> {item.vendor.label}</small>
-                               <br />
-                               <small><b>Approved By:</b> {item?.approved_by?.map(a => a.label)?.join(", ")}</small>
-                             </div>
-                             <button
-                                 disabled={isAddingDataProcessing}
-                               className="btn btn-danger btn-sm"
-                               onClick={() => handleRemoveProduct(index)}
-                             >
-                                {isAddingDataProcessing ? (
-                                <>
-                                  <span className="spinner-border spinner-border-sm me-2"></span>
-                                  Uploading...
-                                </>
+                  {/* Products Table - Move this from outside to inside the products tab */}
+          <div className="card card-body product-table">
+            {loading && <FullLoading />}
+            {!loading && (
+              <table className="table table-striped table-hover table-responsive mb-3">
+                <thead>
+                  <tr className="text-nowrap">
+                    <th scope="col">
+                      <input
+                        type="checkbox"
+                        name="select_all_products"
+                        onClick={(e) => selectAllProduct(e)}
+                      />
+                    </th>
+                    <th scope="col">Product Name</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Sub Category</th>
+                    <th scope="col">Approval Status</th>
+                    <th scope="col">Created At</th>
+                    <th scope="col">Updated At</th>
+                    <th scope="col">Approved At</th>
+                    <th scope="col">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products &&
+                    products.map((item) => {
+                      return (
+                        <tr key={item.id} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
+                          <td>
+                            <input
+                              type="checkbox"
+                              name="select_product"
+                              checked={item.isChecked}
+                              readOnly
+                              onClick={(e) => selectProduct(e, item)}
+                            />
+                          </td>
+                          <td>{item.name}</td>
+                          <td className="subcatstd">
+                            <span className="badge badge-warning">
+                              {item.product_categories.length > 0
+                                ? item.product_categories[0].category_name
+                                : "-"}
+                            </span>
+                          </td>
+                          <td className="subcatstd">{getSubCats(item)}</td>
+                          <td>
+                            {(userType && userType != 6) && (
+                              item?.is_approve === 1 ? (
+                                <OverlayTrigger
+                                  placement="top"
+                                  overlay={
+                                    <Tooltip id="tooltip1">
+                                      Click to Disapprove
+                                    </Tooltip>
+                                  }
+                                >
+                                  <button
+                                    className="btn btn-secondary bg-danger mb-2"
+                                    onClick={() => openRejectModal(item.id)}
+                                  >
+                                    Disapprove
+                                  </button>
+                                </OverlayTrigger>
                               ) : (
-                                "Remove"
-                              )}
-                             </button>
-                           </div>
-                         ))}
-                       </div>
-                     </div>
-                   )}
+                                <div className="d-flex flex-row align-items-center">
+                                  <OverlayTrigger
+                                    placement="top"
+                                    overlay={
+                                      <Tooltip id="tooltip1">Click to approve</Tooltip>
+                                    }
+                                  >
+                                    <button
+                                      className="btn btn-secondary bg-success mb-2"
+                                      onClick={() => handleAcceptRejectProduct(item.id, '1')}
+                                    >
+                                      Approve
+                                    </button>
+                                  </OverlayTrigger>
 
+                                  {item?.is_approve === 0 && item?.reject_reason &&
+                                    <OverlayTrigger
+                                      placement="top"
+                                      overlay={
+                                        <Tooltip id="tooltip1">
+                                          {item?.reject_reason}
+                                        </Tooltip>
+                                      }
+                                    >
+                                      <span className="fa fa-info-circle ml-2"></span>
+                                    </OverlayTrigger>}
+                                </div>
+                              ))}
+                            {getApprovalInfo(item)}
+                          </td>
+                          <td style={{ width: "100px" }}>
+                            {new Date(item.created_at).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </td>
+                          <td style={{ width: "100px" }}>
+                            {item.updated_at ? new Date(item.updated_at).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            }) : "-"}
+                          </td>
+                          <td style={{ width: "100px" }}>
+                            {item.approved_at ? new Date(item.approved_at).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            }) : "-"}
+                          </td>
+                          <td>
+                            <div className="d-flex">
+                              <span
+                                className="fa fa-eye mr-2"
+                                onClick={() =>
+                                  router.push(
+                                    `/product-management/product-details/${item.id}`
+                                  )
+                                }
+                              ></span>
+                              {userType != 6 &&
+                                <span
+                                  className="fa fa-edit"
+                                  onClick={() => handleUpdateProduct(item)}
+                                ></span>}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            )}
 
-                <div className="col-12 d-flex justify-content-end gap-4 my-3">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    disabled={isAddingDataProcessing}
-                    onClick={handleSubmitMapping}
-                  >
-                    {isAddingDataProcessing ? (
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                {/* Always show database totals */}
+                <p><b>Total Products: </b>{totalCount.total_count}</p>
+                <p><b>Page: </b>{totalCount.page} of {totalCount.total}</p>
+                {/* <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p> */}
+                
+                {/* Show filtered counts when filtering is applied */}
+                {totalCount.is_filtered && (
+                  <div className="mt-2 pt-2 border-top">
+                    <p><b>Filtered Results: </b>{totalCount.filtered_count}</p>
+                    {/* <p><b>Filtered Approved: </b>{totalCount.filtered_approve_count}</p>
+                    <p><b>Filtered Disapproved: </b>{totalCount.filtered_disapprove_count}</p> */}
+                  </div>
+                )}
+              </div>
+              {/* Always show pagination if we have total count from API */}
+              <div className="d-flex flex-column align-items-center gap-2">
+                {/* Pagination Section */}
+                <div className="d-flex justify-content-between align-items-center mt-3">
+                  {totalCount.filtered_count > 0 && (
                     <>
-                      <span className="spinner-border spinner-border-sm me-2"></span>
-                      Uploading...
+                      <ReactPaginate
+                        previousLabel={"Previous"}
+                        nextLabel={"Next"}
+                        breakLabel={"..."}
+                        pageCount={totalPages}
+                        marginPagesDisplayed={2}
+                        pageRangeDisplayed={5}
+                        onPageChange={handlePageClick}
+                        containerClassName={"pagination mb-0"}
+                        pageClassName={"page-item"}
+                        pageLinkClassName={"page-link"}
+                        previousClassName={"page-item"}
+                        previousLinkClassName={"page-link"}
+                        nextClassName={"page-item"}
+                        nextLinkClassName={"page-link"}
+                        breakClassName={"page-item"}
+                        breakLinkClassName={"page-link"}
+                        activeClassName={"active"}
+                        forcePage={page - 1}
+                      />
+                      
+                      <div className="d-flex align-items-center">
+                        <input
+                          type="text"
+                          className="form-control me-2"
+                          style={{ width: "80px" }}
+                          value={pageSearchInput}
+                          onChange={handlePageSearchInput}
+                          placeholder="Page #"
+                        />
+                        <button
+                          className="btn btn-primary"
+                          onClick={handlePageSearchSubmit}
+                          disabled={!pageSearchInput || parseInt(pageSearchInput) < 1 || parseInt(pageSearchInput) > totalPages}
+                        >
+                          Go
+                        </button>
+                      </div>
                     </>
-                  ) : (
-                    "Submit"
                   )}
-                  </button>
-                </div>
-
-                <div className="col-12 mt-3">
-                  <p className=" border rounded-3 p-2 bg-light">
-                    <b>Note: </b>
-                    If you don't find the Product or Vendor, please add them first and retry.
-                  </p>
+                        </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
+                {/* Variants Tab */}
+                <div className={`tab-pane fade ${activeTab === 'variants' ? 'active show' : ''}`} id="variants-tab" role="tabpanel" aria-labelledby="variants-tab">
+                  <div className="card card-body">
+                    <div className="row g-3">
+                      {/* Search and filters for variants */}
+                      <div className="col-sm-3 mb-3">
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Search Variants"
+                          value={filterValues.searchString}
+                          onChange={handleSearch}
+                        />
+                      </div>
+                      
+                      {/* Changes by Agnij May 2, 2025 [Fixed category filter in variants tab] */}
+                      <div className="col-sm-3 mb-3">
+                        <Select
+                          id={id}
+                          options={categories}
+                          placeholder="Category"
+                          styles={customSelectStyles}
+                          isClearable={true}
+                          instanceId="category-select-variants"
+                          value={filterValues.category ? categories.find(opt => opt.value === filterValues.category) : null}
+                          onChange={(selectedOption) => handleFilterChange('category', selectedOption)}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <Select
+                          id={id}
+                          options={approvalStatusOptions}
+                          placeholder="Filter by Approval Status"
+                          styles={customSelectStyles}
+                          isClearable={true}
+                          instanceId="approval-status-select-variants"
+                          value={filterValues.approvalStatus ? approvalStatusOptions.find(opt => opt.value === filterValues.approvalStatus) : null}
+                          onChange={(selectedOption) => {
+                            handleFilterChange('approvalStatus', selectedOption);
+                            // Changes by Agnij May 3, 2025 [Ensure approvalStatus is immediately available]
+                            const newApprovalStatus = selectedOption ? selectedOption.value : "";
+                            setFilterValues(prev => ({
+                              ...prev,
+                              approvalStatus: newApprovalStatus
+                            }));
+                          }}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <select
+                          className="form-control"
+                          value={filterValues.addedBy}
+                          onChange={(e) => handleFilterChange('addedBy', e.target.value)}
+                        >
+                          <option value="">Filter by Added By</option>
+                          {addedByOptions.map(user => (
+                            <option key={user.value} value={user.value}>
+                              {user.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* Date Filters */}
+                      <div className="col-sm-3 mb-3">
+                        <div className="date-input-container">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Start Date"
+                            onFocus={(e) => (e.target.type = 'date')}
+                            onBlur={(e) => {
+                              if (!e.target.value) {
+                                e.target.type = 'text'
+                              }
+                            }}
+                            value={filterValues.dateFrom}
+                            onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="col-sm-3 mb-3">
+                        <div className="date-input-container">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="End Date"
+                            onFocus={(e) => (e.target.type = 'date')}
+                            onBlur={(e) => {
+                              if (!e.target.value) {
+                                e.target.type = 'text'
+                              }
+                            }}
+                            value={filterValues.dateTo}
+                            onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <div className="d-flex">
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                              getAllVariants();
+                            }}
+                          >
+                            Search
+                          </button>
+                          <button
+                            className="btn btn-secondary ms-2"
+                            onClick={resetFilters}
+                          >
+                            Reset
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Variants table */}
+                    <div className="table-responsive mb-3">
+                      {loadingVariants ? (
+                        <FullLoading />
+                      ) : (
+                        <table className="table table-striped table-hover">
+                          <thead>
+                            <tr>
+                              <th>
+                                <input
+                                  type="checkbox"
+                                  onChange={(e) => {
+                                    // Implement select all for variants
+                                    const checked = e.target.checked;
+                                    const updatedVariants = variants.map(variant => ({
+                                      ...variant,
+                                      isChecked: checked
+                                    }));
+                                    setVariants(updatedVariants);
+                                  }}
+                                />
+                              </th>
+                              <th>Name</th>
+                              <th>Product</th>
+                              <th>Category</th>
+                              <th>Status</th>
+                              {/* Changes by Agnij May 3, 2025 [Combine created/updated columns in Variants tab] */}
+                              <th>Created By / At</th>
+                              <th>Updated By / At</th>
+                              {/* Removed Created At, Updated At, Approved At */}
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {variants.length > 0 ? (
+                              variants.map((variant) => (
+                                <tr key={variant.id}>
+                                  <td>
+                                    <input
+                                      type="checkbox"
+                                      checked={variant.isChecked}
+                                      onChange={(e) => {
+                                        // Toggle checkbox for a single variant
+                                        const checked = e.target.checked;
+                                        const updatedVariants = variants.map(v => 
+                                          v.id === variant.id ? { ...v, isChecked: checked } : v
+                                        );
+                                        setVariants(updatedVariants);
+                                      }}
+                                    />
+                                  </td>
+                                  <td>{variant.name || variant.variant_name}</td>
+                                  <td>{variant.product_name}</td>
+                                  <td>
+                                    <span className="badge badge-warning">
+                                      {variant.category_names && variant.category_names.length > 0 
+                                        ? variant.category_names[0] 
+                                        : "-"}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {/* Similar approval controls as products */}
+                                    {(userType && userType != 6) && (
+                                      variant?.is_approve === 1 ? (
+                                        <OverlayTrigger
+                                          placement="top"
+                                          overlay={
+                                            <Tooltip id="tooltip1">
+                                              Click to Disapprove
+                                            </Tooltip>
+                                          }
+                                        >
+                                          <button
+                                            className="btn btn-secondary bg-danger btn-sm mb-2"
+                                            // onClick={() => openRejectModal(variant.id)}
+                                            onClick={() => handleAcceptRejectVariant(variant.id, '0')}
+                                          >
+                                            Disapprove
+                                          </button>
+                                        </OverlayTrigger>
+                                      ) : (
+                                        <div className="d-flex flex-row align-items-center">
+                                          <OverlayTrigger
+                                            placement="top"
+                                            overlay={
+                                              <Tooltip id="tooltip1">Click to approve</Tooltip>
+                                            }
+                                          >
+                                            <button
+                                              className="btn btn-secondary bg-success btn-sm mb-2"
+                                              onClick={() => handleAcceptRejectVariant(variant.id, '1')}
+                                            >
+                                              Approve
+                                            </button>
+                                          </OverlayTrigger>
+
+                                          {variant?.is_approve === 0 && variant?.reject_reason &&
+                                            <OverlayTrigger
+                                              placement="top"
+                                              overlay={
+                                                <Tooltip id="tooltip1">
+                                                  {variant?.reject_reason}
+                                                </Tooltip>
+                                              }
+                                            >
+                                              <span className="fa fa-info-circle ml-2"></span>
+                                            </OverlayTrigger>}
+                                        </div>
+                                      ))}
+                                  </td>
+                                  {/* Changes by Agnij May 3, 2025 [Combine created/updated columns in Variants tab] */}
+                                  <td>
+                                    {/* Combined Created By and Created At */}
+                                    <div>
+                                      {variant.created_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(variant.created_by))?.label || variant.created_by 
+                                        : "-"}
+                                    </div>
+                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                                      {variant.created_at ? 
+                                        new Date(variant.created_at).toLocaleDateString("en-GB", {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        }) : "-"}
+                                    </div>
+                                  </td>
+                                  <td>
+                                    {/* Combined Updated By and Updated At */}
+                                    <div>
+                                      {variant.updated_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(variant.updated_by))?.label || variant.updated_by 
+                                        : "-"}
+                                    </div>
+                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                                      {variant.updated_at ? 
+                                        new Date(variant.updated_at).toLocaleDateString("en-GB", {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        }) : "-"}
+                                    </div>
+                                  </td>
+                                  {/* Removed Created At, Updated At, Approved At TDs */}
+                                  <td>
+                                    <button
+                                      className="btn btn-sm btn-primary me-2"
+                                      onClick={() => {
+                                        router.push(`/product-management/variant/${variant.id}`);
+                                      }}
+                                    >
+                                      <i className="fas fa-eye"></i> View
+                                    </button>
+                                    <button
+                                      className="btn btn-sm btn-info"
+                                      onClick={() => {
+                                        router.push(`/product-management/edit-variant/${variant.id}`);
+                                      }}
+                                    >
+                                      <i className="fas fa-edit"></i> Edit
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                {/* Changes by Agnij May 3, 2025 [Adjust colspan after combining columns in Variants tab] */}
+                                <td colSpan="8" className="text-center"> {/* Adjusted colspan from 11 to 8 */}
+                                  No variants found
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                    
+                    {/* Variants pagination */}
+                    {variants.length > 0 && variantsTotalPages > 1 && (
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <p><b>Total Variants: </b>{variants.length}</p>
+                          <p><b>Page: </b>{variantsPage} of {variantsTotalPages}</p>
+                        </div>
+                        <div className="d-flex flex-column align-items-center gap-2">
+                          {/* Pagination Section */}
+                          <div className="d-flex justify-content-between align-items-center">
+                            <ReactPaginate
+                              previousLabel={"Previous"}
+                              nextLabel={"Next"}
+                              breakLabel={"..."}
+                              pageCount={variantsTotalPages}
+                              marginPagesDisplayed={2}
+                              pageRangeDisplayed={3}
+                              onPageChange={handleVariantsPageClick}
+                              containerClassName={"pagination mb-0"}
+                              pageClassName={"page-item"}
+                              pageLinkClassName={"page-link"}
+                              previousClassName={"page-item"}
+                              previousLinkClassName={"page-link"}
+                              nextClassName={"page-item"}
+                              nextLinkClassName={"page-link"}
+                              breakClassName={"page-item"}
+                              breakLinkClassName={"page-link"}
+                              activeClassName={"active"}
+                              forcePage={variantsPage - 1}
+                            />
+                            
+                            {/* Changes by Agnij May 31, 2025 [Added page search for variants] */}
+                            <div className="d-flex align-items-center ms-3">
+                              <input
+                                type="text"
+                                className="form-control me-2"
+                                style={{ width: "80px" }}
+                                value={variantsPageSearchInput}
+                                onChange={handleVariantsPageSearchInput}
+                                placeholder="Page #"
+                              />
+                              <button
+                                className="btn btn-primary"
+                                onClick={handleVariantsPageSearchSubmit}
+                                disabled={!variantsPageSearchInput || parseInt(variantsPageSearchInput) < 1 || parseInt(variantsPageSearchInput) > variantsTotalPages}
+                              >
+                                Go
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Mappings Tab */}
+                <div className={`tab-pane fade ${activeTab === 'mappings' ? 'active show' : ''}`} id="mappings-tab" role="tabpanel" aria-labelledby="mappings-tab">
+                  <div className="card card-body">
+                    <div className="row g-3">
+                      {/* Changes by Agnij June 12, 2024 [Replaced search input with variant dropdown] */}
+                      <div className="col-sm-3 mb-3">
+                        <Select
+                          options={variantsFilterData}
+                          placeholder="Filter by Variant"
+                          styles={customSelectStyles}
+                          isClearable={true}
+                          instanceId="variant-select-mappings"
+                          value={filterValues.variant ? variantsFilterData.find(opt => opt.value === filterValues.variant) : null}
+                          onChange={(selectedOption) => {
+                            handleFilterChange('variant', selectedOption);
+                            // Also update selectedVariant state
+                            setSelectedVariant(selectedOption ? selectedOption.value : "");
+                          }}
+                        />
+                      </div>
+                      
+                      {/* Changes by Agnij May 02, 2025 [Added complete filters to mappings tab to match products tab] */}
+                      <div className="col-sm-3 mb-3">
+                        <Select
+                          options={vendorData}
+                          placeholder="Vendor"
+                          styles={customSelectStyles}
+                          isClearable={true}
+                          instanceId="vendor-select-mappings"
+                          value={filterValues.vendor ? vendorData.find(opt => opt.value === filterValues.vendor) : null}
+                          onChange={(selectedOption) => {
+                            handleFilterChange('vendor', selectedOption);
+                            // Also update selectedVendor state
+                            setSelectedVendor(selectedOption ? selectedOption.value : "");
+                          }}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <Select
+                          id={id}
+                          options={approvalStatusOptions}
+                          placeholder="Filter by Approval Status"
+                          styles={customSelectStyles}
+                          isClearable={true}
+                          instanceId="approval-status-select-mappings"
+                          value={filterValues.approvalStatus ? approvalStatusOptions.find(opt => opt.value === filterValues.approvalStatus) : null}
+                          onChange={(selectedOption) => handleFilterChange('approvalStatus', selectedOption)}
+                        />
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <select
+                          className="form-control"
+                          value={filterValues.category}
+                          onChange={(e) => handleFilterChange('category', e.target.value)}
+                        >
+                          <option value="">Filter by Category</option>
+                          {categories.map(category => (
+                            <option key={category.value} value={category.value}>
+                              {category.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <select
+                          className="form-control"
+                          value={filterValues.addedBy}
+                          onChange={(e) => handleFilterChange('addedBy', e.target.value)}
+                        >
+                          <option value="">Filter by Added By</option>
+                          {addedByOptions.map(user => (
+                            <option key={user.value} value={user.value}>
+                              {user.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      {/* Date Filters */}
+                      <div className="col-sm-3 mb-3">
+                        <div className="date-input-container">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Start Date"
+                            onFocus={(e) => (e.target.type = 'date')}
+                            onBlur={(e) => {
+                              if (!e.target.value) {
+                                e.target.type = 'text'
+                              }
+                            }}
+                            value={filterValues.dateFrom}
+                            onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="col-sm-3 mb-3">
+                        <div className="date-input-container">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="End Date"
+                            onFocus={(e) => (e.target.type = 'date')}
+                            onBlur={(e) => {
+                              if (!e.target.value) {
+                                e.target.type = 'text'
+                              }
+                            }}
+                            value={filterValues.dateTo}
+                            onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="col-sm-3 mb-3">
+                        <div className="d-flex">
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                              // Changes by Agnij June 12, 2024 [Pass selectedVariant explicitly]
+                              console.log('Search button clicked with variant:', selectedVariant);
+                              getAllMappings();
+                            }}
+                          >
+                            Search
+                          </button>
+                          <button
+                            className="btn btn-secondary ms-2"
+                            onClick={resetFilters}
+                          >
+                            Reset
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Mappings table */}
+                    <div className="table-responsive mb-3">
+                      {loadingMappings ? (
+                        <FullLoading />
+                      ) : (
+                        <table className="table table-striped table-hover">
+                          <thead>
+                            <tr>
+                              <th>Variant</th>
+                              <th>Product</th>
+                              <th>Vendor</th>
+                              <th>Vendor Email</th>
+                              <th>Category</th>
+                              <th>Approval Status</th>
+                              <th>Created By / Mapped On</th> 
+                              <th>Updated By / At</th>
+                              {/* Removed Mapped On, Updated At, Approved At */}
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {mappings.length > 0 ? (
+                              mappings.map((mapping) => (
+                                <tr key={`mapping-${mapping.id}`}>
+                                  <td>{mapping.name || mapping.variant_name}</td>
+                                  <td>{mapping.product_name}</td>
+                                  <td>
+                                    <span className="badge badge-info">
+                                      {mapping.vendor_name || "-"}
+                                    </span>
+                                  </td>
+                                  <td>{mapping.vendor_email || "-"}</td>
+                                  <td>
+                                    {/* Changes by Agnij May 3, 2025 [Fix category display to use category_info] */}
+                                    <span className="badge badge-warning">
+                                      {mapping.category_info || "-"} {/* Use category_info string directly */}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {/* Changes by Agnij April 30, 2025 [Added approval controls for mappings] */}
+                                    {(userType && userType != 6) && (
+                                      mapping?.is_approve ? (
+                                        <OverlayTrigger
+                                          placement="top"
+                                          overlay={
+                                            <Tooltip id="tooltip1">
+                                              Click to Disapprove
+                                            </Tooltip>
+                                          }
+                                        >
+                                          <button
+                                            className="btn btn-secondary bg-danger btn-sm mb-2"
+                                            onClick={() => openRejectModal(`mapping_${mapping.mapping_id}`)}
+                                          >
+                                            Disapprove
+                                          </button>
+                                        </OverlayTrigger>
+                                      ) : (
+                                        <div className="d-flex flex-row align-items-center">
+                                          <OverlayTrigger
+                                            placement="top"
+                                            overlay={
+                                              <Tooltip id="tooltip1">Click to approve</Tooltip>
+                                            }
+                                          >
+                                            <button
+                                              className="btn btn-secondary bg-success btn-sm mb-2"
+                                              onClick={() => handleAcceptRejectProduct(`mapping_${mapping.mapping_id}`, '1')}
+                                            >
+                                              Approve
+                                            </button>
+                                          </OverlayTrigger>
+
+                                          {mapping?.is_approve === 0 && mapping?.reject_reason &&
+                                            <OverlayTrigger
+                                              placement="top"
+                                              overlay={
+                                                <Tooltip id="tooltip1">
+                                                  {mapping?.reject_reason}
+                                                </Tooltip>
+                                              }
+                                            >
+                                              <span className="fa fa-info-circle ml-2"></span>
+                                            </OverlayTrigger>}
+                                        </div>
+                                      ))}
+                                  </td>
+                                  {/* Changes by Agnij May 3, 2025 [Combine created/mapped and updated columns] */}
+                                  <td>
+                                    {/* Combined Created By and Mapped On */}
+                                    <div>
+                                      {mapping.created_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(mapping.created_by))?.label || mapping.created_by 
+                                        : "-"}
+                                    </div>
+                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                                      {mapping.mapped_at_formatted || "-"}
+                                    </div>
+                                  </td>
+                                  <td>
+                                    {/* Combined Updated By and Updated At */}
+                                    <div>
+                                      {mapping.updated_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(mapping.updated_by))?.label || mapping.updated_by 
+                                        : "-"}
+                                    </div>
+                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                                      {mapping.updated_at ? 
+                                        new Date(mapping.updated_at).toLocaleDateString("en-GB", {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        }) : "-"}
+                                    </div>
+                                  </td>
+                                  {/* Removed Mapped On, Updated At, Approved At TDs */}
+                                  <td>
+                                    <button
+                                      className="btn btn-sm btn-info"
+                                      onClick={() => {
+                                        router.push(`/product-management/mapping/${mapping.mapping_id}`);
+                                      }}
+                                    >
+                                      <i className="fas fa-edit"></i> View
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                {/* Changes by Agnij May 3, 2025 [Adjust colspan after combining columns] */}
+                                <td colSpan="9" className="text-center"> {/* Adjusted colspan from 12 to 9 */}
+                                  No mappings found
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                    
+                    {/* Mappings pagination */}
+                    {mappings.length > 0 && (
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <p><b>Total Mappings: </b>{mappings.length}</p>
+                          <p><b>Page: </b>{mappingsPage} of {mappingsTotalPages}</p>
+                        </div>
+                        {/* Changes by Agnij May 02, 2025 [Removed condition to always show pagination] */}
+                        <div className="d-flex flex-column align-items-center gap-2">
+                          {/* Pagination Section */}
+                          <div className="d-flex justify-content-between align-items-center">
+                            <ReactPaginate
+                              previousLabel={"Previous"}
+                              nextLabel={"Next"}
+                              breakLabel={"..."}
+                              pageCount={mappingsTotalPages}
+                              marginPagesDisplayed={2}
+                              pageRangeDisplayed={5}
+                              onPageChange={handleMappingsPageClick}
+                              containerClassName={"pagination mb-0"}
+                              pageClassName={"page-item"}
+                              pageLinkClassName={"page-link"}
+                              previousClassName={"page-item"}
+                              previousLinkClassName={"page-link"}
+                              nextClassName={"page-item"}
+                              nextLinkClassName={"page-link"}
+                              breakClassName={"page-item"}
+                              breakLinkClassName={"page-link"}
+                              activeClassName={"active"}
+                              forcePage={mappingsPage - 1}
+                            />
+                            
+                            {/* Changes by Agnij May 31, 2025 [Added page search for mappings] */}
+                            <div className="d-flex align-items-center ms-3">
+                              <input
+                                type="text"
+                                className="form-control me-2"
+                                style={{ width: "80px" }}
+                                value={mappingsPageSearchInput}
+                                onChange={handleMappingsPageSearchInput}
+                                placeholder="Page #"
+                              />
+                              <button
+                                className="btn btn-primary"
+                                onClick={handleMappingsPageSearchSubmit}
+                                disabled={!mappingsPageSearchInput || parseInt(mappingsPageSearchInput) < 1 || parseInt(mappingsPageSearchInput) > mappingsTotalPages}
+                              >
+                                Go
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Error modals */}
           {productWithVendorErrors &&
             <div className="card card-body product-table">
               {loading && <FullLoading />}
@@ -1613,9 +3350,6 @@ const ProductManagement = () => {
                       <thead>
                         <tr>
                           <th scope="col">Row No.</th>
-                          {/* <th scope="col">Product Name</th>
-                        <th scope="col">Vendor Name</th>
-                        <th scope="col">Vendor Email</th> */}
                           <th scope="col">Errors</th>
                         </tr>
                       </thead>
@@ -1625,9 +3359,6 @@ const ProductManagement = () => {
                             return (
                               <tr key={`err_item_${item.Row}`}>
                                 <td>{item.Row || "---"}</td>
-                                {/* <td>{item.productName || "---"}</td>
-                              <td>{item.vendorName || "---"}</td>
-                              <td>{item.vendorEmail || "---"}</td> */}
                                 <td>
                                   {typeof item.error === 'string' ?
                                     item.error
@@ -1662,236 +3393,6 @@ const ProductManagement = () => {
               )}
             </div>
           }
-
-          <div className="card card-body product-table">
-            {loading && <FullLoading />}
-            {!loading && (
-              <table className="table table-striped table-hover table-responsive mb-3">
-                <thead>
-                  <tr className="text-nowrap">
-                    <th scope="col">
-                      <input
-                        type="checkbox"
-                        name="select_all_products"
-                        onClick={(e) => selectAllProduct(e)}
-                      />
-                    </th>
-                    <th scope="col">Product Name</th>
-                    <th scope="col">Category</th>
-                    <th scope="col">Accept/Reject</th>
-                    <th scope="col">Sub Category</th>
-                    <th scope="col">Vendors</th>
-                    <th scope="col">Approval Status</th>
-                    <th scope="col">Image</th>
-                    <th scope="col">TDS</th>
-                    <th scope="col">QAP</th>
-                    <th scope="col">Created At</th>
-                    <th scope="col">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products &&
-                    products.map((item) => {
-                      return (
-                        <tr key={item.id} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
-                          <td>
-                            <input
-                              type="checkbox"
-                              name="select_product"
-                              checked={item.isChecked}
-                              readOnly
-                              onClick={(e) => selectProduct(e, item)}
-                            />
-                          </td>
-                          <td>{item.name}</td>
-                          {/* <td>{item.status == 1 ? "Active" : "Inactive"}</td> */}
-                          <td className="subcatstd">
-                            <span className="badge badge-warning">
-                              {item.product_categories.length > 0
-                                ? item.product_categories[0].category_name
-                                : "-"}
-                            </span>
-                          </td>
-                          <td>
-                            {item?.is_approve === 1 ? "Approved" : "Rejected"}
-                          </td>
-                          <td className="subcatstd">{getSubCats(item)}</td>
-                          <td>{ item?.vendor ? item?.vendor_name: "-"}</td>
-                          <td>
-                            {(userType && userType != 6) && (
-                              item?.is_approve === 1 ? (
-                                <OverlayTrigger
-                                  placement="top"
-                                  overlay={
-                                    <Tooltip id="tooltip1">
-                                      Click to Disapprove
-                                    </Tooltip>
-                                  }
-                                >
-                                  <button
-                                    className="btn btn-secondary bg-danger mb-2"
-                                    onClick={() => openRejectModal(item.id)}
-                                  >
-                                    Disapprove
-                                  </button>
-                                </OverlayTrigger>
-                              ) : (
-                                <div className="d-flex flex-row align-items-center">
-                                  <OverlayTrigger
-                                    placement="top"
-                                    overlay={
-                                      <Tooltip id="tooltip1">Click to approve</Tooltip>
-                                    }
-                                  >
-                                    <button
-                                      className="btn btn-secondary bg-success mb-2"
-                                      onClick={() => handleAcceptRejectProduct(item.id, '1')}
-                                    >
-                                      Approve
-                                    </button>
-                                  </OverlayTrigger>
-
-                                  {item?.is_approve === 0 && item?.reject_reason &&
-                                    <OverlayTrigger
-                                      placement="top"
-                                      overlay={
-                                        <Tooltip id="tooltip1">
-                                          {item?.reject_reason}
-                                        </Tooltip>
-                                      }
-                                    >
-                                      <span className="fa fa-info-circle ml-2"></span>
-                                    </OverlayTrigger>}
-                                </div>
-                              ))}
-                            {getApprovalInfo(item)}
-                          </td>
-
-                          <td>
-                            {item?.new_image_name ? <img
-                              width={60}
-                              height={60}
-                              src={item?.new_image_name}
-                              alt="new_image"
-                            /> : "--"}
-                          </td>
-                          <td>
-                            {item?.tds_new_file_name ? (
-                              <a href={item?.tds_new_file_name} target="_blank">
-                                <i class="fa fa-file"></i>
-                              </a>
-                            ) : '--'}
-                          </td>
-                          <td>
-                            {item?.qap_new_file_name ? (
-                              <a href={item?.qap_new_file_name} target="_blank">
-                                <i class="fa fa-file"></i>
-                              </a>
-                            ) : '--'}
-                          </td>
-                          <td style={{ width: "100px" }}>
-                            {new Date(item.created_at).toLocaleDateString("en-GB", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </td>
-                          <td>
-                            <div className="d-flex">
-                              <span
-                                className="fa fa-eye mr-2"
-                                onClick={() =>
-                                  router.push(
-                                    `/product-management/product-details/${item.id}`
-                                  )
-                                }
-                              ></span>
-                              {userType != 6 &&
-                                <span
-                                  className="fa fa-edit"
-                                  onClick={() => handleUpdateProduct(item)}
-                                ></span>}
-                              {/* <span
-                                onClick={() => handleDeleteProduct(item.id)}
-                                class="fa fa-trash ml-2">
-                              </span> */}
-                            </div>
-
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            )}
-
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                {/* Always show database totals */}
-                <p><b>Total Products: </b>{totalCount.total_count}</p>
-                <p><b>Total Approved Products: </b>{totalCount.approve_count}</p>
-                <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p>
-                
-                {/* Show filtered counts when filtering is applied */}
-                {totalCount.is_filtered && (
-                  <div className="mt-2 pt-2 border-top">
-                    <p><b>Filtered Results: </b>{totalCount.filtered_count}</p>
-                    <p><b>Filtered Approved: </b>{totalCount.filtered_approve_count}</p>
-                    <p><b>Filtered Disapproved: </b>{totalCount.filtered_disapprove_count}</p>
-                  </div>
-                )}
-              </div>
-              {/* Always show pagination if we have total count from API */}
-              <div className="d-flex flex-column align-items-center gap-2">
-                {/* Pagination Section */}
-                <div className="d-flex justify-content-between align-items-center mt-3">
-                  {totalCount.filtered_count > 0 && (
-                    <>
-                      <ReactPaginate
-                        previousLabel={"Previous"}
-                        nextLabel={"Next"}
-                        breakLabel={"..."}
-                        pageCount={totalPages}
-                        marginPagesDisplayed={2}
-                        pageRangeDisplayed={5}
-                        onPageChange={handlePageClick}
-                        containerClassName={"pagination mb-0"}
-                        pageClassName={"page-item"}
-                        pageLinkClassName={"page-link"}
-                        previousClassName={"page-item"}
-                        previousLinkClassName={"page-link"}
-                        nextClassName={"page-item"}
-                        nextLinkClassName={"page-link"}
-                        breakClassName={"page-item"}
-                        breakLinkClassName={"page-link"}
-                        activeClassName={"active"}
-                        forcePage={page - 1}
-                      />
-                      
-                      <div className="d-flex align-items-center">
-                        <input
-                          type="text"
-                          className="form-control me-2"
-                          style={{ width: "80px" }}
-                          value={pageSearchInput}
-                          onChange={handlePageSearchInput}
-                          placeholder="Page #"
-                        />
-                        <button
-                          className="btn btn-primary"
-                          onClick={handlePageSearchSubmit}
-                          disabled={!pageSearchInput || parseInt(pageSearchInput) < 1 || parseInt(pageSearchInput) > totalPages}
-                        >
-                          Go
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
       </section>
 
@@ -1905,6 +3406,13 @@ const ProductManagement = () => {
         handleInputDisapprove={handleInputDisapprove}
         handleSelect={handleSelect}
         submitApproveVendor={handleAcceptRejectProduct}
+      />
+
+      {/* Add Variant Modal */}
+      <AddVariantModal
+        isOpen={showAddVariantModal}
+        onClose={() => setShowAddVariantModal(false)}
+        onSuccess={handleAddVariantSuccess}
       />
     </>
   );
