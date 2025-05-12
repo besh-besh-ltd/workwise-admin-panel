@@ -3178,7 +3178,7 @@ const ProductManagement = () => {
                                         router.push(`/product-management/mapping/${mapping.mapping_id}`);
                                       }}
                                     >
-                                      <i className="fas fa-edit"></i> Edit
+                                      <i className="fas fa-edit"></i> View
                                     </button>
                                   </td>
                                 </tr>
