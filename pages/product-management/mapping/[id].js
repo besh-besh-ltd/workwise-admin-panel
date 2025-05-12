@@ -247,7 +247,7 @@ const MappingDetail = () => {
             <FullLoading />
           ) : mapping ? (
             <div className="row">
-              <div className="col-md-8">
+              <div className="col-md-16">
                 <div className="card">
                   <div className="card-header">
                     <h3 className="card-title">Mapping Information</h3>
@@ -345,7 +345,7 @@ const MappingDetail = () => {
                 </div>
               </div>
 
-              <div className="col-md-4">
+              {/* <div className="col-md-4">
                 <div className="card">
                   <div className="card-header">
                     <h3 className="card-title">Update Mapping</h3>
@@ -429,7 +429,7 @@ const MappingDetail = () => {
                     </div>
                   </div>
                 )}
-              </div>
+              </div> */}
             </div>
           ) : (
             <div className="alert alert-danger">
