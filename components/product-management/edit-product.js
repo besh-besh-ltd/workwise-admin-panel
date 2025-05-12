@@ -167,79 +167,139 @@ const EditProduct = () => {
 
 		try {
 			// For non-editable products, only update vendor approvals while preserving other fields
+			// if (!isEditable) {
+			// 	// Include required fields from existing data
+			// 	formData.append('name', productDetailsData.name);
+			// 	formData.append('status', '1');
+				
+			// 	// Handle categories array
+			// 	const existingCategories = productDetailsData.product_categories?.map(cat => cat.id) || [];
+			// 	existingCategories.forEach((categoryId) => {
+			// 		formData.append('categories[]', categoryId.toString());
+			// 	});
+
+			// 	// Handle approved_id array
+			// 	const approvedIds = values.approved_id || [];
+			// 	if (approvedIds.length > 0) {
+			// 		formData.append('approved_id', approvedIds.join(','));
+			// 	} else {
+			// 		formData.append('approved_id', '');
+			// 	}
+
+			// 	// Include product variants
+			// 	// if (productDetailsData.product_variants && productDetailsData.product_variants.length > 0) {
+			// 	// 	productDetailsData.product_variants.forEach((variant, index) => {
+			// 	// 		formData.append(`variations[${index}][attribute]`, variant.variant_name || '');
+			// 	// 		formData.append(`variations[${index}][attributeValue]`, variant.variant_value || '');
+			// 	// 	});
+			// 	// } else {
+			// 	// 	formData.append('variations[0][attribute]', '');
+			// 	// 	formData.append('variations[0][attributeValue]', '');
+			// 	// }
+			// } else {
+			// 	// For editable products, send all values
+			// 	formData.append('name', values.name);
+			// 	formData.append('status', '1');
+
+			// 	// Handle categories array
+			// 	const categories = selectedValues
+			// 		.filter(cat => cat)
+			// 		.map(cat => cat.value);
+				
+			// 	if (categories.length === 0) {
+			// 		throw new Error('At least one category is required');
+			// 	}
+
+			// 	formData.append('categories', categories);
+
+			// 	// Handle approved_id array
+			// 	const approvedIds = values.approved_id || [];
+			// 	if (approvedIds.length > 0) {
+			// 		formData.append('approved_id', approvedIds.join(','));
+			// 	} else {
+			// 		formData.append('approved_id', '');
+			// 	}
+
+			// 	// Handle variations array
+			// 	// if (values.variations && values.variations.length > 0) {
+			// 	// 	const filteredVariations = values.variations.filter(
+			// 	// 		v => v.attribute.trim() !== '' || v.attributeValue.trim() !== ''
+			// 	// 	);
+					
+			// 	// 	filteredVariations.forEach((variation, index) => {
+			// 	// 		formData.append(`variations[${index}][attribute]`, variation.attribute || '');
+			// 	// 		formData.append(`variations[${index}][attributeValue]`, variation.attributeValue || '');
+			// 	// 	});
+			// 	// } else {
+			// 	// 	formData.append('variations[0][attribute]', '');
+			// 	// 	formData.append('variations[0][attributeValue]', '');
+			// 	// }
+			// }
+
+			// const jsonPayload = Object.fromEntries(formData.entries());
+
+			let payload = {};
+
 			if (!isEditable) {
 				// Include required fields from existing data
-				formData.append('name', productDetailsData.name);
-				formData.append('status', '1');
-				
+				payload.name = productDetailsData.name;
+				payload.status = '1';
+
 				// Handle categories array
-				const existingCategories = productDetailsData.product_categories?.map(cat => cat.id) || [];
-				existingCategories.forEach((categoryId) => {
-					formData.append('categories[]', categoryId.toString());
-				});
+				payload.categories = productDetailsData.product_categories?.map(cat => cat.id) || [];
 
 				// Handle approved_id array
-				const approvedIds = values.approved_id || [];
-				if (approvedIds.length > 0) {
-					formData.append('approved_id', approvedIds.join(','));
-				} else {
-					formData.append('approved_id', '');
-				}
+				payload.approved_id = values.approved_id?.length > 0 ? values.approved_id : [];
 
-				// Include product variants
-				if (productDetailsData.product_variants && productDetailsData.product_variants.length > 0) {
-					productDetailsData.product_variants.forEach((variant, index) => {
-						formData.append(`variations[${index}][attribute]`, variant.variant_name || '');
-						formData.append(`variations[${index}][attributeValue]`, variant.variant_value || '');
-					});
-				} else {
-					formData.append('variations[0][attribute]', '');
-					formData.append('variations[0][attributeValue]', '');
-				}
+				// Handle product variants
+				// if (productDetailsData.product_variants?.length > 0) {
+				// 	payload.variations = productDetailsData.product_variants.map(variant => ({
+				// 		attribute: variant.variant_name || '',
+				// 		attributeValue: variant.variant_value || ''
+				// 	}));
+				// } else {
+				// 	payload.variations = [{ attribute: '', attributeValue: '' }];
+				// }
 			} else {
 				// For editable products, send all values
-				formData.append('name', values.name);
-				formData.append('status', '1');
+				payload.name = values.name;
+				payload.status = '1';
 
 				// Handle categories array
 				const categories = selectedValues
-					.filter(cat => cat != null)
+					.filter(cat => cat)
 					.map(cat => cat.value);
-				
+
 				if (categories.length === 0) {
 					throw new Error('At least one category is required');
 				}
 
-				categories.forEach((categoryId) => {
-					formData.append('categories[]', categoryId.toString());
-				});
+				payload.categories = categories;
 
 				// Handle approved_id array
-				const approvedIds = values.approved_id || [];
-				if (approvedIds.length > 0) {
-					formData.append('approved_id', approvedIds.join(','));
-				} else {
-					formData.append('approved_id', '');
-				}
+				payload.approved_id = '';
+				// values.approved_id?.length > 0 ? values.approved_id : [];
 
 				// Handle variations array
-				if (values.variations && values.variations.length > 0) {
-					const filteredVariations = values.variations.filter(
-						v => v.attribute.trim() !== '' || v.attributeValue.trim() !== ''
-					);
-					
-					filteredVariations.forEach((variation, index) => {
-						formData.append(`variations[${index}][attribute]`, variation.attribute || '');
-						formData.append(`variations[${index}][attributeValue]`, variation.attributeValue || '');
-					});
-				} else {
-					formData.append('variations[0][attribute]', '');
-					formData.append('variations[0][attributeValue]', '');
-				}
+				// if (values.variations?.length > 0) {
+				// 	const filteredVariations = values.variations.filter(
+				// 		v => v.attribute.trim() !== '' || v.attributeValue.trim() !== ''
+				// 	);
+
+				// 	payload.variations = filteredVariations.map(variation => ({
+				// 		attribute: variation.attribute || '',
+				// 		attributeValue: variation.attributeValue || ''
+				// 	}));
+				// } else {
+				// 	payload.variations = [{ attribute: '', attributeValue: '' }];
+				// }
 			}
 
+			console.log(payload);
+
+
 			setMainLoading(true);
-			handleUpdateProduct(formData, id)
+			handleUpdateProduct(payload, id)
 				.then((res) => {
 					toast.success(res.message);
 					getProducts(id).then(response => {
