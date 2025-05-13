@@ -15,17 +15,7 @@ import { getAdminProfile } from "@/utils/services/login";
 import AddVariantModal from '../modal/AddVariantModal';
 import { getProductVariants } from '../../utils/services/product-management';
 import MapVariantVendorModal from "../modal/MapVariantVendorModal";
-import axiosInstance from "@/utils/axios";
 
-// Custom styles for Product Select Component
-const customStyles = {
-  option: (provided, state) => ({
-    ...provided,
-    marginBottom: '1px solid #000',
-    color: state.isSelected ? '#0d6efd' : '#212529',
-    backgroundColor: state.isSelected ? '#f0f0f0' : provided.backgroundColor,
-  }),
-};
 
 // Modified Select Component to show email along with vendor Name
 const CustomSelectOption = (props) => (
@@ -275,31 +265,7 @@ const ProductManagement = () => {
     setSelectValue(e.target.value);
   }
 
-  const indexNum = (cell, row, enumObject, index) => {
-    return <div>{index + 1}</div>;
-  };
-  const addressEdit = (_cell, row) => {
-    return (
-      <div>
-        {row?.city}, {row?.state}
-      </div>
-    );
-  };
-
-  const uploadToClient = (event) => {
-    if (event.target.files && event.target.files[0]) {
-      const i = event.target.files[0];
-      setFile(i);
-    }
-  };
-
-  const uploadToClientProd = (event) => {
-    if (event.target.files && event.target.files[0]) {
-      const i = event.target.files[0];
-      setProdFile(i);
-    }
-  };
-
+  
   const openRejectModal = (id) => {
     // Changes by Agnij May 01, 2025 [Improved handling for variants and mappings]
     // Process ID to ensure consistent format with mapping_ prefix for mappings
@@ -405,7 +371,7 @@ const ProductManagement = () => {
       const res = await getAdminProfile();
       setUserType(res.data.user_type);
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   }
 
@@ -563,88 +529,6 @@ const ProductManagement = () => {
       })
   }
 
-  const uploadToServer = async () => {
-    if (!file) {
-      toast.error("Please select a file!");
-      return;
-    }
-    setloading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    axiosFormData
-      .post(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/bulk-product-create`,
-        formData,
-        {
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            setuploadProgress(percentCompleted);
-          },
-        }
-      )
-      .then((response) => {
-        setloading(false);
-        if (response.errorsObj) {
-          setProductWithVendorErrors(response.errorsObj)
-          toast.warning("Partially added products.")
-        }
-        else
-          toast.success(response.message);
-        getProducts();
-      })
-      .catch((error) => {
-        if (error.response?.data?.errorsObj) {
-          setProductWithVendorErrors(error.response?.data?.errorsObj)
-        }
-        toast.error(error.response?.data?.message)
-      })
-      .finally(() => {
-        setloading(false);
-        setuploadProgress(0);
-        setFile(null);
-        setEnableBulkUpload(false);
-      })
-  };
-
-  const uploadToServerProd = async () => {
-    if (!prodFile) {
-      toast.error("Please select a file!");
-      return;
-    }
-    setloading(true);
-    const formData = new FormData();
-    formData.append("file", prodFile);
-
-    axiosFormData
-      .post(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/bulk-only-product-create`,
-        formData,
-        {
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            setuploadProgress(percentCompleted);
-          },
-        }
-      )
-      .then((res) => {
-        setloading(false);
-        toast.success(res.message);
-        if (res.errors && res.errors.length > 0) {
-          setProductErrors(res.errors)
-        }
-        setProdFile(null);
-        setEnableBulkProdUpload(false);
-        getProducts();
-      })
-      .catch((error) => {
-        setloading(false);
-      });
-  };
 
   const getProducts = () => {
     // Set loading but keep current products to prevent flickering
@@ -699,11 +583,7 @@ const ProductManagement = () => {
           page: res.page || 0,
           total: res.pages || 0,
           total_count: res.filtered_count || 0,
-          // approve_count: res.approve_count || 0,
-          // disapprove_count: res.disapprove_count || 0,
           filtered_count: res.filtered_count || 0,
-          // filtered_approve_count: res.filtered_approve_count || 0,
-          // filtered_disapprove_count: res.filtered_disapprove_count || 0,
           is_filtered: Boolean(searchString || selectedApproveVendor || selectedVendor || 
             selectedFeatured || selectedCategory || selectedAddedBy || dateFrom || 
             dateTo || selectedApprovalStatus)
@@ -796,20 +676,6 @@ const ProductManagement = () => {
     setUpdateProduct(item);
   };
 
-  const handleDeleteProduct = (id) => {
-    let prodId = id
-    deleteProduct(prodId)
-      .then((res) => {
-        setloading(false);
-        toast.success(res.message);
-        getProducts();
-        router.push(`product-management`);
-        // settotalPages(Math.ceil(res.total_count / limit));
-      })
-      .catch((err) => {
-        setloading(false);
-      });
-  }
 
   // Function to fetch vendor approved-by list
   const getVendorApproveList = () => {
@@ -822,7 +688,7 @@ const ProductManagement = () => {
         setVendorApprovedList(approved_options);
       })
       .catch((error) => {
-        console.log(error)
+        console.error(error)
       });
   };
 
@@ -837,20 +703,6 @@ const ProductManagement = () => {
     );
   }
 
-  // Function to filter out unique products with categories
-  const groupBySlug = (data) => {
-    const groupedData = data.reduce((acc, item) => {
-      const slug = item.slug;
-      if (!acc[slug]) acc[slug] = [];
-
-      const isUnique = !acc[slug].some((existingItem) =>
-        JSON.stringify(existingItem.product_categories) === JSON.stringify(item.product_categories)
-      );
-      if (isUnique) acc[slug].push(item);
-      return acc;
-    }, {});
-    return formatGroupedData(groupedData);
-  }
 
   // Search Product Function
   const getVendorProductList = useCallback((search_key) => {
@@ -892,40 +744,13 @@ const ProductManagement = () => {
         setVendorProductsList(formattedProducts);
       })
       .catch((error) => {
-        console.log(error);
+        console.error(error);
       })
       .finally(() => setProductLoading(false));
   }, []);
 
-  // Debouncing the search product API call for 300ms
-  const debounceGetVendorProductList = useCallback(
-    (inputValue) => {
-      const debounceTimeout = 300;
-      clearTimeout(window.debounceTimer);
-      window.debounceTimer = setTimeout(() => {
-        getVendorProductList(inputValue);
-      }, debounceTimeout);
-    },
-    [getVendorProductList]
-  );
-
-  const handleMappingObj = (selectedOption, { name }) => {
-    if (name === "approved_by" && !productMapObj.product) {
-      toast.error("Please Choose a Product First.", { position: "top-right" })
-      return
-    }
-    setproductMapObj((prevState) => ({
-      ...prevState,
-      [name]: selectedOption
-    }));
-  }  
 
   const handleOpenProductMap = () => {
-    // Save the current state before opening modal
-    // const currentTabContent = document.querySelector('.tab-pane.active');
-    // if (currentTabContent) {
-    //   currentTabContent.style.display = 'block'; 
-    // }
 
     setOpenProductMap(true);
     setIsVariantMapping(true); // Always set to true for variant mapping
@@ -971,160 +796,6 @@ const ProductManagement = () => {
       });
   };
 
-  const fetchAllProductVariants = useCallback(async (searchTerm = null) => {
-    // Changes by Agnij April 30, 2025 [Updated to support searching variants]
-    setLoadingVariants(true);
-    
-    try {
-      // Get all products
-      const products = productData || [];
-      
-      if (products.length === 0) {
-        setVariantsList([]);
-        setLoadingVariants(false);
-        return;
-      }
-      
-      // First approach: get variants for each product individually
-      const variantPromises = products.map(product => 
-        getProductVariants(product.id)
-          .then(response => {
-            let variantData = [];
-            
-            // Try to extract data carefully to avoid undefined errors
-            if (response?.data) {
-              if (Array.isArray(response.data)) {
-                // Direct array response
-                variantData = response.data;
-              } else if (response.data.data && Array.isArray(response.data.data)) {
-                // Nested data object
-                variantData = response.data.data;
-              } else if (response.data.status === 1 && !response.data.data) {
-                // Empty data with success status
-                variantData = [];
-              }
-            }
-            
-            // Only map if we have variants
-            if (variantData.length > 0) {
-              return variantData.map(variant => ({
-                value: variant.id,
-                label: `${variant.variant_name || variant.name} (${product.name || 'Unknown Product'})`,
-                data: variant,
-                product_id: product.id
-              }));
-            }
-            return [];
-          })
-          .catch(error => {
-            console.error(`Error fetching variants for product ${product.id}:`, error);
-            return [];
-          })
-      );
-      
-      // Wait for all promises to resolve
-      const variantResults = await Promise.all(variantPromises);
-      
-      // Combine all results and filter out any undefined or null values
-      let allVariants = variantResults.flat().filter(Boolean);
-      
-      // If we have a search term, filter the variants
-      if (searchTerm && searchTerm.length >= 2) {
-        const filteredVariants = allVariants.filter(variant => {
-          return variant.label.toLowerCase().includes(searchTerm.toLowerCase());
-        });
-        allVariants = filteredVariants;
-      }
-      
-      // Update state with filtered variants
-      setVariantsList(allVariants);
-    } catch (error) {
-      // Changes by Agnij May 02, 2025 [Removed toast error message]
-      console.error('Error in fetchAllProductVariants:', error);
-    } finally {
-      setLoadingVariants(false);
-    }
-  }, [productData]);
-
-  const handleSubmitMapping = async () => {
-    if(!mapMultipleProductsWithVendor || mapMultipleProductsWithVendor?.length <= 0) {
-      toast.error("Select products and vendors to add");
-      return 0;
-    }
-
-    setIsAddingDataProcessing(true);
-
-    for (const productMap of mapMultipleProductsWithVendor) {
-    const { product, vendor, approved_by } = productMap;
-    
-    if (!product || !vendor) {
-      toast.error("Product and Vendor fields are required.");
-      return;
-    }
-
-    try {
-        // Different API call based on if mapping a product or variant
-        if (isVariantMapping) {
-          // Changes by Agnij May 30, 2025 [Fixed parameter name from variant_id to product_variant_id]
-          const payload = {
-            product_variant_id: product.value,
-            vendor_id: vendor.value,
-            approved_by: approved_by?.map((item) => item.value) || null
-          };
-          
-          const res = await mapVariantWithVendor(payload);
-          toast.success(res.message || "Variant mapped successfully");
-        } else {
-      const payload = {
-        product_id: product.value,
-        vendor_id: vendor.value,
-        approved_by: approved_by?.map((item) => item.value) || null
-          };
-          
-      const res = await mapVendorWithProduct(payload);
-          toast.success(res.message);
-        }
-    } catch (error) {
-        console.log(error);
-        toast.error(error.message?.response?.data?.message || "An error occurred");
-    }
-  }
-
-    // Reset form state
-  setproductMapObj({
-    product: null,
-    vendor: null,
-    approved_by: null
-  });
-
-    setMapMultipleProductsWithVendor([]);
-  setIsAddingDataProcessing(false);
-    setOpenProductMap(false);
-    getProducts();
-    
-    // Changes by Agnij May 30, 2025 [Refresh mappings tab data after adding new mappings]
-    if (activeTab === 'mappings') {
-      getAllMappings();
-    }
-  };
-
-  const handleAddProductForBulk = async () => {
-    const { product, vendor, approved_by } = productMapObj;
-
-    if (!product || !vendor) {
-      toast.error("Product and Vendor fields are required.");
-      return;
-    }
-
-    setMapMultipleProductsWithVendor((prevState) => [...prevState, productMapObj]);
-      
-    toast.success(`${isVariantMapping ? "Variant" : "Product"} added for bulk submission.`);
-  };
-
-  const handleRemoveProduct = (index) => {
-    setMapMultipleProductsWithVendor((prevState) => prevState.filter((_, i) => i !== index));
-    toast.success("Product removed successfully.");
-  };
 
   const updateUrlParams = (newParams) => {
     // Build a new URL with merged parameters
@@ -1140,10 +811,7 @@ const ProductManagement = () => {
       }
     });
     
-    // Update the URL without refreshing the page
-    const newUrl = `${window.location.pathname}?${updatedSearchParams.toString()}`;
-    
-    
+   
     router.push(
       { pathname: router.pathname, query: Object.fromEntries(updatedSearchParams) },
       undefined,
@@ -1268,9 +936,6 @@ const ProductManagement = () => {
       variant_id: selectedVariant // Changes by Agnij June 12, 2024 [Added variant filter parameter]
     };
     
-    // Changes by Agnij June 12, 2024 [Log filter parameters for debugging]
-    console.log('Mapping filters being applied:', params);
-    
     try {
       // Changes by Agnij May 02, 2025 [Fixed vendor filter to correctly pass vendor_id parameter]
       // Use the variant mappings API with all filter parameters
@@ -1333,7 +998,10 @@ const ProductManagement = () => {
                 vendor_email: mapping.vendor_email || 'N/A',
                 mapped_at: mapping.mapped_at || mapping.created_at,
                 mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 
-                                      mapping.created_at ? new Date(mapping.created_at).toLocaleString() : 'Unknown',
+                                      mapping.created_at ? new Date(mapping.created_at).toLocaleString() : '-',
+                updated_at_formatted: mapping.updated_at ? new Date(mapping.updated_at).toLocaleString() : '-',
+                approved_by: mapping.approved_by || 'N/A',
+                mapped_at_approved: mapping.approved_at ? new Date(mapping.approved_at).toLocaleString() : '-',
                 is_mapped: true,
                 is_approve: mapping.is_approve || 0,
                 reject_reason: mapping.reject_reason,
@@ -1392,59 +1060,7 @@ const ProductManagement = () => {
       startDate: filterValues.startDate,
       endDate: filterValues.endDate
     });
-    
-    // Changes by Agnij May 04, 2025 [Remove direct data fetch; rely on useEffect]
-    // // Fetch data with new page 
-    // setLoadingVariants(true);
-    // 
-    // // Changes by Agnij May 01, 2025 [Added date range parameters]
-    // const params = {
-    //   page: selectedPage,
-    //   limit: variantsLimit,
-    //   search: searchString || \"\",
-    //   start_date: filterValues.startDate ? new Date(filterValues.startDate).toISOString() : null,
-    //   end_date: filterValues.endDate ? new Date(filterValues.endDate).toISOString() : null
-    // };
-    // 
-    // searchAllVariants(params.search, params.start_date, params.end_date)
-    //   .then(response => {
-    //     if (response?.data?.data) {
-    //       const variantsData = response.data.data;
-    //       
-    //       if (variantsData && Array.isArray(variantsData)) {
-    //         // Format variants to include more information
-    //         const formattedVariants = variantsData.map(variant => ({
-    //           ...variant,
-    //           variant_name: variant.name, // Ensure variant_name is available
-    //           product_name: variant.product_name || 'Unknown Product',
-    //           category_info: Array.isArray(variant.category_names) ? variant.category_names.join(', ') : '',
-    //           created_at_formatted: new Date(variant.created_at).toLocaleString()
-    //         }));
-    //         
-    //         // Calculate total items (might need to be provided by API)
-    //         const totalItems = formattedVariants.length;
-    //         
-    //         // Calculate indices for pagination
-    //         const startIndex = (params.page - 1) * params.limit;
-    //         const endIndex = Math.min(startIndex + params.limit, totalItems);
-    //         
-    //         // Get the current page of variants
-    //         const paginatedVariants = formattedVariants.slice(startIndex, endIndex);
-    //         
-    //         setVariants(paginatedVariants);
-    //         setVariantsTotalPages(Math.ceil(totalItems / params.limit));
-    //       }
-    //     }
-    //   })
-    //   .catch(error => {
-    //     // Changes by Agnij May 02, 2025 [Removed toast error message]
-    //     console.error(\"Error fetching variants:\", error);
-    //     setVariants([]);
-    //     setVariantsTotalPages(0);
-    //   })
-    //   .finally(() => {
-    //     setLoadingVariants(false);
-    //   });
+
   };
   
   // Changes by Agnij May 31, 2025 [Updated mappings pagination to handle different response formats]
@@ -1501,7 +1117,6 @@ const ProductManagement = () => {
         )
           .then(response => {
             // Changes by Agnij May 3, 2025 [Fixed response processing for page changes]
-            
             
             // Handle different response formats
             let mappingsData = [];
@@ -1841,15 +1456,6 @@ const ProductManagement = () => {
     }
   };
 
-  const handleCategoryChange = (e) => {
-    const value = e.target.value;
-    setSelectedCategory(value);
-  };
-
-  const handleAddedByChange = (e) => {
-    const value = e.target.value;
-    setSelectedAddedBy(value);
-  };
 
   const getApprovalInfo = (item) => {
     // Get the added by ID and approved by ID
@@ -2008,7 +1614,6 @@ const ProductManagement = () => {
     // Only fetch if the variants tab is active
     if (activeTab === 'variants') {
       // Changes by Agnij May 04, 2025 [Remove debug log]
-      // console.log(`useEffect triggered for variants: page=${variantsPage}, filters=`, filterValues);
       getAllVariants(); 
     }
   }, [activeTab, variantsPage, filterValues]); // Dependencies: activeTab, variantsPage, filterValues
@@ -2077,12 +1682,10 @@ const ProductManagement = () => {
       10000    // limit (very large number to fetch all)
     )
       .then(response => {
-        console.log('searchAllVariants response for dropdown:', response); // Log the raw response
         
         // The function now returns { data: [], pagination: {} }
         if (response && response.data) {
           const variantsData = response.data; // Use the data array directly
-          console.log('Total variants fetched for dropdown:', variantsData.length); // Log count
           formatVariantsForDropdown(variantsData);
         } else {
           console.warn('No data received from searchAllVariants for dropdown.');
@@ -2916,7 +2519,7 @@ const ProductManagement = () => {
                   </div>
                 </div>
                 
-                {/* Mappings Tab */}
+                {/*START: Mappings Tab */}
                 <div className={`tab-pane fade ${activeTab === 'mappings' ? 'active show' : ''}`} id="mappings-tab" role="tabpanel" aria-labelledby="mappings-tab">
                   <div className="card card-body">
                     <div className="row g-3">
@@ -3039,7 +2642,6 @@ const ProductManagement = () => {
                             className="btn btn-primary"
                             onClick={() => {
                               // Changes by Agnij June 12, 2024 [Pass selectedVariant explicitly]
-                              console.log('Search button clicked with variant:', selectedVariant);
                               getAllMappings();
                             }}
                           >
@@ -3067,10 +2669,10 @@ const ProductManagement = () => {
                               <th>Product</th>
                               <th>Vendor</th>
                               <th>Vendor Email</th>
-                              <th>Category</th>
                               <th>Approval Status</th>
-                              <th>Created By / Mapped On</th> 
-                              <th>Updated By / At</th>
+                              <th>Created By</th>
+                              <th>Approved By</th> 
+                              <th>Updated By</th>
                               {/* Removed Mapped On, Updated At, Approved At */}
                               <th>Actions</th>
                             </tr>
@@ -3087,12 +2689,6 @@ const ProductManagement = () => {
                                     </span>
                                   </td>
                                   <td>{mapping.vendor_email || "-"}</td>
-                                  <td>
-                                    {/* Changes by Agnij May 3, 2025 [Fix category display to use category_info] */}
-                                    <span className="badge badge-warning">
-                                      {mapping.category_info || "-"} {/* Use category_info string directly */}
-                                    </span>
-                                  </td>
                                   <td>
                                     {/* Changes by Agnij April 30, 2025 [Added approval controls for mappings] */}
                                     {(userType && userType != 6) && (
@@ -3154,6 +2750,18 @@ const ProductManagement = () => {
                                       {mapping.mapped_at_formatted || "-"}
                                     </div>
                                   </td>
+
+                                  <td>
+                                    <div>
+                                      {mapping.approved_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(mapping.approved_by))?.label || mapping.approved_by 
+                                        : "-"}
+                                    </div>
+                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                                      {mapping.mapped_at_approved || "-"}
+                                    </div>
+                                  </td>
+
                                   <td>
                                     {/* Combined Updated By and Updated At */}
                                     <div>
@@ -3162,12 +2770,7 @@ const ProductManagement = () => {
                                         : "-"}
                                     </div>
                                     <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
-                                      {mapping.updated_at ? 
-                                        new Date(mapping.updated_at).toLocaleDateString("en-GB", {
-                                          day: "numeric",
-                                          month: "short",
-                                          year: "numeric",
-                                        }) : "-"}
+                                      {mapping.updated_at_formatted} 
                                     </div>
                                   </td>
                                   {/* Removed Mapped On, Updated At, Approved At TDs */}
@@ -3252,6 +2855,8 @@ const ProductManagement = () => {
                     )}
                   </div>
                 </div>
+                {/*END: Mappings Tab */}
+
               </div>
             </div>
           </div>

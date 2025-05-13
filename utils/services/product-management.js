@@ -1104,3 +1104,38 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
     }
   });
 };
+
+export const getVariantMappingById = (id = null) => {
+  return new Promise(async (resolve, reject) => {
+    if(!id) reject("Id is required")
+    try {
+      // Add a timestamp to prevent 304 responses
+      let response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-mappings/${id}`,
+        { validateStatus: status => (status >= 200 && status < 300) || status === 304 }
+      );
+      
+      if (response?.data) {
+        resolve(response);
+      } else {
+        // Empty or invalid response
+        resolve({
+          status: 200,
+          data: {
+            status: 1,
+            data: [],
+          }
+        });
+      }
+    } catch (error) {
+      // Return empty data on error instead of rejecting
+      resolve({
+        status: 200,
+        data: {
+          status: 1,
+          data: [],
+        }
+      });
+    }
+  });
+};
