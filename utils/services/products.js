@@ -5,7 +5,7 @@ export const addProducts = (payload) => {
 	console.log(process.env.NEXT_PUBLIC_API_URL)
 	return new Promise(async (resolve, reject) => {
 		try {
-			let response = await axiosFormData.post(
+			let response = await axiosInstance.post(
 				`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/admin-product-add`,
 				payload
 			);
@@ -30,7 +30,7 @@ export const getProducts = (value) => {
 export const handleUpdateProduct = (values, data) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			let response = await axiosFormData.put(
+			let response = await axiosInstance.put(
 				`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/admin-product-edit/${data}`,
 				values
 			);

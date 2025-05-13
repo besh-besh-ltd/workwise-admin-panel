@@ -89,15 +89,6 @@ const ProductReview = () => {
   }, [page]);
   return (
     <>
-      <ToastContainer />
-      <div className="content-header">
-        <div className="container-fluid">
-          <div className="row">
-            <h1 className="m-0 text-dark">Product Preview List</h1>
-          </div>
-        </div>
-      </div>
-
       <section className="content">
         <div className="card card-body product-table mt-3">
           <div className="row justify-content-end">
