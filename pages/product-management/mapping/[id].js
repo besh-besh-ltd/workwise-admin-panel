@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAdminProfile } from "@/utils/services/login";
-import { searchAllVariants, getVariantMappings, mapVariantWithVendor } from '@/utils/services/product-management';
+import { searchAllVariants, getVariantMappings, mapVariantWithVendor, getVariantMappingById } from '@/utils/services/product-management';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 import FullLoading from '@/components/loading/FullLoading';
@@ -15,7 +15,6 @@ const MappingDetail = () => {
   const [variant, setVariant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [vendorData, setVendorData] = useState([]);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [userType, setUserType] = useState(null);
   const [allMappings, setAllMappings] = useState([]);
@@ -46,14 +45,13 @@ const MappingDetail = () => {
 
   useEffect(() => {
     getUserProfile();
-    getVendors();
   }, []);
 
   useEffect(() => {
-    if (id && vendorData.length > 0) {
+    if (id) {
       fetchMappingDetails();
     }
-  }, [id, vendorData]);
+  }, [id]);
 
   const getUserProfile = async () => {
     try {
@@ -62,22 +60,6 @@ const MappingDetail = () => {
     } catch (error) {
       console.log(error);
     }
-  };
-
-  const getVendors = () => {
-    vendorList()
-      .then((rsp) => {
-        let lists = rsp.data.map((s) => ({
-          label: s.organization_name ? s.organization_name : s.name,
-          value: s.id,
-          email: s.email || "Email Not Available",
-          phone: s.mobile || "Phone Not Available",
-        }));
-        setVendorData(lists);
-      })
-      .catch((error) => {
-        console.error("Error fetching vendors:", error);
-      });
   };
 
   const fetchMappingDetails = async () => {
@@ -93,8 +75,7 @@ const MappingDetail = () => {
       const stringId = id.toString();
       
       // Fetch all mappings without any filter to get a larger pool to search through
-      const mappingsResponse = await getVariantMappings(null, "", null, null, null, null, null, null, 1, 100);
-      console.log("Mappings response received");
+      const mappingsResponse = await getVariantMappingById(id);
       
       let mappingsData = [];
       
@@ -114,71 +95,77 @@ const MappingDetail = () => {
       
       // Save all mappings for reference (but we'll remove this debug info later)
       setAllMappings(mappingsData);
+      const mapping = mappingsData[0]
+      setMapping(mapping);
+
+      if (mapping.vendor_details) {
+        setSelectedVendor(mapping.vendor_details ?? null);
+      }
       
       // Try multiple fields and formats for matching to find the exact mapping
-      let foundMapping = null;
+      // let foundMapping = null;
       
-      console.log(`Searching for mapping with ID ${id} in ${mappingsData.length} mappings`);
+      // console.log(`Searching for mapping with ID ${id} in ${mappingsData.length} mappings`);
       
-      // First try to find exact match by any ID field
-      foundMapping = mappingsData.find(m => 
-        (m.mapping_id !== undefined && (m.mapping_id === numericId || m.mapping_id === stringId)) || 
-        (m.id !== undefined && (m.id === numericId || m.id === stringId)) ||
-        (m.variant_mapping_id !== undefined && (m.variant_mapping_id === numericId || m.variant_mapping_id === stringId))
-      );
+      // // First try to find exact match by any ID field
+      // foundMapping = mappingsData.find(m => 
+      //   (m.mapping_id !== undefined && (m.mapping_id === numericId || m.mapping_id === stringId)) || 
+      //   (m.id !== undefined && (m.id === numericId || m.id === stringId)) ||
+      //   (m.variant_mapping_id !== undefined && (m.variant_mapping_id === numericId || m.variant_mapping_id === stringId))
+      // );
       
-      if (foundMapping) {
-        console.log("Found mapping by direct ID match");
-      } else {
-        // If not found by direct ID, look harder
-        for (const m of mappingsData) {
-          // Check all possible ID fields and string representations
-          if (
-            String(m.mapping_id) === stringId || 
-            String(m.id) === stringId ||
-            String(m.variant_mapping_id) === stringId ||
-            (m.variant_id && String(m.variant_id) === stringId) ||
-            (m.vendor_id && String(m.vendor_id) === stringId) 
-          ) {
-            foundMapping = m;
-            console.log("Found mapping by string comparison");
-            break;
-          }
-        }
-      }
+      // if (foundMapping) {
+      //   console.log("Found mapping by direct ID match");
+      // } else {
+      //   // If not found by direct ID, look harder
+      //   for (const m of mappingsData) {
+      //     // Check all possible ID fields and string representations
+      //     if (
+      //       String(m.mapping_id) === stringId || 
+      //       String(m.id) === stringId ||
+      //       String(m.variant_mapping_id) === stringId ||
+      //       (m.variant_id && String(m.variant_id) === stringId) ||
+      //       (m.vendor_id && String(m.vendor_id) === stringId) 
+      //     ) {
+      //       foundMapping = m;
+      //       console.log("Found mapping by string comparison");
+      //       break;
+      //     }
+      //   }
+      // }
       
-      if (foundMapping) {
-        console.log("Found mapping:", foundMapping.id);
-        setMapping(foundMapping);
+      // if (foundMapping) {
+      //   console.log("Found mapping:", foundMapping.id);
+      //   setMapping(foundMapping);
         
-        // Find the current vendor in our vendor data
-        if (foundMapping.vendor_id && vendorData.length > 0) {
-          const currentVendor = vendorData.find(v => v.value === parseInt(foundMapping.vendor_id) || v.value === foundMapping.vendor_id);
-          console.log("Setting selected vendor:", currentVendor?.label || "Not found");
-          setSelectedVendor(currentVendor || null);
-        }
+      //   // Find the current vendor in our vendor data
+      //   if (foundMapping.vendor_id && vendorData.length > 0) {
+      //     const currentVendor = vendorData.find(v => v.value === parseInt(foundMapping.vendor_id) || v.value === foundMapping.vendor_id);
+      //     console.log("Setting selected vendor:", currentVendor?.label || "Not found");
+      //     setSelectedVendor(currentVendor || null);
+      //   }
         
-        // Also get variant details
-        if (foundMapping.variant_id) {
-          // Get variant details
-          console.log("Fetching variant details for variant ID:", foundMapping.variant_id);
-          const variantResponse = await searchAllVariants(foundMapping.variant_id);
+      //   // Also get variant details
+      //   if (foundMapping.variant_id) {
+      //     // Get variant details
+      //     console.log("Fetching variant details for variant ID:", foundMapping.variant_id);
+      //     const variantResponse = await searchAllVariants(foundMapping.variant_id);
           
-          if (variantResponse?.data?.data && Array.isArray(variantResponse.data.data)) {
-            const variantData = variantResponse.data.data.find(v => 
-              v.id === parseInt(foundMapping.variant_id) || v.id === foundMapping.variant_id
-            );
+      //     if (variantResponse?.data?.data && Array.isArray(variantResponse.data.data)) {
+      //       const variantData = variantResponse.data.data.find(v => 
+      //         v.id === parseInt(foundMapping.variant_id) || v.id === foundMapping.variant_id
+      //       );
             
-            if (variantData) {
-              console.log("Found variant:", variantData.id);
-              setVariant(variantData);
-            }
-          }
-        }
+      //       if (variantData) {
+      //         console.log("Found variant:", variantData.id);
+      //         setVariant(variantData);
+      //       }
+      //     }
+      //   }
         
-        setLoading(false);
-        return;
-      }
+      //   setLoading(false);
+      //   return;
+      // }
       
       // If we get here, no mapping was found
       console.log("No mapping found with ID:", id);
@@ -284,9 +271,9 @@ const MappingDetail = () => {
                         <strong>Current Vendor:</strong>
                       </div>
                       <div className="col-md-8">
-                        <strong>{mapping.vendor_name || mapping.vendor_display_name || "Unknown"}</strong>
+                        <strong>{mapping?.vendor_details?.name || "Unknown"}</strong>
                         <br />
-                        <small>{mapping.vendor_email || "No email available"}</small>
+                        <small>{mapping?.vendor_details?.email || "No email available"}</small>
                       </div>
                     </div>
                     <div className="row mb-3">
