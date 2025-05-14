@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { getAdminProfile } from "@/utils/services/login";
-import { searchAllVariants, getVariantMappings, mapVariantWithVendor, getVariantMappingById } from '@/utils/services/product-management';
+import { searchAllVariants, getVariantMappings, mapVariantWithVendor, getVariantMappingById, addVendorApproveVariant } from '@/utils/services/product-management';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 import FullLoading from '@/components/loading/FullLoading';
-import { vendorList } from '@/utils/services/rfq';
+import { vendorApproveList, vendorList } from '@/utils/services/rfq';
 import Select, { components } from 'react-select';
 
 // Changes by Agnij May 31, 2025 [Created mapping view/edit page]
@@ -18,21 +18,23 @@ const MappingDetail = () => {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [userType, setUserType] = useState(null);
   const [allMappings, setAllMappings] = useState([]);
+  const [selectedOptions, setSelectedOptions] = useState([]);
+  const [vendorApprovedList, setVendorApprovedList] = useState([]);
+ const  [initialApprovedList, setInitialApprovedList] = useState([]);
 
-  // Modified Select Component to show email along with vendor Name
-  const CustomSelectOption = (props) => (
-    <components.Option {...props}>
-      <div>
-        <strong>{props?.data?.label}</strong>
-        <br />
-        <p className="row">
-          <small>{props?.data?.email}</small>
-          <small className="ms-3">{props?.data?.phone}</small>
-        </p>
-      </div>
-    </components.Option>
-  );
 
+  const getVendorApproveList = () => {
+    vendorApproveList().then((res) => {
+      let lists = res.data.map((s) => ({
+        label: s.vendor_approve,
+        value: s.id,
+      }));
+      setVendorApprovedList(lists);
+    })
+      .catch((error) => {
+        console.log(error)
+      });
+  };
   // Custom styles for Select Component
   const customStyles = {
     option: (provided, state) => ({
@@ -45,13 +47,15 @@ const MappingDetail = () => {
 
   useEffect(() => {
     getUserProfile();
+    getVendorApproveList();
   }, []);
 
-  useEffect(() => {
-    if (id) {
-      fetchMappingDetails();
-    }
-  }, [id]);
+ useEffect(() => {
+  if (id && vendorApprovedList.length > 0) {
+    fetchMappingDetails();
+  }
+}, [id, vendorApprovedList]); // 🔁 Add vendorApprovedList as a dependency
+
 
   const getUserProfile = async () => {
     try {
@@ -62,144 +66,91 @@ const MappingDetail = () => {
     }
   };
 
-  const fetchMappingDetails = async () => {
-    if (!id) return;
-    
-    setLoading(true);
-    try {
-      console.log("Fetching mapping details for ID:", id);
-      
-      // Changes by Agnij Jun 26 2024 [Fixed mapping ID detection to properly find mappings]
-      // Convert ID to different formats for flexible matching
-      const numericId = parseInt(id);
-      const stringId = id.toString();
-      
-      // Fetch all mappings without any filter to get a larger pool to search through
-      const mappingsResponse = await getVariantMappingById(id);
-      
-      let mappingsData = [];
-      
-      // Handle different potential response formats
-      if (mappingsResponse?.data?.data && Array.isArray(mappingsResponse.data.data)) {
-        mappingsData = mappingsResponse.data.data;
-      } else if (Array.isArray(mappingsResponse?.data)) {
-        mappingsData = mappingsResponse.data;
-      } else if (mappingsResponse?.data) {
-        // Handle nested data
-        if (mappingsResponse.data.data && Array.isArray(mappingsResponse.data.data)) {
-          mappingsData = mappingsResponse.data.data;
-        } else {
-          mappingsData = [mappingsResponse.data];
-        }
-      }
-      
-      // Save all mappings for reference (but we'll remove this debug info later)
-      setAllMappings(mappingsData);
-      const mapping = mappingsData[0]
-      setMapping(mapping);
+ const fetchMappingDetails = async () => {
+  if (!id) return;
 
-      if (mapping.vendor_details) {
-        setSelectedVendor(mapping.vendor_details ?? null);
+  setLoading(true);
+  try {
+    console.log("Fetching mapping details for ID:", id);
+
+    const mappingsResponse = await getVariantMappingById(id);
+
+    let mappingsData = [];
+
+    // Handle different potential response formats
+    if (mappingsResponse?.data?.data && Array.isArray(mappingsResponse.data.data)) {
+      mappingsData = mappingsResponse.data.data;
+    } else if (Array.isArray(mappingsResponse?.data)) {
+      mappingsData = mappingsResponse.data;
+    } else if (mappingsResponse?.data) {
+      if (mappingsResponse.data.data && Array.isArray(mappingsResponse.data.data)) {
+        mappingsData = mappingsResponse.data.data;
+      } else {
+        mappingsData = [mappingsResponse.data];
       }
-      
-      // Try multiple fields and formats for matching to find the exact mapping
-      // let foundMapping = null;
-      
-      // console.log(`Searching for mapping with ID ${id} in ${mappingsData.length} mappings`);
-      
-      // // First try to find exact match by any ID field
-      // foundMapping = mappingsData.find(m => 
-      //   (m.mapping_id !== undefined && (m.mapping_id === numericId || m.mapping_id === stringId)) || 
-      //   (m.id !== undefined && (m.id === numericId || m.id === stringId)) ||
-      //   (m.variant_mapping_id !== undefined && (m.variant_mapping_id === numericId || m.variant_mapping_id === stringId))
-      // );
-      
-      // if (foundMapping) {
-      //   console.log("Found mapping by direct ID match");
-      // } else {
-      //   // If not found by direct ID, look harder
-      //   for (const m of mappingsData) {
-      //     // Check all possible ID fields and string representations
-      //     if (
-      //       String(m.mapping_id) === stringId || 
-      //       String(m.id) === stringId ||
-      //       String(m.variant_mapping_id) === stringId ||
-      //       (m.variant_id && String(m.variant_id) === stringId) ||
-      //       (m.vendor_id && String(m.vendor_id) === stringId) 
-      //     ) {
-      //       foundMapping = m;
-      //       console.log("Found mapping by string comparison");
-      //       break;
-      //     }
-      //   }
-      // }
-      
-      // if (foundMapping) {
-      //   console.log("Found mapping:", foundMapping.id);
-      //   setMapping(foundMapping);
-        
-      //   // Find the current vendor in our vendor data
-      //   if (foundMapping.vendor_id && vendorData.length > 0) {
-      //     const currentVendor = vendorData.find(v => v.value === parseInt(foundMapping.vendor_id) || v.value === foundMapping.vendor_id);
-      //     console.log("Setting selected vendor:", currentVendor?.label || "Not found");
-      //     setSelectedVendor(currentVendor || null);
-      //   }
-        
-      //   // Also get variant details
-      //   if (foundMapping.variant_id) {
-      //     // Get variant details
-      //     console.log("Fetching variant details for variant ID:", foundMapping.variant_id);
-      //     const variantResponse = await searchAllVariants(foundMapping.variant_id);
-          
-      //     if (variantResponse?.data?.data && Array.isArray(variantResponse.data.data)) {
-      //       const variantData = variantResponse.data.data.find(v => 
-      //         v.id === parseInt(foundMapping.variant_id) || v.id === foundMapping.variant_id
-      //       );
-            
-      //       if (variantData) {
-      //         console.log("Found variant:", variantData.id);
-      //         setVariant(variantData);
-      //       }
-      //     }
-      //   }
-        
-      //   setLoading(false);
-      //   return;
-      // }
-      
-      // If we get here, no mapping was found
+    }
+
+    const mapping = mappingsData[0]; // ✅ Declare `mapping` before using it
+
+    if (!mapping) {
       console.log("No mapping found with ID:", id);
       setLoading(false);
-      
-    } catch (error) {
-      console.error("Error fetching mapping details:", error);
-      toast.error("Failed to load mapping details");
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateMapping = async () => {
-    if (!selectedVendor) {
-      toast.error("Please select a vendor");
       return;
     }
 
+    // Now it's safe to use `mapping`
+    setMapping(mapping);
+
+    const approvedIds = mapping.approved_ids;
+   const approverOptions = vendorApprovedList
+     .filter((approver) => approvedIds.includes(approver.value)) // <-- use `value`, not `id`
+     .map((approver) => ({
+       label: approver.label,
+       value: approver.value,
+     }));
+
+    setInitialApprovedList(approverOptions);
+
+    if (mapping.vendor_details) {
+      setSelectedVendor(mapping.vendor_details ?? null);
+    }
+
+    setAllMappings(mappingsData);
+    console.log("Mapping details fetched successfully:", mapping);
+    console.log("Approved IDs:", initialApprovedList);
+    setLoading(false);
+    
+  } catch (error) {
+    console.error("Error fetching mapping details:", error);
+    toast.error("Failed to load mapping details");
+    setLoading(false);
+  }
+};
+
+  const handleChange = (selected) => {
+    setSelectedOptions(selected); // selected is an array of selected option objects
+  };
+ 
+ const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = {
-        product_variant_id: mapping.variant_id,
-        vendor_id: selectedVendor.value
+      const selectedApprovers = selectedOptions.map(option => option.value);
+      const data = {
+        mapping_id: id,
+        approved_id: selectedApprovers,
       };
+      console.log("Saving data:", data);
 
-      console.log("Updating mapping with payload:", payload);
-      const response = await mapVariantWithVendor(payload);
-      console.log("Update response:", response);
-      
-      toast.success(response.message || "Mapping updated successfully");
-      router.push("/product-management?tab=mappings");
+      const response = await addVendorApproveVariant(data);
+      if (response.status === 200) {
+        toast.success("Mapping updated successfully");
+        router.push("/product-management?tab=mappings");
+      } else {
+        toast.error("Failed to update mapping");
+      }
     } catch (error) {
-      console.error("Error updating mapping:", error);
-      toast.error(error.message || "Failed to update mapping");
+      console.error("Error saving mapping:", error);
+      toast.error("Failed to save mapping");
     } finally {
       setSaving(false);
     }
@@ -218,7 +169,9 @@ const MappingDetail = () => {
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={() => router.push("/product-management?tab=mappings")}
+                  onClick={() =>
+                    router.push("/product-management?tab=mappings")
+                  }
                 >
                   <i className="fas fa-arrow-left mr-1"></i> Back to Mappings
                 </button>
@@ -253,8 +206,12 @@ const MappingDetail = () => {
                         <strong>Variant:</strong>
                       </div>
                       <div className="col-md-8">
-                        <a href={`/product-management/variant/${mapping.variant_id}`} className="text-primary">
-                          {mapping.variant_name || "Variant ID: " + mapping.variant_id}
+                        <a
+                          href={`/product-management/variant/${mapping.variant_id}`}
+                          className="text-primary"
+                        >
+                          {mapping.variant_name ||
+                            "Variant ID: " + mapping.variant_id}
                         </a>
                       </div>
                     </div>
@@ -271,9 +228,14 @@ const MappingDetail = () => {
                         <strong>Current Vendor:</strong>
                       </div>
                       <div className="col-md-8">
-                        <strong>{mapping?.vendor_details?.name || "Unknown"}</strong>
+                        <strong>
+                          {mapping?.vendor_details?.name || "Unknown"}
+                        </strong>
                         <br />
-                        <small>{mapping?.vendor_details?.email || "No email available"}</small>
+                        <small>
+                          {mapping?.vendor_details?.email ||
+                            "No email available"}
+                        </small>
                       </div>
                     </div>
                     <div className="row mb-3">
@@ -281,39 +243,23 @@ const MappingDetail = () => {
                         <strong>Vendor Approved By:</strong>
                       </div>
                       <div className="col-md-8">
-                        {mapping.approved_by ? (
-                          Array.isArray(mapping.approved_by) ? (
-                            mapping.approved_by.map((approver, index) => (
-                              <div key={index}>
-                                {approver}
-                                {index !== mapping.approved_by.length - 1 && <span>,&nbsp;</span>}
-                              </div>
-                            ))
-                          ) : (
-                            mapping.approved_by
-                          )
-                        ) : variant && variant.vendor_approved_by ? (
-                          Array.isArray(variant.vendor_approved_by) ? (
-                            variant.vendor_approved_by.map((approver, index) => (
-                              <div key={index}>
-                                {approver.name || approver}
-                                {index !== variant.vendor_approved_by.length - 1 && <span>,&nbsp;</span>}
-                              </div>
-                            ))
-                          ) : (
-                            variant.vendor_approved_by
-                          )
-                        ) : (
-                          <span className="text-muted">No approval information</span>
-                        )}
-                      </div>
+                         <Select
+                            isMulti
+                            options={vendorApprovedList}
+                            defaultValue={initialApprovedList}
+                            onChange={handleChange}
+                            placeholder="Choose approvers..."
+                          />
+                         </div>
                     </div>
                     <div className="row mb-3">
                       <div className="col-md-4">
                         <strong>Mapped At:</strong>
                       </div>
                       <div className="col-md-8">
-                        {mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : "Unknown"}
+                        {mapping.mapped_at
+                          ? new Date(mapping.mapped_at).toLocaleString()
+                          : "Unknown"}
                       </div>
                     </div>
                     <div className="row mb-3">
@@ -331,98 +277,14 @@ const MappingDetail = () => {
                   </div>
                 </div>
               </div>
-
-              {/* <div className="col-md-4">
-                <div className="card">
-                  <div className="card-header">
-                    <h3 className="card-title">Update Mapping</h3>
-                  </div>
-                  <div className="card-body">
-                    <div className="form-group">
-                      <label>Select New Vendor</label>
-                      <Select
-                        options={vendorData}
-                        placeholder="Select Vendor"
-                        styles={customStyles}
-                        components={{ Option: CustomSelectOption }}
-                        value={selectedVendor}
-                        onChange={setSelectedVendor}
-                      />
-                      <small className="form-text text-muted">
-                        Current vendor: {mapping.vendor_name || mapping.vendor_display_name || "Unknown"}
-                      </small>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-block mt-4"
-                      onClick={handleUpdateMapping}
-                      disabled={saving}
-                    >
-                      {saving ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>
-                          Updating...
-                        </>
-                      ) : (
-                        'Update Mapping'
-                      )}
-                    </button>
-                  </div>
-                </div>
-                
-                {variant && (
-                  <div className="card mt-4">
-                    <div className="card-header">
-                      <h3 className="card-title">Variant Information</h3>
-                    </div>
-                    <div className="card-body">
-                      <div className="row mb-2">
-                        <div className="col-md-5">
-                          <strong>Variant ID:</strong>
-                        </div>
-                        <div className="col-md-7">
-                          {variant.id}
-                        </div>
-                      </div>
-                      <div className="row mb-2">
-                        <div className="col-md-5">
-                          <strong>Name:</strong>
-                        </div>
-                        <div className="col-md-7">
-                          {variant.name || variant.variant_name}
-                        </div>
-                      </div>
-                      <div className="row mb-2">
-                        <div className="col-md-5">
-                          <strong>Categories:</strong>
-                        </div>
-                        <div className="col-md-7">
-                          {variant.category_names && variant.category_names.length > 0 ? (
-                            variant.category_names.map((category, index) => (
-                              <span key={index} className="badge badge-warning mr-1">
-                                {category}
-                              </span>
-                            ))
-                          ) : (
-                            "No categories"
-                          )}
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        <a href={`/product-management/variant/${variant.id}`} className="btn btn-sm btn-info btn-block">
-                          <i className="fas fa-eye mr-1"></i> View Variant Details
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div> */}
             </div>
           ) : (
             <div className="alert alert-danger">
-              <h5><i className="icon fas fa-ban"></i> Mapping Not Found</h5>
+              <h5>
+                <i className="icon fas fa-ban"></i> Mapping Not Found
+              </h5>
               <p>
-                We couldn't find the mapping with ID: {id}.<br/>
+                We couldn't find the mapping with ID: {id}.<br />
                 This could be because:
               </p>
               <ul>
@@ -439,6 +301,22 @@ const MappingDetail = () => {
               </button>
             </div>
           )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <span>
+                <i className="fas fa-spinner fa-spin mr-1"></i> Saving...
+              </span>
+            ) : (
+              <span>
+                <i className="fas fa-save mr-1"></i> Save Changes
+              </span>
+            )}
+          </button>
         </div>
       </section>
     </section>
