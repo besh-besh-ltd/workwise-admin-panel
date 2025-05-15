@@ -1,64 +1,28 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import FormikField from "@/components/shared/FormikField";
-import UploadFiles from "@/components/shared/ImagesUpload";
 import {
 	categoryList,
-	vendorApproveList,
-	vendorList,
 } from "@/utils/services/rfq";
 import { addProducts } from "@/utils/services/products";
 import * as yup from "yup";
-import { ErrorMessage, Field, FieldArray, Form, Formik } from "formik";
+import { Form, Formik } from "formik";
 import { ToastContainer, toast } from "react-toastify";
 import Select from "react-select";
 import { useRouter } from "next/router";
 
 
 const AddProduct = () => {
-	const [isClient, setIsClient] = useState(false);
 	const [catloading, setcatloading] = useState(false);
 	const [categories, setCategories] = useState([]);
 	const [selectedValues, setSelectedValues] = useState([]);
 	const [groupedCategories, setgroupedCategories] = useState(new Map());
 
-	const [vendorApprovedList, setVendorApprovedList] = useState([]);
 	const [mainLoading, setMainLoading] = useState(false);
-	const [vendorData, setVendorData] = useState([]);
 	const router = useRouter();
-
-	const isFeaturesArray = [
-		{ label: "Select is Featured", value: "" },
-		{ label: "Yes", value: "1" },
-		{ label: "No", value: "0" },
-	];
-
-	const editorConfiguration = {
-		toolbar: [
-			"heading",
-			"|",
-			"bold",
-			"italic",
-			"link",
-			"bulletedList",
-			"numberedList",
-			"|",
-			"outdent",
-			"indent",
-			"|",
-			"imageUpload",
-			"blockQuote",
-			"insertTable",
-			"mediaEmbed",
-			"undo",
-			"redo",
-		],
-	};
 
 	useEffect(() => {
 		getCategories();
-		getVendorApproveList();
-		getVendor();
 	}, []);
 
 	const initialValues = {
@@ -128,34 +92,6 @@ const AddProduct = () => {
 		}
 	};
 
-	const getVendor = () => {
-		vendorList()
-			.then((rsp) => {
-				let lists = rsp.data.map((s) => ({
-					label: s.name,
-					value: s.id,
-				}));
-				lists.unshift({ label: "Select Vendor list", value: "" });
-				lists.push({ label: "Other", value: "o" });
-				setVendorData(lists);
-			})
-			.catch((error) => {
-				setcatloading(false);
-			});
-	};
-
-	const getVendorApproveList = () => {
-		vendorApproveList().then((res) => {
-			let lists = res.data.map((s) => ({
-				label: s.vendor_approve,
-				value: s.id,
-			}));
-			// lists.unshift({ label: "Select Vendor list", value: "" });
-			// lists.push({ label: "Other", value: "o" });
-			setVendorApprovedList(lists);
-		});
-	};
-
 	const submitHandler = (values) => {
 		let payload = {
 			...values,
@@ -219,9 +155,9 @@ const AddProduct = () => {
 													approved_id: yup.array(),
 													// .required("Approved Vendor is required"),
 													// vendor: yup.string().required("Vendor is required"),
-													is_featured: yup
-														.string()
-														.required("Vendor is required"),
+													// is_featured: yup
+													// 	.string()
+													// 	.required("Vendor is required"),
 													// featured: yup
 													//   .string()
 													//   .required("Featured is required"),
@@ -390,7 +326,9 @@ const AddProduct = () => {
 																</div>
 															)} */}
 
-															<div className="prod-spec-sec p-0">
+															{/* REMOVED AFTER PRODUCT -> VARIANT MAPPING */}
+
+															{/* <div className="prod-spec-sec p-0">
 																<div className="col-md-12">
 																	<div className="specification ">
 																		<FieldArray name="variations">
@@ -468,17 +406,6 @@ const AddProduct = () => {
 																		</FieldArray>
 																	</div>
 																	<div className="d-flex gap-4 mt-2">
-																		{/* <div className="form-group">
-																			<FormikField
-																				label="Vendor"
-																				type="select"
-																				selectOptions={vendorData}
-																				isRequired={true}
-																				name="vendor"
-																				touched={touched}
-																				errors={errors}
-																			/>
-																		</div> */}
 																		<div className="form-group">
 																			<FormikField
 																				label="Is Featured"
@@ -492,7 +419,7 @@ const AddProduct = () => {
 																		</div>
 																	</div>
 																</div>
-															</div>
+															</div> */}
 														</div>
 
 														<button

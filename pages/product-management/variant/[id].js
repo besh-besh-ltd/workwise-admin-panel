@@ -202,7 +202,7 @@ const VariantView = () => {
             <FullLoading />
           ) : variant ? (
             <div className="row">
-              <div className="col-md-8">
+              <div className="col-md-16">
                 <div className="card">
                   <div className="card-header">
                     <h3 className="card-title">Basic Information</h3>
@@ -254,32 +254,48 @@ const VariantView = () => {
                     </div>
                     <div className="row mb-3">
                       <div className="col-md-4">
-                        <strong>Created At:</strong>
+                        <strong>Vendors:</strong>
                       </div>
                       <div className="col-md-8">
-                        {variant.created_at ? new Date(variant.created_at).toLocaleString() : "N/A"}
+                        <span><strong>Approved:</strong> {variant?.vendor_count?.approved ?? 0}, <strong>Disapproved:</strong> {variant?.vendor_count?.disapproved ?? 0}</span>
                       </div>
                     </div>
                     <div className="row mb-3">
                       <div className="col-md-4">
-                        <strong>Updated At:</strong>
+                        <strong>Created At / By:</strong>
                       </div>
                       <div className="col-md-8">
-                        {variant.updated_at ? new Date(variant.updated_at).toLocaleString() : "N/A"}
+                        {variant.created_at ? new Date(variant.created_at).toLocaleString() : "N/A"} / <strong>{variant.created_by}</strong>
+                      </div>
+                    </div>
+                    <div className="row mb-3">
+                      <div className="col-md-4">
+                        <strong>Updated At / By:</strong>
+                      </div>
+                      <div className="col-md-8">
+                        {variant.updated_at ? new Date(variant.updated_at).toLocaleString() : "N/A"} / <strong>{variant.updated_by}</strong>
+                      </div>
+                    </div>
+                    <div className="row mb-3">
+                      <div className="col-md-4">
+                        <strong>Approved At / By:</strong>
+                      </div>
+                      <div className="col-md-8">
+                        {variant.approved_at ? new Date(variant.approved_at).toLocaleString() : "N/A"} / <strong>{variant.approved_by ?? "N/A"}</strong>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="col-md-4">
+              {/* REMOVED AFTER PRODUCT -> VARAINT PATCH 2 */}
+              {/* <div className="col-md-4">
                 <div className="card">
                   <div className="card-header">
                     <h3 className="card-title">Map New Vendor</h3>
                   </div>
                   <div className="card-body">
 
-                    {/* Map New Vendor Section */}
                     <div>
                       <h5>Select a Vendor</h5>
                       <div className="form-group">
@@ -303,7 +319,7 @@ const VariantView = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
           ) : (
             <div className="alert alert-danger">
