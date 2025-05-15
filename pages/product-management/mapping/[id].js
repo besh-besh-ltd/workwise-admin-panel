@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getAdminProfile } from "@/utils/services/login";
 import { searchAllVariants, getVariantMappings, mapVariantWithVendor, getVariantMappingById, addVendorApproveVariant } from '@/utils/services/product-management';
 import { useRouter } from 'next/router';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import FullLoading from '@/components/loading/FullLoading';
 import { vendorApproveList, vendorList } from '@/utils/services/rfq';
 import Select, { components } from 'react-select';
@@ -139,17 +139,16 @@ const MappingDetail = () => {
         mapping_id: id,
         approved_id: selectedApprovers,
       };
-      console.log("Saving data:", data);
 
       const response = await addVendorApproveVariant(data);
-      if (response.status === 200) {
-        toast.success("Mapping updated successfully");
-        router.push("/product-management?tab=mappings");
-      } else {
-        toast.error("Failed to update mapping");
-      }
+      
+     if (response.status === 1) {
+      
+       toast.success("Mapping updated successfully");
+     } else {
+       toast.error("Failed to update mapping");
+     }
     } catch (error) {
-      console.error("Error saving mapping:", error);
       toast.error("Failed to save mapping");
     } finally {
       setSaving(false);
@@ -157,7 +156,9 @@ const MappingDetail = () => {
   };
 
   return (
+    
     <section className="content">
+      <ToastContainer />
       <div className="content-header">
         <div className="container-fluid">
           <div className="row mb-2">
