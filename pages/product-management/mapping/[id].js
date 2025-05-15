@@ -156,7 +156,6 @@ const MappingDetail = () => {
   };
 
   return (
-    
     <section className="content">
       <ToastContainer />
       <div className="content-header">
@@ -189,91 +188,199 @@ const MappingDetail = () => {
           ) : mapping ? (
             <div className="row">
               <div className="col-md-16">
-                <div className="card">
-                  <div className="card-header">
-                    <h3 className="card-title">Mapping Information</h3>
+                <div className="card-body">
+                  <div className="row mb-3">
+                    <div className="col-md-4">
+                      <strong>Mapping ID:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      {mapping.mapping_id || mapping.id}
+                    </div>
+
+                    <div className="col-md-4">
+                      <strong>Created By / At:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      {mapping?.mapping_created_by_name || "N/A"} /{" "}
+                      {mapping?.mapping_created_at
+                        ? new Date(
+                            mapping.mapping_created_at
+                          ).toLocaleDateString()
+                        : "N/A"}
+                    </div>
+
+                    <div className="col-md-4">
+                      <strong>Updated By / At:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      {mapping?.mapping_updated_by_name || "N/A"} /{" "}
+                      {mapping?.mapping_updated_at
+                        ? new Date(
+                            mapping.mapping_updated_at
+                          ).toLocaleDateString()
+                        : "N/A"}
+                    </div>
+
+                    <div className="col-md-4">
+                      <strong>Approved By / At:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      {mapping?.mapping_approved_by_name || "N/A"} /{" "}
+                      {mapping?.mapping_approved_at
+                        ? new Date(
+                            mapping.mapping_approved_at
+                          ).toLocaleDateString()
+                        : "N/A"}
+                    </div>
                   </div>
-                  <div className="card-body">
-                    <div className="row mb-3">
-                      <div className="col-md-4">
-                        <strong>Mapping ID:</strong>
-                      </div>
-                      <div className="col-md-8">
-                        {mapping.mapping_id || mapping.id}
-                      </div>
+
+                  <div className="row mb-3">
+                    <div className="col-md-4">
+                      <strong>Variant:</strong>
                     </div>
-                    <div className="row mb-3">
-                      <div className="col-md-4">
-                        <strong>Variant:</strong>
-                      </div>
-                      <div className="col-md-8">
-                        <a
-                          href={`/product-management/variant/${mapping.variant_id}`}
-                          className="text-primary"
-                        >
-                          {mapping.variant_name ||
-                            "Variant ID: " + mapping.variant_id}
-                        </a>
-                      </div>
+                    <div className="col-md-8">
+                      <a
+                        href={`/product-management/variant/${mapping.variant_id}`}
+                        className="text-primary"
+                      >
+                        {mapping.variant_name ||
+                          "Variant ID: " + mapping.variant_id}
+                      </a>
                     </div>
-                    <div className="row mb-3">
-                      <div className="col-md-4">
-                        <strong>Product:</strong>
-                      </div>
-                      <div className="col-md-8">
-                        {mapping.product_name || "Unknown Product"}
-                      </div>
+
+                    <div className="col-md-4">
+                      <strong>Created By / At:</strong>
                     </div>
-                    <div className="row mb-3">
-                      <div className="col-md-4">
-                        <strong>Current Vendor:</strong>
-                      </div>
-                      <div className="col-md-8">
-                        <strong>
-                          {mapping?.vendor_details?.name || "Unknown"}
-                        </strong>
-                        <br />
-                        <small>
-                          {mapping?.vendor_details?.email ||
-                            "No email available"}
-                        </small>
-                      </div>
+                    <div className="col-md-8">
+                      {mapping?.variant_created_by_name || "Unknown"} /{" "}
+                      {mapping?.variant_created_at
+                        ? new Date(
+                            mapping.variant_created_at
+                          ).toLocaleDateString()
+                        : "Unknown"}
                     </div>
-                    <div className="row mb-3">
-                      <div className="col-md-4">
-                        <strong>Vendor Approved By:</strong>
-                      </div>
-                      <div className="col-md-8">
-                         <Select
-                            isMulti
-                            options={vendorApprovedList}
-                            defaultValue={initialApprovedList}
-                            onChange={handleChange}
-                            placeholder="Choose approvers..."
-                          />
-                         </div>
+
+                    <div className="col-md-4">
+                      <strong>Updated By / At:</strong>
                     </div>
-                    <div className="row mb-3">
-                      <div className="col-md-4">
-                        <strong>Mapped At:</strong>
-                      </div>
-                      <div className="col-md-8">
-                        {mapping.mapped_at
-                          ? new Date(mapping.mapped_at).toLocaleString()
-                          : "Unknown"}
-                      </div>
+                    <div className="col-md-8">
+                      {mapping?.variant_updated_by_name || "N/A"} /{" "}
+                      {mapping?.variant_updated_at
+                        ? new Date(
+                            mapping.variant_updated_at
+                          ).toLocaleDateString()
+                        : "N/A"}
                     </div>
-                    <div className="row mb-3">
-                      <div className="col-md-4">
-                        <strong>Status:</strong>
-                      </div>
-                      <div className="col-md-8">
-                        {mapping.status ? (
-                          <span className="badge badge-success">Active</span>
-                        ) : (
-                          <span className="badge badge-danger">Inactive</span>
-                        )}
-                      </div>
+
+                    <div className="col-md-4">
+                      <strong>Approved By / At:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      {mapping?.variant_approved_by_name || "N/A"} /{" "}
+                      {mapping?.variant_approved_at
+                        ? new Date(
+                            mapping.variant_approved_at
+                          ).toLocaleDateString()
+                        : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="row mb-3">
+                    <div className="col-md-4">
+                      <strong>Product:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      {mapping.product_name || "Unknown Product"}
+                    </div>
+
+                    <div className="col-md-4">
+                      <strong>Created By / At:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      {mapping.product_created_by_name || "N/A"} /{" "}
+                      {mapping.product_created_at
+                        ? new Date(
+                            mapping.product_created_at
+                          ).toLocaleDateString()
+                        : "N/A"}
+                    </div>
+
+                    <div className="col-md-4">
+                      <strong>Updated By / At:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      {mapping.product_updated_by_name || "N/A"} /{" "}
+                      {mapping.product_updated_at
+                        ? new Date(
+                            mapping.product_updated_at
+                          ).toLocaleDateString()
+                        : "N/A"}
+                    </div>
+
+                    <div className="col-md-4">
+                      <strong>Approved By / At:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      {mapping.product_approved_by_name || "N/A"} /{" "}
+                      {mapping.product_approved_at
+                        ? new Date(
+                            mapping.product_approved_at
+                          ).toLocaleDateString()
+                        : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="row mb-3">
+                    <div className="col-md-4">
+                      <strong>Current Vendor:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      <strong>
+                        {mapping?.vendor_details?.name || "Unknown"}
+                      </strong>
+                      <br />
+                      <small>
+                        {mapping?.vendor_details?.email || "No email available"}
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className="row mb-3">
+                    <div className="col-md-4">
+                      <strong>Vendor Approved By:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      <Select
+                        isMulti
+                        options={vendorApprovedList}
+                        defaultValue={initialApprovedList}
+                        onChange={handleChange}
+                        placeholder="Choose approvers..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="row mb-3">
+                    <div className="col-md-4">
+                      <strong>Mapped At:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      {mapping.mapped_at
+                        ? new Date(mapping.mapped_at).toLocaleDateString()
+                        : "Unknown"}
+                    </div>
+                  </div>
+
+                  <div className="row mb-3">
+                    <div className="col-md-4">
+                      <strong>Status:</strong>
+                    </div>
+                    <div className="col-md-8">
+                      {mapping.status ? (
+                        <span className="badge badge-success">Active</span>
+                      ) : (
+                        <span className="badge badge-danger">Inactive</span>
+                      )}
                     </div>
                   </div>
                 </div>
