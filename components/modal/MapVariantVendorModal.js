@@ -10,6 +10,7 @@ import Select, { components } from 'react-select';
 const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [vendors, setVendors] = useState([]);
+  const [vendorSearchTerm, setVendorSearchTerm] = useState("")
   const [vendorOptions, setVendorOptions] = useState([]);
   const [approvedByOptions, setApprovedByOptions] = useState([]);
   const [modalElement, setModalElement] = useState(null);
@@ -26,6 +27,18 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (vendorSearchTerm.length < 3) return;
+
+    const handler = setTimeout(() => {
+      fetchVendors(vendorSearchTerm);
+    }, 1000);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [vendorSearchTerm]);
   
   // Create portal element for modal
   useEffect(() => {
@@ -52,7 +65,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   useEffect(() => {
     if (isVisible) {
       setError(null);
-      fetchVendors();
       fetchApprovedBy();
       resetForm();
       
@@ -72,11 +84,11 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
   const fetchVendors = async () => {
     try {
       setLoading(true);
-      const vendorsResponse = await vendorList();
+      const vendorsResponse = await vendorList(vendorSearchTerm);
       
       if (vendorsResponse?.data) {
         setVendors(vendorsResponse.data);
-        
+        setVendorSearchTerm("")
         // Format vendors for Select component
         const options = vendorsResponse.data.map((vendor) => ({
           label: vendor.organization_name ?? '-',
@@ -459,6 +471,10 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     );
   };
 
+  const handleDecouncedVendorSearch = (search) => {
+    console.log("Searched for: ", search)
+  }
+
   // If modal isn't visible or the portal element isn't ready, don't render anything
   if (!isVisible || !modalElement) return null;
 
@@ -477,7 +493,8 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
       justifyContent: 'center' 
     }}>
       <div className="modal-dialog modal-lg" style={{
-        maxHeight: 900,
+        maxHeight: 650,
+        width: 800,
         overflow: 'auto'
       }} onClick={e => e.stopPropagation()}>
         <div className="modal-content">
@@ -544,12 +561,15 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
                   name="vendor"
                   options={vendorOptions}
                   value={formData.vendor}
+                  inputValue={vendorSearchTerm}
                   onChange={(selected) => handleInputChange(selected, { name: 'vendor' })}
                   placeholder="Select a vendor"
-                  isSearchable
+                  // isSearchable
+                  onInputChange={(newValue) => setVendorSearchTerm(newValue)}
                   components={{ Option: CustomSelectOption }}
                   className="basic-select"
                   classNamePrefix="select"
+                  noOptionsMessage={() => "Please enter atleast 3 letters to search"}
                 />
               </div>
               
