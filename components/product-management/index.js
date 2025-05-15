@@ -343,7 +343,6 @@ const ProductManagement = () => {
         const vendorsResponse = await vendorList(vendorSearchTerm);
         
         if (vendorsResponse?.data) {
-          setVendorSearchTerm("")
           // Format vendors for Select component
           const options = vendorsResponse.data.map((vendor) => ({
             label: vendor.organization_name ?? '-',
@@ -351,7 +350,6 @@ const ProductManagement = () => {
             email: vendor.email || "Email Not Available",
             phone: vendor.mobile || "Phone Not Available"
           }));
-          console.log(options)
           setVendorOptions(options);
         } else {
           console.error("Invalid vendor response:", vendorsResponse);

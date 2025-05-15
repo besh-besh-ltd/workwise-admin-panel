@@ -88,7 +88,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
       
       if (vendorsResponse?.data) {
         setVendors(vendorsResponse.data);
-        setVendorSearchTerm("")
         // Format vendors for Select component
         const options = vendorsResponse.data.map((vendor) => ({
           label: vendor.organization_name ?? '-',
