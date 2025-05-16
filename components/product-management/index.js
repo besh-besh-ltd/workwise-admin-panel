@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants, getVariantMappings, acceptVariant } from "@/utils/services/product-management";
+import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants, getVariantMappings, acceptVariant, getParentCategories } from "@/utils/services/product-management";
 import axiosFormData from "@/utils/axios/form-data";
 import FullLoading from "../loading/FullLoading";
 import { ToastContainer, toast } from "react-toastify";
@@ -35,16 +35,16 @@ const CustomSelectOption = (props) => (
 const ProductManagement = () => {
   const router = useRouter();
   const id = Date.now().toString();
+
+  const limit = 10;
+
   const [enableBulkUpload, setEnableBulkUpload] = useState(false);
   const [enableBulkProdUpload, setEnableBulkProdUpload] = useState(false);
-  const [file, setFile] = useState(null);
-  const [prodFile, setProdFile] = useState(null);
   const [loading, setloading] = useState(false);
   const [products, setproducts] = useState([]);
+  const [vendorOptions, setVendorOptions] = useState([]);
   const [productData, setProductData] = useState([]); // Added state for product data
   const [updateProduct, setUpdateProduct] = useState("");
-  const [uploadProgress, setuploadProgress] = useState(0);
-  const [limit, setlimit] = useState(10);
   const [page, setPage] = useState(parseInt(router.query.page) || 1);
   const [totalPages, settotalPages] = useState(null);
   const [selectedProductId, setselectedProductsId] = useState('');
@@ -57,17 +57,19 @@ const ProductManagement = () => {
   const [variantsLimit, setVariantsLimit] = useState(10);
   const [variantsTotalPages, setVariantsTotalPages] = useState(null);
   const [variants, setVariants] = useState([]);
+  const [variantsPaginationMeta, setVariantsPaginationMeta] = useState(null);
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [mappingsPage, setMappingsPage] = useState(parseInt(router.query.mappingsPage) || 1);
   const [mappingsLimit, setMappingsLimit] = useState(10);
   const [mappingsTotalPages, setMappingsTotalPages] = useState(null);
   const [mappings, setMappings] = useState([]);
+  const [mappingsPaginationMeta, setMappingsPaginationMeta] = useState(null);
   const [loadingMappings, setLoadingMappings] = useState(false);
   
   // Filter states for current active filters
+  const [vendorSearchTerm, setVendorSearchTerm] = useState("")
   const [searchString, setSearchString] = useState(router.query.search || '');
   const [selectedApproveVendor, setSelectedApproveVendor] = useState(router.query.approveVendor || "");
-  const [vendorData, setVendorData] = useState([]);
   const [selectedVendor, setSelectedVendor] = useState(router.query.vendor || "");
   const [selectedFeatured, setSelectedFeatured] = useState(router.query.featured || "");
   const [userType, setUserType] = useState(null);
@@ -110,9 +112,9 @@ const ProductManagement = () => {
     }));
 
     // Update URL parameters immediately
-    updateUrlParams({
-      [type]: value || ""
-    });
+    // updateUrlParams({
+    //   [type]: value || ""
+    // });
   };
 
   const handleSearch = (e) => {
@@ -124,20 +126,6 @@ const ProductManagement = () => {
 
   const handleSearchClick = () => {
     setPage(1);
-    setPageSearchInput("");
-    
-    // Update all states with filter values
-    setSearchString(filterValues.searchString);
-    setSelectedApproveVendor(filterValues.approveVendor);
-    setSelectedVendor(filterValues.vendor);
-    setSelectedFeatured(filterValues.featured);
-    setSelectedCategory(filterValues.category);
-    setSelectedAddedBy(filterValues.addedBy);
-    setDateFrom(filterValues.dateFrom);
-    setDateTo(filterValues.dateTo);
-    setSelectedApprovalStatus(filterValues.approvalStatus);
-    // Changes by Agnij June 12, 2024 [Make sure selectedVariant is updated]
-    setSelectedVariant(filterValues.variant);
 
     // Update URL with all filter values
     updateUrlParams({
@@ -183,38 +171,16 @@ const ProductManagement = () => {
     });
 
     // Reset states
-    setSearchString("");             
-    setSelectedApproveVendor("");    
-    setSelectedVendor("");           
-    setSelectedFeatured("");         
-    setSelectedCategory("");         
-    setSelectedAddedBy("");          
-    setDateFrom("");                 
-    setDateTo("");                   
-    setSelectedApprovalStatus("");
-    setSelectedVariant(""); // Changes by Agnij May 05, 2025 [Reset variant filter state]
     setPage(1);                      
     setVariantsPage(1);
     setMappingsPage(1);
-    setPageSearchInput("");
-    setVariantsPageSearchInput("");
-    setMappingsPageSearchInput("");
     
     // Reset URL parameters
-    const currentTabParam = activeTab || 'products';
-    router.push({
-      pathname: router.pathname,
-      query: { tab: currentTabParam }
-    }, undefined, { shallow: true });
-    
-    // Call appropriate fetch based on active tab
-    if (activeTab === 'products') {
-      getProducts();
-    } else if (activeTab === 'variants') {
-      getAllVariants();
-    } else if (activeTab === 'mappings') {
-      getAllMappings();
-    }
+    // const currentTabParam = activeTab || 'products';
+    // router.push({
+    //   pathname: router.pathname,
+    //   query: { tab: currentTabParam }
+    // }, undefined, { shallow: true });
   };
 
   const [inputValue, setInputValue] = useState("");
@@ -223,7 +189,6 @@ const ProductManagement = () => {
   const [productErrors, setProductErrors] = useState(null);
 
   const [mapMultipleProductsWithVendor, setMapMultipleProductsWithVendor] = useState([])
-  const [isAddingDataProcessing, setIsAddingDataProcessing] = useState(false);
 
   const [productLoading, setProductLoading] = useState(false);
   const [vendorApprovedList, setVendorApprovedList] = useState([]);
@@ -246,10 +211,8 @@ const ProductManagement = () => {
     control: (base) => ({
       ...base,
       height: "30px",
-      maxWidth: "300px",
       borderRadius: "6px",
       paddingLeft: "10px",
-      marginRight: "15px",
     }),
   };
 
@@ -375,21 +338,30 @@ const ProductManagement = () => {
     }
   }
 
-  const getVendor = () => {
-    vendorList()
-      .then((rsp) => {
-        let lists = rsp.data.map((s) => ({
-          label: s.organization_name ? s.organization_name : s.name,  // Fallback to name if organization_name is null
-          value: s.id,
-          email: s.email || "Email Not Available",  // Handle null email
-          phone: s.mobile || "Phone Not Available", // Handle null phone
-        }));
-        setVendorData(lists);
-      })
-      .catch((error) => {
-        setloading(false);
-      });
-  }
+  const fetchVendors = async () => {
+      try {
+        const vendorsResponse = await vendorList(vendorSearchTerm);
+        
+        if (vendorsResponse?.data) {
+          // Format vendors for Select component
+          const options = vendorsResponse.data.map((vendor) => ({
+            label: vendor.organization_name ?? '-',
+            value: vendor.id,
+            email: vendor.email || "Email Not Available",
+            phone: vendor.mobile || "Phone Not Available"
+          }));
+          setVendorOptions(options);
+        } else {
+          console.error("Invalid vendor response:", vendorsResponse);
+          setError("Failed to load vendors: Invalid response");
+          toast.error('Failed to load vendors: Invalid response');
+        }
+      } catch (error) {
+        console.error('Error fetching vendors:', error);
+        setError(`Failed to load vendors: ${error.message || "Unknown error"}`);
+        toast.error('Failed to load vendors');
+      }
+    };
 
   const getReasonList = () => {
     rejectListProduct()
@@ -533,29 +505,40 @@ const ProductManagement = () => {
   const getProducts = () => {
     // Set loading but keep current products to prevent flickering
     setloading(true);
+
+    const params = {
+      searchString: filterValues.searchString,
+      selectedApproveVendor: filterValues.approveVendor,
+      selectedVendor: filterValues.vendor,
+      selectedFeatured: filterValues.featured,
+      selectedAddedBy: filterValues.addedBy,
+      selectedCategory: filterValues.category,
+      dateFrom: filterValues.dateFrom,
+      dateTo: filterValues.dateTo,
+      selectedApprovalStatus: filterValues.approvalStatus
+    }
     
     // Pass all filters to the API
     getAllProducts(
       limit,                    // Number of products to fetch per page
       page,                     // Use current page instead of hardcoded 1
-      searchString,             // Use actual search string
-      selectedApproveVendor,    // Use selected vendor approval filter
-      selectedVendor,           // Use selected vendor ID filter
-      selectedFeatured,         // Use selected featured filter
-      selectedAddedBy,          // Use selected added by filter
-      selectedCategory,         // Use selected category filter
-      dateFrom,                 // Use selected from date filter
-      dateTo,                   // Use selected to date filter
-      selectedApprovalStatus    // Use selected approval status filter
+      params.searchString,             // Use actual search string
+      params.selectedApproveVendor,    // Use selected vendor approval filter
+      params.selectedVendor,           // Use selected vendor ID filter
+      params.selectedFeatured,         // Use selected featured filter
+      params.selectedAddedBy,          // Use selected added by filter
+      params.selectedCategory,         // Use selected category filter
+      params.dateFrom,                 // Use selected from date filter
+      params.dateTo,                   // Use selected to date filter
+      params.selectedApprovalStatus    // Use selected approval status filter
     )
       .then((res) => {
         setloading(false);
-        
         // Handle API response
         const productsData = res.data || [];
         
         // Calculate total pages based on filtered count
-        const calculatedTotalPages = Math.ceil(res.filtered_count / limit);
+        const calculatedTotalPages = Math.max(res.page, (Math.ceil(res.filtered_count / limit)));
         
         // If current page is greater than total pages, reset to page 1
         if (page > calculatedTotalPages) {
@@ -589,10 +572,10 @@ const ProductManagement = () => {
             dateTo || selectedApprovalStatus)
         });
 
-        // Apply the checked property to products
-        const productsWithChecked = productsData.map(item => ({ ...item, isChecked: false }));
-        setproducts(productsWithChecked);
-        setProductData(productsWithChecked); // Set product data for variant mapping
+        console.log("PRODUCT DATA ------- ", productsData)
+
+        setproducts(productsData);
+        setProductData(productsData); // Set product data for variant mapping
       })
       .catch((err) => {
         console.error("Error fetching products:", err);
@@ -884,6 +867,7 @@ const ProductManagement = () => {
               }));
               
               setVariants(formattedVariants); // Set data directly from API response
+              setVariantsPaginationMeta(paginationData)
               
               // Set total pages from backend pagination info
               setVariantsTotalPages(paginationData.pages || 1); // Use pages count from backend
@@ -917,40 +901,83 @@ const ProductManagement = () => {
       setLoadingVariants(false);
     }
   };
+
+  const getVariantsForFilter = () => {
+    if (variantsFilterData.length > 0) {
+      return; 
+    }
+    
+    setLoadingVariants(true);
+    searchAllVariants(
+      null,    // id
+      "",      // searchTerm
+      null,    // startDate
+      null,    // endDate
+      null,    // vendorId
+      null,    // categoryId
+      null,    // addedBy
+      null,    // approvalStatus
+      1,       // page
+      10000    // limit (very large number to fetch all)
+    )
+      .then(response => {
+        
+        if (response && response.data) {
+          const variantsData = response.data;
+          formatVariantsForDropdown(variantsData);
+        } else {
+          console.warn('No data received from searchAllVariants for dropdown.');
+          setVariantsFilterData([]);
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching variants for dropdown:", error);
+        setVariantsFilterData([]);
+      })
+      .finally(() => {
+        setLoadingVariants(false);
+      });
+  };
+
+  const formatVariantsForDropdown = (variantsData) => {
+    if (variantsData && Array.isArray(variantsData)) {
+      const formattedVariants = variantsData.map(variant => ({
+        value: variant.id,
+        label: variant.name || variant.variant_name || `Variant #${variant.id}`
+      }));
+      setVariantsFilterData(formattedVariants);
+    }
+  };
   
-  // Changes by Agnij May 2, 2025 [Fixed mappings data handling]
   const getAllMappings = () => {
     setLoadingMappings(true);
-    
-    // Changes by Agnij May 02, 2025 [Updated to use all filters from active states like getProducts does]
+
     const params = {
       page: mappingsPage,
       limit: mappingsLimit,
-      search: searchString,
-      vendor_id: selectedVendor,
-      category_id: selectedCategory,
-      added_by: selectedAddedBy,
-      date_from: dateFrom,
-      date_to: dateTo,
-      approval_status: selectedApprovalStatus,
-      variant_id: selectedVariant // Changes by Agnij June 12, 2024 [Added variant filter parameter]
+      search: filterValues.searchString,
+      vendor_id: filterValues.vendor,
+      category_id: filterValues.category,
+      added_by: filterValues.addedBy,
+      date_from: filterValues.dateFrom,
+      date_to: filterValues.dateTo,
+      approval_status: filterValues.approvalStatus,
+      variant_id: filterValues.variant
     };
     
     try {
-      // Changes by Agnij May 02, 2025 [Fixed vendor filter to correctly pass vendor_id parameter]
-      // Use the variant mappings API with all filter parameters
       getVariantMappings(
-        null,                      // id
-        params.search || "",       // Search string
-        params.date_from,          // Start date
-        params.date_to,            // End date
-        params.vendor_id,          // Vendor ID - corrected from previous implementation
-        params.category_id,        // Category ID
-        params.added_by,           // Added by
-        params.approval_status,    // Approval status
-        params.page,               // Page number
-        params.limit,              // Page size
-        params.variant_id          // Changes by Agnij June 12, 2024 [Added variant filter parameter]
+        null,
+        params.search || "",
+        params.date_from,
+        params.date_to,
+        params.vendor_id,
+        params.category_id,
+        params.added_by,
+        params.approval_status,
+        params.page,
+        params.limit,
+        params.variant_id
       )
         .then(response => {
           
@@ -997,10 +1024,9 @@ const ProductManagement = () => {
                 vendor_name: vendorName,
                 vendor_email: mapping.vendor_email || 'N/A',
                 mapped_at: mapping.mapped_at || mapping.created_at,
-                mapped_at_formatted: mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleString() : 
-                                      mapping.created_at ? new Date(mapping.created_at).toLocaleString() : '-',
-                updated_at_formatted: mapping.updated_at ? new Date(mapping.updated_at).toLocaleString() : '-',
+                updated_at: mapping.updated_at,
                 approved_by: mapping.approved_by || 'N/A',
+                approved_at: mapping.updated_at,
                 mapped_at_approved: mapping.approved_at ? new Date(mapping.approved_at).toLocaleString() : '-',
                 is_mapped: true,
                 is_approve: mapping.is_approve || 0,
@@ -1011,6 +1037,7 @@ const ProductManagement = () => {
             });
             
             setMappings(formattedMappings);
+            setMappingsPaginationMeta(paginationData);
             
             // Calculate total pages from pagination data or estimated from data length
             let totalPages = 1; // Default to at least 1 page
@@ -1317,31 +1344,28 @@ const ProductManagement = () => {
     }
   };
 
-  // Handle filter changes
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
+      if (vendorSearchTerm.length < 3) return;
+  
+      const handler = setTimeout(() => {
+        fetchVendors(vendorSearchTerm);
+      }, 1000);
+  
+      return () => {
+        clearTimeout(handler);
+      };
+    }, [vendorSearchTerm]);
 
-    // Clear existing products and reset pagination when filters change
-    setproducts([]);
-    setPageSearchInput("");
-    
-    // Fetch new data with updated filters
-    getProducts();
-  }, [
-    searchString,
-    selectedApproveVendor,
-    selectedVendor,
-    selectedFeatured,
-    selectedCategory,
-    selectedAddedBy,
-    dateFrom,
-    dateTo,
-    selectedApprovalStatus,
-    page
-  ]);
+  useEffect(() => {
+    if(activeTab == 'products')
+      getProducts()
+    else if(activeTab == 'variants')
+      getAllVariants();
+    else {
+      getAllMappings();
+      getVariantsForFilter();
+    }
+  }, [activeTab, page, variantsPage, mappingsPage])
 
   // Sync state with URL params
   useEffect(() => {
@@ -1386,48 +1410,23 @@ const ProductManagement = () => {
 
   // Initial data loading
   useEffect(() => {
-    // Fetch initial data
-    getProducts();
     fetchCategories();
     fetchAddedByOptions();
     getUserProfile();
-    getVendor();
     getVendorApproveList();
     getReasonList();
     
-    // Changes by Agnij Aprill 30, 2025 [Handle tab from URL]
     if (router.query.tab) {
       setActiveTab(router.query.tab);
-      
-      // Load data for the active tab
-      if (router.query.tab === 'variants') {
-        getAllVariants();
-      } else if (router.query.tab === 'mappings') {
-        getAllMappings();
-      }
     }
   }, []);
 
-  useEffect(() => {
-    getReasonList();
-    getVendorApproveList();
-  }, []);
-
-  // Track if this is the first render
-  const isFirstRender = React.useRef(true);
-
   const fetchCategories = async () => {
     try {
-      const response = await getCategories(1, 1000); // Get a large number of categories to ensure we get all parent categories
-      
-      // Filter categories with parent_id 0 as requested
-      const parentCategories = response.data.filter(category => {
-        const parentId = category.parent_id;
-        return parentId === 0 || parentId === "0" || parentId === null;
-      });
+      const response = await getParentCategories(); // Get a large number of categories to ensure we get all parent categories
       
       // Create options only from parent categories (parent_id = 0)
-      const categoryOptions = parentCategories.map(cat => ({
+      const categoryOptions = response.data.map(cat => ({
         label: cat.title || cat.name || cat.category_name,
         value: cat.id,
         slug: cat.slug
@@ -1608,109 +1607,18 @@ const ProductManagement = () => {
     setShowAddVariantModal(false);
   };
 
-  // Changes by Agnij May 04, 2025 [Add useEffect to fetch variants on page/filter change]
-  // This hook now handles fetching variants when the page or filters change
   useEffect(() => {
-    // Only fetch if the variants tab is active
-    if (activeTab === 'variants') {
-      // Changes by Agnij May 04, 2025 [Remove debug log]
-      getAllVariants(); 
-    }
-  }, [activeTab, variantsPage, filterValues]); // Dependencies: activeTab, variantsPage, filterValues
-
-  // Changes by Agnij May 04, 2025 [Add useEffect for Products Tab]
-  useEffect(() => {
-    if (activeTab === 'products') {
-      getProducts();
-    }
-    // Dependencies include filters used by getProducts
-  }, [activeTab, page, searchString, selectedApproveVendor, selectedVendor, selectedFeatured, selectedCategory, selectedAddedBy, dateFrom, dateTo, selectedApprovalStatus]);
-  
-  // Changes by Agnij May 04, 2025 [Add useEffect for Mappings Tab]
-  useEffect(() => {
-    if (activeTab === 'mappings') {
-      getAllMappings();
-      // Changes by Agnij May 05, 2025 [Load variants for filter dropdown when mappings tab is active]
-      getVariantsForFilter();
-    }
-  }, [activeTab, mappingsPage, filterValues]);
-
-  // Changes by Agnij May 05, 2025 [Add useEffect to update URL when activeTab changes]
-  useEffect(() => {
-    // Only update URL if activeTab is set (avoid initial load issues)
     if (activeTab) {
-      // Get current query parameters
       const currentQuery = { ...router.query };
-      
-      // Create the new parameters object, ensuring tab is updated
       const newParams = { ...currentQuery, tab: activeTab };
-      
-      // Call updateUrlParams with the combined parameters
       updateUrlParams(newParams);
     }
-  }, [activeTab]); // Dependency: only activeTab
+  }, [activeTab]);
 
   useEffect(() => {
     getReasonList();
     getVendorApproveList();
   }, []);
-
-  // Changes by Agnij May 05, 2025 [Added function to get all variants for the filter dropdown]
-  const getVariantsForFilter = () => {
-    // If we already have variants data, format it for the dropdown
-    if (variantsFilterData.length > 0) { // Check if filter data already exists
-      // Optionally re-format if needed, or just return
-      // formatVariantsForDropdown(variantsFilterData); // Assuming already formatted
-      return; 
-    }
-    
-    // Otherwise fetch variants data
-    setLoadingVariants(true);
-    
-    // Changes by Agnij May 05, 2025 [Using searchAllVariants with a large limit]
-    // Reverting to searchAllVariants but requesting a very high limit
-    searchAllVariants(
-      null,    // id
-      "",      // searchTerm
-      null,    // startDate
-      null,    // endDate
-      null,    // vendorId
-      null,    // categoryId
-      null,    // addedBy
-      null,    // approvalStatus
-      1,       // page
-      10000    // limit (very large number to fetch all)
-    )
-      .then(response => {
-        
-        // The function now returns { data: [], pagination: {} }
-        if (response && response.data) {
-          const variantsData = response.data; // Use the data array directly
-          formatVariantsForDropdown(variantsData);
-        } else {
-          console.warn('No data received from searchAllVariants for dropdown.');
-          setVariantsFilterData([]);
-        }
-      })
-      .catch(error => {
-        console.error("Error fetching variants for dropdown:", error);
-        setVariantsFilterData([]);
-      })
-      .finally(() => {
-        setLoadingVariants(false);
-      });
-  };
-  
-  // Changes by Agnij May 05, 2025 [Helper to format variants for dropdown]
-  const formatVariantsForDropdown = (variantsData) => {
-    if (variantsData && Array.isArray(variantsData)) {
-      const formattedVariants = variantsData.map(variant => ({
-        value: variant.id,
-        label: variant.name || variant.variant_name || `Variant #${variant.id}`
-      }));
-      setVariantsFilterData(formattedVariants);
-    }
-  };
 
   return (
     <>
@@ -1791,7 +1699,7 @@ const ProductManagement = () => {
                     <div className="card card-body">
               <div className="row g-3">
                 {/* Search and Primary Filters */}
-                <div className="col-sm-3 mb-3">
+                <div className="col-sm-3 mb-1">
                   <input
                     type="text"
                     className="form-control"
@@ -1800,19 +1708,19 @@ const ProductManagement = () => {
                     onChange={handleSearch}
                   />
                 </div>
-                <div className="col-sm-3 mb-3">
+                <div className="col-sm-3 mb-1">
                   <Select
                     id={id}
                     options={vendorApprovedList}
                     placeholder="Approved Vendor"
-                    styles={customSelectStyles}
                     isClearable={true}
                     instanceId="approved-vendor-select"
                     value={filterValues.approveVendor ? vendorApprovedList.find(opt => opt.value === filterValues.approveVendor) : null}
                     onChange={(selectedOption) => handleFilterChange('approveVendor', selectedOption)}
                   />
                 </div>
-                <div className="col-sm-3 mb-3">
+                {/* SELECT VENDOR FILTER NOT APPLICABE FOR PRODUCTS */}
+                {/* <div className="col-sm-3 mb-1">
                   <Select
                     id={id}
                     options={vendorData}
@@ -1824,13 +1732,12 @@ const ProductManagement = () => {
                     onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
                     components={{ Option: CustomSelectOption }}
                   />
-                </div>
-                <div className="col-sm-3 mb-3">
+                </div> */}
+                <div className="col-sm-3 mb-1">
                   <Select
                     id={id}
                     options={approvalStatusOptions}
                     placeholder="Filter by Approval Status"
-                    styles={customSelectStyles}
                     isClearable={true}
                     instanceId="approval-status-select"
                     value={filterValues.approvalStatus ? approvalStatusOptions.find(opt => opt.value === filterValues.approvalStatus) : null}
@@ -1839,7 +1746,7 @@ const ProductManagement = () => {
                 </div>
 
                 {/* Secondary Filters */}
-                <div className="col-sm-3 mb-3">
+                <div className="col-sm-3 mb-1">
                   <select
                     className="form-control"
                     value={filterValues.category}
@@ -1853,7 +1760,7 @@ const ProductManagement = () => {
                     ))}
                   </select>
                 </div>
-                <div className="col-sm-3 mb-3">
+                <div className="col-sm-3 mb-1">
                   <select
                     className="form-control"
                     value={filterValues.addedBy}
@@ -1869,7 +1776,7 @@ const ProductManagement = () => {
                 </div>
 
                 {/* Date Filters */}
-                <div className="col-sm-3 mb-3">
+                <div className="col-sm-3 mb-1">
                   <div className="date-input-container">
                     <input
                       type="text"
@@ -1886,7 +1793,7 @@ const ProductManagement = () => {
                     />
                   </div>
                 </div>
-                <div className="col-sm-3 mb-3">
+                <div className="col-sm-3 mb-1">
                   <div className="date-input-container">
                     <input
                       type="text"
@@ -1910,36 +1817,37 @@ const ProductManagement = () => {
                     <button
                       type="button"
                       onClick={handleSearchClick}
-                      className="btn btn-secondary"
+                      className="btn btn-primary"
                     >
                       Search
                     </button>
                     <button
                       type="button"
                       onClick={() => router.push("/product-management/add-product")}
-                      className="btn btn-primary"
+                      className="btn btn-secondary"
                     >
-                      <i className="fa fa-plus"></i> Add Product
+                      Add Product
                     </button>
                     <button
                       type="button"
                       className="btn btn-primary me-2"
+                      onClick={() => setShowAddVariantModal(true)}
+                    >
+                      Add Variant
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary me-2"
                       onClick={() => handleOpenProductMap()}
                       style={{ backgroundColor: '#0046ad', borderColor: '#0046ad' }}
                     >
                       Map Variant with Vendor
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary me-2"
-                      onClick={() => setShowAddVariantModal(true)}
-                    >
-                      Add Variant
-                    </button>
-                    {userType != 6 &&
+                    {/* REMOVED EXPORT FEATURE AS OF NOW */}
+                    {false &&
                       <button
                         type="button"
-                        className="btn btn-primary"
+                        className="btn btn-secondary"
                         onClick={handleExport}
                       >
                         Export
@@ -1958,10 +1866,10 @@ const ProductManagement = () => {
             )}
 
                   {/* Products Table - Move this from outside to inside the products tab */}
-          <div className="card card-body product-table">
-            {loading && <FullLoading />}
+          <div className="card card-body table-responsive">
+            {loading && <FullLoading /> }
             {!loading && (
-              <table className="table table-striped table-hover table-responsive mb-3">
+              <table className="table table-striped table-hover mb-3">
                 <thead>
                   <tr className="text-nowrap">
                     <th scope="col">
@@ -1975,14 +1883,14 @@ const ProductManagement = () => {
                     <th scope="col">Category</th>
                     <th scope="col">Sub Category</th>
                     <th scope="col">Approval Status</th>
-                    <th scope="col">Created At</th>
-                    <th scope="col">Updated At</th>
-                    <th scope="col">Approved At</th>
+                    <th scope="col">Created At / By</th>
+                    <th scope="col">Updated At / By</th>
+                    <th scope="col">Approved At / By</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {products &&
+                  {(products && products.length > 0) ?
                     products.map((item) => {
                       return (
                         <tr key={item.id} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
@@ -2051,28 +1959,30 @@ const ProductManagement = () => {
                                     </OverlayTrigger>}
                                 </div>
                               ))}
-                            {getApprovalInfo(item)}
                           </td>
                           <td style={{ width: "100px" }}>
-                            {new Date(item.created_at).toLocaleDateString("en-GB", {
+                            <span style={{textWrap: 'nowrap'}}>{new Date(item.created_at).toLocaleDateString("en-GB", {
                               day: "numeric",
                               month: "short",
                               year: "numeric",
-                            })}
+                            })}</span>
+                            <p style={{fontSize: 15, fontWeight: 600}}>{item.created_by}</p>
                           </td>
                           <td style={{ width: "100px" }}>
-                            {item.updated_at ? new Date(item.updated_at).toLocaleDateString("en-GB", {
+                            <span style={{textWrap: 'nowrap'}}>{item.updated_at ? new Date(item.updated_at).toLocaleDateString("en-GB", {
                               day: "numeric",
                               month: "short",
                               year: "numeric",
-                            }) : "-"}
+                            }) : "-"}</span>
+                            <p style={{fontSize: 15, fontWeight: 600}}>{item.updated_by}</p>
                           </td>
                           <td style={{ width: "100px" }}>
-                            {item.approved_at ? new Date(item.approved_at).toLocaleDateString("en-GB", {
+                            <span style={{textWrap: 'nowrap'}}>{item.approved_at ? new Date(item.approved_at).toLocaleDateString("en-GB", {
                               day: "numeric",
                               month: "short",
                               year: "numeric",
-                            }) : "-"}
+                            }) : "-"}</span>
+                            <p style={{fontSize: 15, fontWeight: 600}}>{item.approved_by}</p>
                           </td>
                           <td>
                             <div className="d-flex">
@@ -2093,7 +2003,14 @@ const ProductManagement = () => {
                           </td>
                         </tr>
                       );
-                    })}
+                    }) : (
+                      <tr>
+                        {/* Changes by Agnij May 3, 2025 [Adjust colspan after combining columns in Variants tab] */}
+                        <td colSpan="10" className="text-center"> {/* Adjusted colspan from 11 to 8 */}
+                          No products found
+                        </td>
+                      </tr>
+                    )}
                 </tbody>
               </table>
             )}
@@ -2103,16 +2020,6 @@ const ProductManagement = () => {
                 {/* Always show database totals */}
                 <p><b>Total Products: </b>{totalCount.total_count}</p>
                 <p><b>Page: </b>{totalCount.page} of {totalCount.total}</p>
-                {/* <p><b>Total Disapproved Products: </b>{totalCount.disapprove_count}</p> */}
-                
-                {/* Show filtered counts when filtering is applied */}
-                {totalCount.is_filtered && (
-                  <div className="mt-2 pt-2 border-top">
-                    <p><b>Filtered Results: </b>{totalCount.filtered_count}</p>
-                    {/* <p><b>Filtered Approved: </b>{totalCount.filtered_approve_count}</p>
-                    <p><b>Filtered Disapproved: </b>{totalCount.filtered_disapprove_count}</p> */}
-                  </div>
-                )}
               </div>
               {/* Always show pagination if we have total count from API */}
               <div className="d-flex flex-column align-items-center gap-2">
@@ -2171,7 +2078,7 @@ const ProductManagement = () => {
                   <div className="card card-body">
                     <div className="row g-3">
                       {/* Search and filters for variants */}
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <input
                           type="text"
                           className="form-control"
@@ -2182,12 +2089,11 @@ const ProductManagement = () => {
                       </div>
                       
                       {/* Changes by Agnij May 2, 2025 [Fixed category filter in variants tab] */}
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <Select
                           id={id}
                           options={categories}
                           placeholder="Category"
-                          styles={customSelectStyles}
                           isClearable={true}
                           instanceId="category-select-variants"
                           value={filterValues.category ? categories.find(opt => opt.value === filterValues.category) : null}
@@ -2195,12 +2101,11 @@ const ProductManagement = () => {
                         />
                       </div>
                       
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <Select
                           id={id}
                           options={approvalStatusOptions}
                           placeholder="Filter by Approval Status"
-                          styles={customSelectStyles}
                           isClearable={true}
                           instanceId="approval-status-select-variants"
                           value={filterValues.approvalStatus ? approvalStatusOptions.find(opt => opt.value === filterValues.approvalStatus) : null}
@@ -2216,7 +2121,7 @@ const ProductManagement = () => {
                         />
                       </div>
                       
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <select
                           className="form-control"
                           value={filterValues.addedBy}
@@ -2231,7 +2136,7 @@ const ProductManagement = () => {
                         </select>
                       </div>
                       {/* Date Filters */}
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <div className="date-input-container">
                           <input
                             type="text"
@@ -2248,7 +2153,7 @@ const ProductManagement = () => {
                           />
                         </div>
                       </div>
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <div className="date-input-container">
                           <input
                             type="text"
@@ -2265,26 +2170,37 @@ const ProductManagement = () => {
                           />
                         </div>
                       </div>
-                      
-                      <div className="col-sm-3 mb-3">
-                        <div className="d-flex">
-                          <button
-                            className="btn btn-primary"
-                            onClick={() => {
-                              getAllVariants();
-                            }}
-                          >
-                            Search
-                          </button>
-                          <button
-                            className="btn btn-secondary ms-2"
-                            onClick={resetFilters}
-                          >
-                            Reset
-                          </button>
-                        </div>
+                      <div className="mb-4">
+                        <button
+                          className="btn btn-primary me-2"
+                          onClick={handleSearchClick}
+                        >
+                          Search
+                        </button>
+                        <button
+                          className="btn btn-secondary me-2"
+                          onClick={resetFilters}
+                        >
+                          Reset
+                        </button>
+                        <button
+                        type="button"
+                        className="btn btn-primary me-2"
+                        onClick={() => setShowAddVariantModal(true)}
+                        >
+                          Add Variant
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary me-2"
+                          onClick={() => handleOpenProductMap()}
+                          style={{ backgroundColor: '#0046ad', borderColor: '#0046ad' }}
+                        >
+                          Map Variant with Vendor
+                        </button>
                       </div>
                     </div>
+                    
                     
                     {/* Variants table */}
                     <div className="table-responsive mb-3">
@@ -2308,15 +2224,16 @@ const ProductManagement = () => {
                                   }}
                                 />
                               </th>
-                              <th>Name</th>
-                              <th>Product</th>
-                              <th>Category</th>
-                              <th>Status</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Name</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Product</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Category</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Status</th>
                               {/* Changes by Agnij May 3, 2025 [Combine created/updated columns in Variants tab] */}
-                              <th>Created By / At</th>
-                              <th>Updated By / At</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Created At / By</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Updated At / By</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Approved At / By</th>
                               {/* Removed Created At, Updated At, Approved At */}
-                              <th>Actions</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2399,45 +2316,61 @@ const ProductManagement = () => {
                                   {/* Changes by Agnij May 3, 2025 [Combine created/updated columns in Variants tab] */}
                                   <td>
                                     {/* Combined Created By and Created At */}
-                                    <div>
-                                      {variant.created_by ? 
-                                        addedByOptions.find(user => user.value === parseInt(variant.created_by))?.label || variant.created_by 
-                                        : "-"}
-                                    </div>
-                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                                    <span>
                                       {variant.created_at ? 
                                         new Date(variant.created_at).toLocaleDateString("en-GB", {
                                           day: "numeric",
                                           month: "short",
                                           year: "numeric",
                                         }) : "-"}
-                                    </div>
+                                    </span>
+                                    <p style={{ fontSize: '15px', fontWeight: 600 }}>
+                                      {variant.created_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(variant.created_by))?.label || variant.created_by 
+                                        : "-"}
+                                    </p>
                                   </td>
                                   <td>
                                     {/* Combined Updated By and Updated At */}
-                                    <div>
-                                      {variant.updated_by ? 
-                                        addedByOptions.find(user => user.value === parseInt(variant.updated_by))?.label || variant.updated_by 
-                                        : "-"}
-                                    </div>
-                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                                    <span>
                                       {variant.updated_at ? 
                                         new Date(variant.updated_at).toLocaleDateString("en-GB", {
                                           day: "numeric",
                                           month: "short",
                                           year: "numeric",
                                         }) : "-"}
-                                    </div>
+                                    </span>
+                                    <p style={{ fontSize: '15px', fontWeight: 600 }}>
+                                      {variant.updated_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(variant.updated_by))?.label || variant.updated_by 
+                                        : "-"}
+                                    </p>
+                                  </td>
+                                  <td>
+                                    {/* Combined Updated By and Updated At */}
+                                    <span>
+                                      {variant.approved_at ? 
+                                        new Date(variant.approved_at).toLocaleDateString("en-GB", {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        }) : "-"}
+                                    </span>
+                                    <p style={{ fontSize: '15px', fontWeight: 600 }}>
+                                      {variant.approved_by ? 
+                                        addedByOptions.find(user => user.value === parseInt(variant.approved_by))?.label || variant.updated_by 
+                                        : "-"}
+                                    </p>
                                   </td>
                                   {/* Removed Created At, Updated At, Approved At TDs */}
                                   <td>
                                     <button
-                                      className="btn btn-sm btn-primary me-2"
+                                      className="btn btn-sm btn-primary mb-2"
                                       onClick={() => {
                                         router.push(`/product-management/variant/${variant.id}`);
                                       }}
                                     >
-                                      <i className="fas fa-eye"></i> View
+                                      View
                                     </button>
                                     <button
                                       className="btn btn-sm btn-info"
@@ -2445,7 +2378,7 @@ const ProductManagement = () => {
                                         router.push(`/product-management/edit-variant/${variant.id}`);
                                       }}
                                     >
-                                      <i className="fas fa-edit"></i> Edit
+                                      Edit
                                     </button>
                                   </td>
                                 </tr>
@@ -2453,7 +2386,7 @@ const ProductManagement = () => {
                             ) : (
                               <tr>
                                 {/* Changes by Agnij May 3, 2025 [Adjust colspan after combining columns in Variants tab] */}
-                                <td colSpan="8" className="text-center"> {/* Adjusted colspan from 11 to 8 */}
+                                <td colSpan="10" className="text-center"> {/* Adjusted colspan from 11 to 8 */}
                                   No variants found
                                 </td>
                               </tr>
@@ -2467,7 +2400,7 @@ const ProductManagement = () => {
                     {variants.length > 0 && variantsTotalPages > 1 && (
                       <div className="d-flex justify-content-between align-items-center">
                         <div>
-                          <p><b>Total Variants: </b>{variants.length}</p>
+                          <p><b>Total Variants: </b>{variantsPaginationMeta?.total ?? 0}</p>
                           <p><b>Page: </b>{variantsPage} of {variantsTotalPages}</p>
                         </div>
                         <div className="d-flex flex-column align-items-center gap-2">
@@ -2524,11 +2457,10 @@ const ProductManagement = () => {
                   <div className="card card-body">
                     <div className="row g-3">
                       {/* Changes by Agnij June 12, 2024 [Replaced search input with variant dropdown] */}
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <Select
                           options={variantsFilterData}
                           placeholder="Filter by Variant"
-                          styles={customSelectStyles}
                           isClearable={true}
                           instanceId="variant-select-mappings"
                           value={filterValues.variant ? variantsFilterData.find(opt => opt.value === filterValues.variant) : null}
@@ -2541,28 +2473,33 @@ const ProductManagement = () => {
                       </div>
                       
                       {/* Changes by Agnij May 02, 2025 [Added complete filters to mappings tab to match products tab] */}
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <Select
-                          options={vendorData}
-                          placeholder="Vendor"
-                          styles={customSelectStyles}
-                          isClearable={true}
+                          id="vendor"
                           instanceId="vendor-select-mappings"
-                          value={filterValues.vendor ? vendorData.find(opt => opt.value === filterValues.vendor) : null}
-                          onChange={(selectedOption) => {
-                            handleFilterChange('vendor', selectedOption);
-                            // Also update selectedVendor state
-                            setSelectedVendor(selectedOption ? selectedOption.value : "");
+                          name="vendor"
+                          options={vendorOptions}
+                          value={filterValues.vendor ? vendorOptions.find(opt => opt.value === filterValues.vendor) : null}
+                          inputValue={vendorSearchTerm}
+                          onChange={(selected) => {
+                            handleFilterChange('vendor', selected)
+                            setSelectedVendor(selected ? selected.value : "");
                           }}
+                          placeholder="Select a vendor"
+                          // isSearchable
+                          onInputChange={(newValue) => setVendorSearchTerm(newValue)}
+                          components={{ Option: CustomSelectOption }}
+                          className="basic-select"
+                          classNamePrefix="select"
+                          noOptionsMessage={() => "Please enter atleast 3 letters to search"}
                         />
                       </div>
                       
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <Select
                           id={id}
                           options={approvalStatusOptions}
                           placeholder="Filter by Approval Status"
-                          styles={customSelectStyles}
                           isClearable={true}
                           instanceId="approval-status-select-mappings"
                           value={filterValues.approvalStatus ? approvalStatusOptions.find(opt => opt.value === filterValues.approvalStatus) : null}
@@ -2570,7 +2507,7 @@ const ProductManagement = () => {
                         />
                       </div>
                       
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <select
                           className="form-control"
                           value={filterValues.category}
@@ -2585,7 +2522,7 @@ const ProductManagement = () => {
                         </select>
                       </div>
                       
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <select
                           className="form-control"
                           value={filterValues.addedBy}
@@ -2601,7 +2538,7 @@ const ProductManagement = () => {
                       </div>
                       
                       {/* Date Filters */}
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <div className="date-input-container">
                           <input
                             type="text"
@@ -2618,7 +2555,7 @@ const ProductManagement = () => {
                           />
                         </div>
                       </div>
-                      <div className="col-sm-3 mb-3">
+                      <div className="col-sm-3 mb-1">
                         <div className="date-input-container">
                           <input
                             type="text"
@@ -2636,43 +2573,46 @@ const ProductManagement = () => {
                         </div>
                       </div>
                       
-                      <div className="col-sm-3 mb-3">
-                        <div className="d-flex">
-                          <button
-                            className="btn btn-primary"
-                            onClick={() => {
-                              // Changes by Agnij June 12, 2024 [Pass selectedVariant explicitly]
-                              getAllMappings();
-                            }}
-                          >
-                            Search
-                          </button>
-                          <button
-                            className="btn btn-secondary ms-2"
-                            onClick={resetFilters}
-                          >
-                            Reset
-                          </button>
-                        </div>
+                      <div className="mb-4">
+                        <button
+                          className="btn btn-primary me-2"
+                          onClick={handleSearchClick}
+                        >
+                          Search
+                        </button>
+                        <button
+                          className="btn btn-secondary me-2"
+                          onClick={resetFilters}
+                        >
+                          Reset
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary me-2"
+                          onClick={() => handleOpenProductMap()}
+                          style={{ backgroundColor: '#0046ad', borderColor: '#0046ad' }}
+                        >
+                          Map Variant with Vendor
+                        </button>
                       </div>
                     </div>
                     
                     {/* Mappings table */}
                     <div className="table-responsive mb-3">
                       {loadingMappings ? (
-                        <FullLoading />
+                        <FullLoading />  
                       ) : (
                         <table className="table table-striped table-hover">
                           <thead>
                             <tr>
-                              <th>Variant</th>
-                              <th>Product</th>
-                              <th>Vendor</th>
-                              <th>Vendor Email</th>
-                              <th>Approval Status</th>
-                              <th>Created By</th>
-                              <th>Approved By</th> 
-                              <th>Updated By</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Variant</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Product</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Vendor</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Vendor Email</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Approval Status</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Created By / At</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Updated By / At</th>
+                              <th scope="col" style={{textWrap: 'nowrap'}}>Approved By / At</th> 
                               {/* Removed Mapped On, Updated At, Approved At */}
                               <th>Actions</th>
                             </tr>
@@ -2741,38 +2681,45 @@ const ProductManagement = () => {
                                   {/* Changes by Agnij May 3, 2025 [Combine created/mapped and updated columns] */}
                                   <td>
                                     {/* Combined Created By and Mapped On */}
-                                    <div>
-                                      {mapping.created_by ? 
-                                        addedByOptions.find(user => user.value === parseInt(mapping.created_by))?.label || mapping.created_by 
-                                        : "-"}
-                                    </div>
-                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
-                                      {mapping.mapped_at_formatted || "-"}
-                                    </div>
-                                  </td>
-
-                                  <td>
-                                    <div>
-                                      {mapping.approved_by ? 
-                                        addedByOptions.find(user => user.value === parseInt(mapping.approved_by))?.label || mapping.approved_by 
-                                        : "-"}
-                                    </div>
-                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
-                                      {mapping.mapped_at_approved || "-"}
-                                    </div>
+                                    <span>
+                                      {mapping.mapped_at ? new Date(mapping.mapped_at).toLocaleDateString("en-GB", {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        }) : "-"}
+                                    </span>
+                                    <p style={{ fontSize: '14px', fontWeight: 600 }}>
+                                      {mapping.created_by ??  "-"}
+                                    </p>
                                   </td>
 
                                   <td>
                                     {/* Combined Updated By and Updated At */}
-                                    <div>
-                                      {mapping.updated_by ? 
-                                        addedByOptions.find(user => user.value === parseInt(mapping.updated_by))?.label || mapping.updated_by 
-                                        : "-"}
-                                    </div>
-                                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
-                                      {mapping.updated_at_formatted} 
-                                    </div>
+                                    <span>
+                                      {mapping.updated_at ? new Date(mapping.updated_at).toLocaleDateString("en-GB", {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        }) : "-"} 
+                                    </span>
+                                    <p style={{ fontSize: '14px', fontWeight: 600 }}>
+                                      {mapping.updated_by ?? "-"}
+                                    </p>
                                   </td>
+
+                                  <td>
+                                    <span>
+                                      {mapping.approved_at ? new Date(mapping.approved_at).toLocaleDateString("en-GB", {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        }) : "-"}
+                                    </span>
+                                    <p style={{ fontSize: '14px', fontWeight: 600 }}>
+                                      {mapping.approved_by ?? "-"}
+                                    </p>
+                                  </td>
+
                                   {/* Removed Mapped On, Updated At, Approved At TDs */}
                                   <td>
                                     <button
@@ -2803,7 +2750,7 @@ const ProductManagement = () => {
                     {mappings.length > 0 && (
                       <div className="d-flex justify-content-between align-items-center">
                         <div>
-                          <p><b>Total Mappings: </b>{mappings.length}</p>
+                          <p><b>Total Mappings: </b>{mappingsPaginationMeta?.total ?? 0}</p>
                           <p><b>Page: </b>{mappingsPage} of {mappingsTotalPages}</p>
                         </div>
                         {/* Changes by Agnij May 02, 2025 [Removed condition to always show pagination] */}

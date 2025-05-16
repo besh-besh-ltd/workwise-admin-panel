@@ -12,6 +12,18 @@ export const getCategories = (page = 1, limit = 10) => {
     }
   });
 };
+export const getParentCategories = () => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/parent-category-list`
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
 export const getCategoriesDetails = (id) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -172,191 +184,26 @@ export const approvedProductList = () => {
 export const getProductDetailsById = (id) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Changes by Agnij May 4, 2025 [Fixed product data retrieval to use database values]
-      
-      // Set a timeout of 5 seconds to prevent long hanging requests
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      try {
-        // Add cache busting to prevent 304 responses with empty data
-        const timestamp = Date.now();
-        
-        // Added debug query parameter to show full database data
         const response = await axiosInstance.get(
-          `${process.env.NEXT_PUBLIC_API_WEB_URL}/products/vendor-product-details/${id}?_t=${timestamp}&debug=true`,
+          `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/get-product-by-id/${id}`,
           { 
-            signal: controller.signal,
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            },
-            // Allow all successful status codes
             validateStatus: status => (status >= 200 && status < 300) || status === 304
           }
         );
         
-        clearTimeout(timeoutId); // Clear the timeout
-        
-        // Handle empty or error responses
         if (response.status === 304 || !response?.data) {
           throw new Error('Empty response from API');
         }
         
-        // Extract the raw product data
-        let productData = null;
-        
-        if (response.data.data && typeof response.data.data === 'object') {
-          // Standard API response with data object
-          productData = response.data.data;
-        } else if (response.data.product && typeof response.data.product === 'object') {
-          // Some APIs return data in a 'product' field
-          productData = response.data.product;
-        } else if (response.data.result && typeof response.data.result === 'object') {
-          // Some APIs use 'result' field
-          productData = response.data.result;
-        } else if (response.data && typeof response.data === 'object' && response.data.id) {
-          // Direct product object in data
-          productData = response.data;
-        } else {
-          // Look for product-like object in the response
-          const findProductObject = (obj) => {
-            if (!obj || typeof obj !== 'object') return null;
-            
-            // Check if this object looks like a product
-            if (obj.id && (obj.name || obj.product_name)) {
-              return obj;
-            }
-            
-            // Check nested objects
-            for (const key in obj) {
-              if (typeof obj[key] === 'object') {
-                const found = findProductObject(obj[key]);
-                if (found) return found;
-              }
-            }
-            
-            return null;
-          };
-          
-          productData = findProductObject(response.data);
-        }
-        
-        // Ensure we have a properly structured product object
-        const formattedProduct = {
-          id: productData.id || id,
-          name: productData.name || productData.product_name || 'Product information unavailable',
-          status: productData.status || productData.is_active || 1,
-          manufacturer: productData.manufacturer || 'Not specified',
-          sku: productData.sku || `SKU-${id}`,
-          description: productData.description || 'No description available',
-          product_images: productData.product_images || productData.images || [],
-          product_categories: productData.product_categories || productData.categories || [],
-          product_variants: productData.product_variants || productData.variants || [],
-          created_at: productData.created_at || new Date().toISOString(),
-          updated_at: productData.updated_at || new Date().toISOString(),
-          is_approve: productData.is_approve || productData.is_approved || 0,
-          slug: productData.slug || ''
-        };
-        
-        // Create a properly formatted response
         const formattedResponse = {
-          ...response,
-          data: {
             status: 1,
-            message: "Product details retrieved successfully",
-            data: formattedProduct,
+            data: response,
             vendor_list: response.data.vendor_list || []
-          }
         };
         
         resolve(formattedResponse);
-      } catch (requestError) {
-        clearTimeout(timeoutId); // Clear the timeout
-        throw requestError; // Re-throw to be caught by the outer catch
-      }
     } catch (error) {
-      // Try an alternative endpoint as a fallback
-      try {
-        const alternativeResponse = await axiosInstance.get(
-          `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/get-product-by-id/${id}`,
-          {
-            headers: {
-              'Cache-Control': 'no-cache'
-            }
-          }
-        );
-        
-        if (alternativeResponse?.data) {
-          let productData = null;
-          if (alternativeResponse.data.data) {
-            productData = alternativeResponse.data.data;
-          } else if (alternativeResponse.data.product) {
-            productData = alternativeResponse.data.product;
-          } else if (alternativeResponse.data) {
-            productData = alternativeResponse.data;
-          }
-          
-          if (productData) {
-            const formattedProduct = {
-              id: productData.id || id,
-              name: productData.name || productData.product_name || 'Product information unavailable',
-              status: productData.status || productData.is_active || 1,
-              manufacturer: productData.manufacturer || 'Not specified',
-              sku: productData.sku || `SKU-${id}`,
-              description: productData.description || 'No description available',
-              product_images: productData.product_images || productData.images || [],
-              product_categories: productData.product_categories || productData.categories || [],
-              product_variants: productData.product_variants || productData.variants || [],
-              created_at: productData.created_at || new Date().toISOString(),
-              updated_at: productData.updated_at || new Date().toISOString(),
-              is_approve: productData.is_approve || productData.is_approved || 0,
-              slug: productData.slug || ''
-            };
-            
-            const formattedResponse = {
-              status: 200,
-              data: {
-                status: 1,
-                message: "Product details retrieved successfully from alternative endpoint",
-                data: formattedProduct,
-                vendor_list: alternativeResponse.data.vendor_list || []
-              }
-            };
-            
-            resolve(formattedResponse);
-            return;
-          }
-        }
-      } catch (alternativeError) {
-        // Create a fallback response if both endpoints fail
-        const fallbackResponse = {
-          status: 200,
-          data: {
-            status: 1,
-            message: "Using fallback data due to API error",
-            data: {
-              id: id,
-              name: 'Product information temporarily unavailable',
-              status: 1,
-              manufacturer: 'Not specified',
-              sku: `SKU-${id}`,
-              description: 'Unable to load product description at this time',
-              product_images: [],
-              product_categories: [],
-              product_variants: [],
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              created_at_formatted: new Date().toLocaleString()
-            },
-            vendor_list: [],
-            error: error.message || 'Unknown error'
-          }
-        };
-        
-        resolve(fallbackResponse);
-      }
+      reject(error)
     }
   });
 };

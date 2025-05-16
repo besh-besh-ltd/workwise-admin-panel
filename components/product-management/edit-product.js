@@ -22,7 +22,6 @@ const EditProduct = () => {
 	const [selectedValues, setSelectedValues] = useState([]);
 	const [groupedCategories, setgroupedCategories] = useState(new Map());
 	const [categoryData, setCategoryData] = useState([]);
-	const [vendorApprovedList, setVendorApprovedList] = useState([]);
 	const [mainLoading, setMainLoading] = useState(false);
 	const [productDetailsData, setProductDetailsData] = useState([]);
 	const [variantData, setVariantData] = useState("");
@@ -34,7 +33,6 @@ const EditProduct = () => {
 	useEffect(() => {
 		if (id) {
 			getCategories();
-			getVendorApproveList();
 			getProductDetails();
 		}
 	}, [id]);
@@ -108,16 +106,6 @@ const EditProduct = () => {
 		} else {
 			setCategories(categories.slice(0, level));
 		}
-	};
-
-	const getVendorApproveList = () => {
-		vendorApproveList().then((res) => {
-			let lists = res.data.map((s) => ({
-				label: s.vendor_approve,
-				value: s.id,
-			}));
-			setVendorApprovedList(lists);
-		});
 	};
 
 	const getProductDetails = async () => {
@@ -491,7 +479,7 @@ const EditProduct = () => {
 																			</>
 																		}
 
-																		{!isEditable && (
+																		{/* {!isEditable && (
 																			<div className="col-md-12">
 																				<div className="form-group">
 																					<label htmlFor="approved_id">
@@ -540,9 +528,10 @@ const EditProduct = () => {
 																					/>
 																				</div>
 																			</div>
-																		)}
+																		)} */}
 
-																		<div className="prod-spec-sec p-0 pt-3">
+																		{/* REMOVED AFTER PRODUCT -> VARAINT MIGRATION */}
+																		{/* <div className="prod-spec-sec p-0 pt-3">
 																			<div className="col-md-12">
 																				<div className="form-group specification">
 																					<label>Product Variants</label>
@@ -631,7 +620,7 @@ const EditProduct = () => {
 																					</FieldArray>
 																				</div>
 																			</div>
-																		</div>
+																		</div> */}
 																	</div>
 																)}
 

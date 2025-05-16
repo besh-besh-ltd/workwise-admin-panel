@@ -225,6 +225,12 @@ const ProductVariantsTab = ({ product }) => {
               <dl className="row mb-0">
                 <dt className="col-sm-4">Created:</dt>
                 <dd className="col-sm-8">{createdDate}</dd>
+
+                <dt className="col-sm-4">Updated:</dt>
+                <dd className="col-sm-8">{new Date(product.updated_at).toLocaleString()}</dd>
+
+                <dt className="col-sm-4">Approved:</dt>
+                <dd className="col-sm-8">{new Date(product.approved_at).toLocaleString()}</dd>
                 
                 <dt className="col-sm-4">Categories:</dt>
                 <dd className="col-sm-8">{categories}</dd>
@@ -297,7 +303,7 @@ const ProductVariantsTab = ({ product }) => {
             className="btn btn-light"
             onClick={handleAddVariant}
           >
-            <i className="fas fa-plus mr-1"></i> Add Variant
+            Add Variant
           </button>
         </div>
         <div className="card-body">
@@ -310,7 +316,7 @@ const ProductVariantsTab = ({ product }) => {
                 className="btn btn-sm btn-outline-danger ml-3"
                 onClick={() => fetchVariants(pagination.page)}
               >
-                <i className="fas fa-sync-alt mr-1"></i> Try Again
+                Try Again
               </button>
             </div>
           )}
@@ -324,7 +330,7 @@ const ProductVariantsTab = ({ product }) => {
                 className="btn btn-primary mt-3"
                 onClick={handleAddVariant}
               >
-                <i className="fas fa-plus mr-1"></i> Add First Variant
+                Add First Variant
               </button>
             </div>
           ) : (
@@ -333,10 +339,9 @@ const ProductVariantsTab = ({ product }) => {
                 <thead className="thead-dark">
                   <tr>
                     <th style={{width: '10%'}}>ID</th>
-                    <th style={{width: '25%'}}>Variant Name</th>
-                    <th style={{width: '25%'}}>Product Name</th>
-                    <th style={{width: '15%'}}>Category</th>
-                    <th style={{width: '15%'}}>Created At</th>
+                    <th style={{width: '30%'}}>Variant Name</th>
+                    <th style={{width: '30%'}}>Product Name</th>
+                    <th style={{width: '25%'}}>Created At</th>
                     <th style={{width: '15%'}}>Actions</th>
                   </tr>
                 </thead>
@@ -357,7 +362,6 @@ const ProductVariantsTab = ({ product }) => {
                           <strong>{variant.variant_name || variant.name || 'Unnamed Variant'}</strong>
                         </td>
                         <td>{variant.product_name || productDetails?.name || 'Unknown Product'}</td>
-                        <td>{variant.category_info || '-'}</td>
                         <td>{variant.created_at_formatted || (variant.created_at ? new Date(variant.created_at).toLocaleString() : '-')}</td>
                         <td>
                           <div className="btn-group">
@@ -370,7 +374,7 @@ const ProductVariantsTab = ({ product }) => {
                                 handleMapVariant(variant);
                               }}
                             >
-                              <i className="fas fa-link mr-1"></i> Map
+                               Map
                             </button>
                             
                             {showDeleteConfirm === variant.id ? (
@@ -380,14 +384,14 @@ const ProductVariantsTab = ({ product }) => {
                                   className="btn btn-danger btn-sm"
                                   onClick={() => handleDeleteVariant(variant.id)}
                                 >
-                                  <i className="fas fa-check mr-1"></i>
+                                  Confirm
                                 </button>
                                 <button 
                                   type="button" 
                                   className="btn btn-secondary btn-sm"
                                   onClick={handleCancelDelete}
                                 >
-                                  <i className="fas fa-times mr-1"></i>
+                                  Cancel
                                 </button>
                               </>
                             ) : (
@@ -396,7 +400,7 @@ const ProductVariantsTab = ({ product }) => {
                                 className="btn btn-danger btn-sm"
                                 onClick={() => handleConfirmDelete(variant.id)}
                               >
-                                <i className="fas fa-trash-alt mr-1"></i>
+                                Delete
                               </button>
                             )}
                           </div>
