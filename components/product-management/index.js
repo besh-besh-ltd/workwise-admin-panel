@@ -1719,20 +1719,6 @@ const ProductManagement = () => {
                     onChange={(selectedOption) => handleFilterChange('approveVendor', selectedOption)}
                   />
                 </div>
-                {/* SELECT VENDOR FILTER NOT APPLICABE FOR PRODUCTS */}
-                {/* <div className="col-sm-3 mb-1">
-                  <Select
-                    id={id}
-                    options={vendorData}
-                    placeholder="Select Vendor"
-                    styles={customSelectStyles}
-                    isClearable={true}
-                    instanceId="vendor-select"
-                    value={filterValues.vendor ? vendorData.find(opt => opt.value === filterValues.vendor) : null}
-                    onChange={(selectedOption) => handleFilterChange('vendor', selectedOption)}
-                    components={{ Option: CustomSelectOption }}
-                  />
-                </div> */}
                 <div className="col-sm-3 mb-1">
                   <Select
                     id={id}

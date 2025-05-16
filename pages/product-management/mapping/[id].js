@@ -71,7 +71,7 @@ const MappingDetail = () => {
 
   setLoading(true);
   try {
-    console.log("Fetching mapping details for ID:", id);
+    // Fetch mapping details by ID
 
     const mappingsResponse = await getVariantMappingById(id);
 
@@ -93,7 +93,7 @@ const MappingDetail = () => {
     const mapping = mappingsData[0]; // ✅ Declare `mapping` before using it
 
     if (!mapping) {
-      console.log("No mapping found with ID:", id);
+     
       setLoading(false);
       return;
     }
@@ -116,12 +116,11 @@ const MappingDetail = () => {
     }
 
     setAllMappings(mappingsData);
-    console.log("Mapping details fetched successfully:", mapping);
-    console.log("Approved IDs:", initialApprovedList);
+ 
     setLoading(false);
     
   } catch (error) {
-    console.error("Error fetching mapping details:", error);
+    
     toast.error("Failed to load mapping details");
     setLoading(false);
   }
