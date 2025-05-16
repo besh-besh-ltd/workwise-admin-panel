@@ -9,6 +9,7 @@ import {
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
+import Select from "react-select";
 
 const AddVendor = () => {
   const [states, setStates] = useState([]);
@@ -24,15 +25,49 @@ const AddVendor = () => {
   
   const router = useRouter();
 
+  	const businessOptions = [
+      {value : "Authorised Distributor", label : "Authorised Distributor"},
+      {value : "Authorised Dealer", label : "Authorised Dealer"},
+      {value : "Branch", label : "Branch"},
+      {value : "Channel Partner", label : "Channel Partner"},
+      {value : "Distributor", label : "Distributor"},
+      {value : "Constructor", label : "Constructor"},
+      {value : "Contractor", label : "Contractor"},
+      {value : "Dealer", label: "Dealer" },
+      {value : "Designer", label : "Designer"},
+      {value : "Exporter", label : "Exporter"},
+      {value : "Importer", label : "Importer"},
+      {value : 'Manufacturer', label: 'Manufacturer' },
+      {value : "OEM (Original EquipmentManufacturer)", label : "OEM (Original EquipmentManufacturer)"},
+      {value : "Official Distributor", label : "Official Distributor"},
+      {Value : "Partner", label : "Partner"},
+      {value : "Retailer", label : "Retailer"},
+      {value : "Service Provider", label : "Service Provider"},
+      {value : "Supplier", label : "Supplier"},
+      {value : "Stockist", label : "Stockist"},
+      {value : "Trader", label : "Trader"},
+      { value: 'Wholesaler', label: 'Wholesaler' } 
+];
+
   const submitHandler = (values, resetForm) => {
     const orgName = values.organization_name;
     const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
 
+   values.spocs.forEach((spoc) => {
+     const rawMobile = spoc.spoc_mobile || "";
 
-    values.spocs.forEach(spoc => {
-      spoc.spoc_mobile = `${spoc.country_code}-${spoc.spoc_mobile}`; // Concatenating country_code and spoc_mobile
-      delete spoc.country_code; // Removing country_code
-    });
+     // Remove any existing country code or prefix like "+91-", "undefined-", etc.
+     const sanitizedMobile = rawMobile
+       .replace(/^\+?\w*-/, "")
+       .trim()
+       .replace(/^0+/, "");
+
+     const countryCode = spoc.country_code || "+91"; // fallback if undefined
+
+     spoc.spoc_mobile = `${countryCode}-${sanitizedMobile}`;
+     delete spoc.country_code;
+   });
+
    
     
 
@@ -689,131 +724,152 @@ const handleCountryChange = (event) => {
                         />
                       </div>
 
-                      {/* SPOC Section */}
-                      <div className="mt-4">
-                        <h5>Vendor SPOCs</h5>
-                        <FieldArray
-                          name="spocs"
-                          render={(arrayHelpers) => (
-                            <>
-                              {values.spocs.map((spoc, index) => (
-                                <div key={index} className="row mb-3">
-                                  <div className="col-3">
-                                    <label>Name</label>
-                                    <Field
-                                      type="text"
-                                      name={`spocs[${index}].spoc_name`}
-                                      className="form-control"
-                                      placeholder="Name"
-                                    />
-                                    <ErrorMessage
-                                      name={`spocs[${index}].spoc_name`}
-                                      component="div"
-                                      className="form-error"
-                                    />
-                                  </div>
-                                  <div className="col-3">
-                                    <label>Email</label>
-                                    <Field
-                                      type="email"
-                                      name={`spocs[${index}].spoc_email`}
-                                      className="form-control"
-                                      placeholder="Email"
-                                    />
-                                    <ErrorMessage
-                                      name={`spocs[${index}].spoc_email`}
-                                      component="div"
-                                      className="form-error"
-                                    />
-                                  </div>
-                                  <div className="col-3">
-                                    <label>Mobile</label>
-                                    <div className="input-group">
-                                      {/* Country Code Dropdown - Fixed with proper field name */}
+                        {/* SPOC Section */}
+                        <div className="mt-4">
+                          <h5>Vendor SPOCs</h5>
+                          <FieldArray
+                            name="spocs"
+                            render={(arrayHelpers) => (
+                              <>
+                                {values.spocs.map((spoc, index) => (
+                                  <div key={index} className="row mb-3">
+                                    <div className="col-3">
+                                      <label>Name</label>
                                       <Field
-                                        as="select"
-                                        name={`spocs[${index}].country_code`}
-                                        className="form-select"
-                                        style={{ maxWidth: "120px" , marginRight: "10px" }}
-                                        defaultValue="+91"
-                                      >
-                                        <option value="" disabled>
-                                          Select
-                                        </option>
-                                        {countryCode.map((item) => (
-                                          <option
-                                            key={item.id}
-                                            value={item.phone_code}
-                                          >
-                                            {item.country_code} (
-                                            {item.phone_code})
-                                          </option>
-                                        ))}
-                                      </Field>
+                                        type="text"
+                                        name={`spocs[${index}].spoc_name`}
+                                        className="form-control"
+                                        placeholder="Name"
+                                      />
+                                      <ErrorMessage
+                                        name={`spocs[${index}].spoc_name`}
+                                        component="div"
+                                        className="form-error"
+                                      />
+                                    </div>
+                                    <div className="col-3">
+                                      <label>Email</label>
+                                      <Field
+                                        type="email"
+                                        name={`spocs[${index}].spoc_email`}
+                                        className="form-control"
+                                        placeholder="Email"
+                                      />
+                                      <ErrorMessage
+                                        name={`spocs[${index}].spoc_email`}
+                                        component="div"
+                                        className="form-error"
+                                      />
+                                    </div>
+                                    <div className="col-3">
+                                      <label>Mobile</label>
+                                      <div className="input-group">
+                                        {/* Country Code Dropdown - Fixed with proper field name */}
+                                        <Field
+                                          as="select"
+                                          name={`spocs[${index}].country_code`}
+                                          className="form-select"
+                                          style={{
+                                            maxWidth: "120px",
+                                            marginRight: "10px",
+                                          }}
+                                        >
+                                          {countryCode.map((item) => (
+                                            <option
+                                              key={item.id}
+                                              value={item.phone_code}
+                                            >
+                                              {item.country_code} (
+                                              {item.phone_code})
+                                            </option>
+                                          ))}
+                                        </Field>
 
-                                      {/* Mobile Number Input */}
-                                      <Field
+                                        {/* Mobile Number Input */}
+                                        {/* <Field
                                         type="text"
                                         name={`spocs[${index}].spoc_mobile`}
                                         className="form-control"
                                         placeholder="Mobile"
+                                      /> */}
+                                        <input
+                                          type="text"
+                                          className="form-control"
+                                          placeholder="Mobile"
+                                          value={
+                                            values.spocs[
+                                              index
+                                            ].spoc_mobile?.replace(
+                                              /^\+?\w*-/,
+                                              ""
+                                            ) || ""
+                                          }
+                                          onChange={(e) =>
+                                            setFieldValue(
+                                              `spocs[${index}].spoc_mobile`,
+                                              e.target.value
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                      <ErrorMessage
+                                        name={`spocs[${index}].spoc_mobile`}
+                                        component="div"
+                                        className="form-error"
                                       />
                                     </div>
-                                    <ErrorMessage
-                                      name={`spocs[${index}].spoc_mobile`}
-                                      component="div"
-                                      className="form-error"
-                                    />
-                                  </div>
 
-                                  <div className="col-2">
-                                    <label>Position</label>
-                                    <Field
-                                      type="text"
-                                      name={`spocs[${index}].spoc_role`}
-                                      className="form-control"
-                                      placeholder="Position"
-                                    />
+                                    <div className="col-2">
+                                      <label>Position</label>
+                                      <Field
+                                        type="text"
+                                        name={`spocs[${index}].spoc_role`}
+                                        className="form-control"
+                                        placeholder="Position"
+                                      />
+                                    </div>
+                                    <div className="col-1 d-flex align-items-end mb-2">
+                                      <button
+                                        type="button"
+                                        className="btn btn-danger btn-sm"
+                                        onClick={() =>
+                                          arrayHelpers.remove(index)
+                                        }
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
                                   </div>
-                                  <div className="col-1 d-flex align-items-end mb-2">
-                                    <button
-                                      type="button"
-                                      className="btn btn-danger btn-sm"
-                                      onClick={() => arrayHelpers.remove(index)}
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                              <button
-                                type="button"
-                                className="btn btn-primary btn-sm"
-                                onClick={() =>
-                                  arrayHelpers.push({
-                                    spoc_name: "",
-                                    spoc_role: "",
-                                    spoc_email: "",
-                                    spoc_mobile: "",
-                                    country_code: "+91", // Default value set here
-                                  })
-                                }
-                              >
-                                Add SPOC
-                              </button>
-                            </>
-                          )}
-                        />
+                                ))}
+                                <button
+                                  type="button"
+                                  className="btn btn-primary btn-sm"
+                                  onClick={() =>
+                                    arrayHelpers.push({
+                                      spoc_name: "",
+                                      spoc_role: "",
+                                      spoc_email: "",
+                                      spoc_mobile: "",
+                                      country_code: "+91", // Default value set here
+                                    })
+                                  }
+                                >
+                                  Add SPOC
+                                </button>
+                              </>
+                            )}
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="d-flex justify-content-end mt-4">
-                      <button type="submit" className="btn btn-secondary">
-                        Save
-                      </button>
-                    </div>
-                  </Form>
-                )}
+                      <div className="d-flex justify-content-end mt-4">
+                        <button type="submit" className="btn btn-secondary">
+                          Save
+                        </button>
+                      </div>
+                    </Form>
+                  );
+                }}
               </Formik>
             </div>
           </div>
