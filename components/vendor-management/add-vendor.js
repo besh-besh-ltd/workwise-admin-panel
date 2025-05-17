@@ -277,248 +277,271 @@ const handleCountryChange = (event) => {
                           )}
                         />
                       </div> */}
-                      <div class="col-6">
-                        <label htmlFor="organization_Name">
-                          Organization Name
-                        </label>
-                        <Field
-                          type="text"
-                          name="organization_name"
-                          class="form-control"
-                          placeholder="Organization Name"
-                        />
-                        <ErrorMessage
-                          name="organization_name"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="email">Email</label>
-                        <Field
-                          type="email"
-                          name="email"
-                          class="form-control"
-                          placeholder="Email"
-                        />
-                        <ErrorMessage
-                          name="email"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div className="mb-3">
-                        <label className="form-label">Mobile *</label>
-                        <div
-                          className="d-flex"
-                          style={{ width: "30%", maxWidth: "800px" }}
-                        >
-                          {/* Country Code Dropdown */}
+                        <div class="col-6">
+                          <label htmlFor="organization_Name">
+                            Organization Name
+                          </label>
                           <Field
-                            as="select"
-                            name="countryCode"
-                            className="form-select me-2"
-                            style={{ width: "40%", maxWidth: "160px" }}
+                            type="text"
+                            name="organization_name"
+                            class="form-control"
+                            placeholder="Organization Name"
+                          />
+                          <ErrorMessage
+                            name="organization_name"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="email">Email</label>
+                          <Field
+                            type="email"
+                            name="email"
+                            class="form-control"
+                            placeholder="Email"
+                          />
+                          <ErrorMessage
+                            name="email"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div className="mb-3">
+                          <label className="form-label">Mobile *</label>
+                          <div
+                            className="d-flex"
+                            style={{ width: "30%", maxWidth: "800px" }}
                           >
-                            {" "}
-                            <option value="+91">IN (+91)</option>{" "}
-                            {/* Default selected */}
-                            {countryCode.map((item) => (
-                              <option key={item.id} value={item.phone_code}>
-                                {item.country_code} ({item.phone_code})
+                            {/* Country Code Dropdown */}
+                            <Field
+                              as="select"
+                              name="countryCode"
+                              className="form-select me-2"
+                              style={{ width: "40%", maxWidth: "160px" }}
+                            >
+                              {" "}
+                              <option value="+91">IN (+91)</option>{" "}
+                              {/* Default selected */}
+                              {countryCode.map((item) => (
+                                <option key={item.id} value={item.phone_code}>
+                                  {item.country_code} ({item.phone_code})
+                                </option>
+                              ))}
+                            </Field>
+
+                            {/* Mobile Number Input */}
+                            <Field
+                              type="text"
+                              name="mobile"
+                              className="form-control"
+                              style={{ flex: "1" }}
+                              placeholder="Mobile"
+                            />
+                          </div>
+                          <ErrorMessage
+                            name="mobile"
+                            component="div"
+                            className="text-danger"
+                          />
+                        </div>
+
+                        <div className="col-6">
+                          <label htmlFor="logo" className="form-label">
+                            Logo
+                          </label>
+                          <Field
+                            name="logo"
+                            type="file"
+                            value={undefined}
+                            className="form-control"
+                            onChange={(event) => {
+                              const file = event.target.files[0];
+                              setFieldValue("logo", file);
+                            }}
+                          />
+                          <ErrorMessage
+                            name="logo"
+                            render={(msg) => (
+                              <div className="form-error text-danger mt-1">
+                                {msg}
+                              </div>
+                            )}
+                          />
+                        </div>
+
+                        <div className="col-6">
+                          <label htmlFor="address" className="form-label">
+                            Address
+                          </label>
+                          <Field
+                            type="text"
+                            name="address"
+                            className="form-control"
+                            placeholder="Address"
+                          />
+                          <ErrorMessage
+                            name="address"
+                            render={(msg) => (
+                              <div className="form-error text-danger mt-1">
+                                {msg}
+                              </div>
+                            )}
+                          />
+                        </div>
+
+                        <div class="col-6">
+                          <label htmlFor="about-vendro">About Vendor</label>
+                          <Field
+                            name="about_vendor_company"
+                            as="textarea"
+                            className="form-control"
+                          />
+                          <ErrorMessage
+                            name="about_vendor_company"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="about-vendro">Postal Code</label>
+                          <Field
+                            type="string"
+                            name="postal_code"
+                            class="form-control"
+                            placeholder="Postal code"
+                          />
+                          <ErrorMessage
+                            name="postal_code"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div class="col-4">
+                          <label htmlFor="city">Country</label>
+                          <Field
+                            onChange={handleCountryChange}
+                            value={selectedCountryOption}
+                            as="select"
+                            className="form-control"
+                            name="country"
+                          >
+                            <option value="">Select</option>
+                            {countryList?.map((country) => (
+                              <option key={country.id} value={country.id}>
+                                {country.country_name}
                               </option>
                             ))}
                           </Field>
-
-                          {/* Mobile Number Input */}
+                        </div>
+                        <div class="col-4">
+                          <label htmlFor="state">State</label>
+                          <Field
+                            value={selectedStateOption}
+                            onChange={handleStateChange}
+                            disabled={isStateDisabled}
+                            as="select"
+                            className="form-control"
+                            name="state"
+                          >
+                            <option value="">Select</option>
+                            {states.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.state_name}
+                              </option>
+                            ))}
+                          </Field>
+                        </div>
+                        <div class="col-4">
+                          <label htmlFor="city">City</label>
+                          <Field
+                            value={selectedCityOption}
+                            onChange={handleCityChange}
+                            disabled={isCityDisabled}
+                            as="select"
+                            className="form-control"
+                            name="city"
+                          >
+                            <option value="">Select</option>
+                            {cities.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.city_name}
+                              </option>
+                            ))}
+                          </Field>
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="website">Website</label>
                           <Field
                             type="text"
-                            name="mobile"
-                            className="form-control"
-                            style={{ flex: "1" }}
-                            placeholder="Mobile"
+                            name="website"
+                            class="form-control"
+                            placeholder="Website"
+                          />
+                          <ErrorMessage
+                            name="postal_code"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
                           />
                         </div>
-                        <ErrorMessage
-                          name="mobile"
-                          component="div"
-                          className="text-danger"
-                        />
-                      </div>
-
-                      <div className="col-6">
-                        <label htmlFor="logo" className="form-label">
-                          Logo
-                        </label>
-                        <Field
-                          name="logo"
-                          type="file"
-                          value={undefined}
-                          className="form-control"
-                          onChange={(event) => {
-                            const file = event.target.files[0];
-                            setFieldValue("logo", file);
-                          }}
-                        />
-                        <ErrorMessage
-                          name="logo"
-                          render={(msg) => (
-                            <div className="form-error text-danger mt-1">
-                              {msg}
-                            </div>
-                          )}
-                        />
-                      </div>
-
-                      <div className="col-6">
-                        <label htmlFor="address" className="form-label">
-                          Address
-                        </label>
-                        <Field
-                          type="text"
-                          name="address"
-                          className="form-control"
-                          placeholder="Address"
-                        />
-                        <ErrorMessage
-                          name="address"
-                          render={(msg) => (
-                            <div className="form-error text-danger mt-1">
-                              {msg}
-                            </div>
-                          )}
-                        />
-                      </div>
-
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">About Vendor</label>
-                        <Field
-                          name="about_vendor_company"
-                          as="textarea"
-                          className="form-control"
-                        />
-                        <ErrorMessage
-                          name="about_vendor_company"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">Postal Code</label>
-                        <Field
-                          type="string"
-                          name="postal_code"
-                          class="form-control"
-                          placeholder="Postal code"
-                        />
-                        <ErrorMessage
-                          name="postal_code"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-4">
-                        <label htmlFor="city">Country</label>
-                        <Field
-                          onChange={handleCountryChange}
-                          value={selectedCountryOption}
-                          as="select"
-                          className="form-control"
-                          name="country"
-                        >
-                          <option value="">Select</option>
-                          {countryList?.map((country) => (
-                            <option key={country.id} value={country.id}>
-                              {country.country_name}
-                            </option>
-                          ))}
-                        </Field>
-                      </div>
-                      <div class="col-4">
-                        <label htmlFor="state">State</label>
-                        <Field
-                          value={selectedStateOption}
-                          onChange={handleStateChange}
-                          disabled={isStateDisabled}
-                          as="select"
-                          className="form-control"
-                          name="state"
-                        >
-                          <option value="">Select</option>
-                          {states.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.state_name}
-                            </option>
-                          ))}
-                        </Field>
-                      </div>
-                      <div class="col-4">
-                        <label htmlFor="city">City</label>
-                        <Field
-                          value={selectedCityOption}
-                          onChange={handleCityChange}
-                          disabled={isCityDisabled}
-                          as="select"
-                          className="form-control"
-                          name="city"
-                        >
-                          <option value="">Select</option>
-                          {cities.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.city_name}
-                            </option>
-                          ))}
-                        </Field>
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="website">Website</label>
-                        <Field
-                          type="text"
-                          name="website"
-                          class="form-control"
-                          placeholder="Website"
-                        />
-                        <ErrorMessage
-                          name="postal_code"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="website">Nature of Business</label>
-                        <Field
-                          type="text"
-                          name="nature_business"
-                          class="form-control"
-                          placeholder="Ex. Manufacturer, Dealer, Trader"
-                        />
-                        <ErrorMessage
-                          name="nature_business"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
-                      <div class="col-6">
-                        <label htmlFor="about-vendro">Estd year</label>
-                        <Field
-                          type="number"
-                          name="estd_year"
-                          class="form-control"
-                          placeholder="Estd year"
-                        />
-                        <ErrorMessage
-                          name="estd_year"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div>
+                        <div className="col-6">
+                          <label htmlFor="nature_business">
+                            Nature of Business
+                          </label>
+                          <Field name="nature_business">
+                            {({ field, form }) => (
+                              <Select
+                                isMulti
+                                name="nature_business"
+                                options={businessOptions}
+                                value={
+                                  field.value
+                                    ? businessOptions.filter((option) =>
+                                        field.value
+                                          .split(",")
+                                          .includes(option.value)
+                                      )
+                                    : []
+                                }
+                                onChange={(selectedOptions) => {
+                                  const values = selectedOptions
+                                    .map((opt) => opt.value)
+                                    .join(",");
+                                  form.setFieldValue("nature_business", values);
+                                }}
+                                onBlur={() =>
+                                  form.setFieldTouched("nature_business", true)
+                                }
+                                placeholder="Select Nature of Business"
+                              />
+                            )}
+                          </Field>
+                          <ErrorMessage
+                            name="nature_business_variable"
+                            component="div"
+                            className="form-error"
+                          />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="about-vendro">Estd year</label>
+                          <Field
+                            type="number"
+                            name="estd_year"
+                            class="form-control"
+                            placeholder="Estd year"
+                          />
+                          <ErrorMessage
+                            name="estd_year"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
 
                         <div class="col-6">
                           <label htmlFor="gstin">Gstin</label>
@@ -720,70 +743,70 @@ const handleCountryChange = (event) => {
                           />
                         </div>
 
-                      {/* SPOC Section */}
-                      <div className="mt-4">
-                        <h5>Vendor SPOCs</h5>
-                        <FieldArray
-                          name="spocs"
-                          render={(arrayHelpers) => (
-                            <>
-                              {values.spocs.map((spoc, index) => (
-                                <div key={index} className="row mb-3">
-                                  <div className="col-3">
-                                    <label>Name</label>
-                                    <Field
-                                      type="text"
-                                      name={`spocs[${index}].spoc_name`}
-                                      className="form-control"
-                                      placeholder="Name"
-                                    />
-                                    <ErrorMessage
-                                      name={`spocs[${index}].spoc_name`}
-                                      component="div"
-                                      className="form-error"
-                                    />
-                                  </div>
-                                  <div className="col-3">
-                                    <label>Email</label>
-                                    <Field
-                                      type="email"
-                                      name={`spocs[${index}].spoc_email`}
-                                      className="form-control"
-                                      placeholder="Email"
-                                    />
-                                    <ErrorMessage
-                                      name={`spocs[${index}].spoc_email`}
-                                      component="div"
-                                      className="form-error"
-                                    />
-                                  </div>
-                                  <div className="col-3">
-                                    <label>Mobile</label>
-                                    <div className="input-group">
-                                      {/* Country Code Dropdown - Fixed with proper field name */}
+                        {/* SPOC Section */}
+                        <div className="mt-4">
+                          <h5>Vendor SPOCs</h5>
+                          <FieldArray
+                            name="spocs"
+                            render={(arrayHelpers) => (
+                              <>
+                                {values.spocs.map((spoc, index) => (
+                                  <div key={index} className="row mb-3">
+                                    <div className="col-3">
+                                      <label>Name</label>
                                       <Field
-                                        as="select"
-                                        name={`spocs[${index}].country_code`}
-                                        className="form-select"
-                                        style={{
-                                          maxWidth: "120px",
-                                          marginRight: "10px",
-                                        }}
-                                        defaultValue="+91"
-                                      >
-                                        <option value="" disabled>
-                                          Select
-                                        </option>
-                                        {countryCode.map((item) => (
-                                          <option
-                                            key={item.id}
-                                            value={item.phone_code}
-                                          >
-                                            {item.country_code} (
-                                            {item.phone_code})
+                                        type="text"
+                                        name={`spocs[${index}].spoc_name`}
+                                        className="form-control"
+                                        placeholder="Name"
+                                      />
+                                      <ErrorMessage
+                                        name={`spocs[${index}].spoc_name`}
+                                        component="div"
+                                        className="form-error"
+                                      />
+                                    </div>
+                                    <div className="col-3">
+                                      <label>Email</label>
+                                      <Field
+                                        type="email"
+                                        name={`spocs[${index}].spoc_email`}
+                                        className="form-control"
+                                        placeholder="Email"
+                                      />
+                                      <ErrorMessage
+                                        name={`spocs[${index}].spoc_email`}
+                                        component="div"
+                                        className="form-error"
+                                      />
+                                    </div>
+                                    <div className="col-3">
+                                      <label>Mobile</label>
+                                      <div className="input-group">
+                                        {/* Country Code Dropdown - Fixed with proper field name */}
+                                        <Field
+                                          as="select"
+                                          name={`spocs[${index}].country_code`}
+                                          className="form-select"
+                                          style={{
+                                            maxWidth: "120px",
+                                            marginRight: "10px",
+                                          }}
+                                          defaultValue="+91"
+                                        >
+                                          <option value="" disabled>
+                                            Select
                                           </option>
-                                        ))}
-                                      </Field>
+                                          {countryCode.map((item) => (
+                                            <option
+                                              key={item.id}
+                                              value={item.phone_code}
+                                            >
+                                              {item.country_code} (
+                                              {item.phone_code})
+                                            </option>
+                                          ))}
+                                        </Field>
 
                                         {/* Mobile Number Input */}
                                         {/* <Field

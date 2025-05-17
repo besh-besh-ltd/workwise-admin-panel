@@ -18,6 +18,7 @@ import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
 import SpocAddModal from "../modal/spoc-add-modal";
 import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
+import Select from "react-select";
 
 const UpdateVendor = () => {
   const [dtaCount, setdtaCount] = useState(0);
@@ -63,7 +64,30 @@ const UpdateVendor = () => {
       });
     } 
     
-    
+    const businessOptions = [
+      {value : "Authorised Distributor", label : "Authorised Distributor"},
+      {value : "Authorised Dealer", label : "Authorised Dealer"},
+      {value : "Branch", label : "Branch"},
+      {value : "Channel Partner", label : "Channel Partner"},
+      {value : "Distributor", label : "Distributor"},
+      {value : "Constructor", label : "Constructor"},
+      {value : "Contractor", label : "Contractor"},
+      {value : "Dealer", label: "Dealer" },
+      {value : "Designer", label : "Designer"},
+      {value : "Exporter", label : "Exporter"},
+      {value : "Importer", label : "Importer"},
+      {value : 'Manufacturer', label: 'Manufacturer' },
+      {value : "OEM (Original EquipmentManufacturer)", label : "OEM (Original EquipmentManufacturer)"},
+      {value : "Official Distributor", label : "Official Distributor"},
+      {Value : "Partner", label : "Partner"},
+      {value : "Retailer", label : "Retailer"},
+      {value : "Service Provider", label : "Service Provider"},
+      {value : "Supplier", label : "Supplier"},
+      {value : "Stockist", label : "Stockist"},
+      {value : "Trader", label : "Trader"},
+      { value: 'Wholesaler', label: 'Wholesaler' } 
+];
+
     
     const handleSpocSubmit = (object,resetForm) => {
    
@@ -625,17 +649,38 @@ useEffect(() => {
                           <label htmlFor="nature_of_business">
                             Nature of Business
                           </label>
-                          <Field
-                            type="text"
-                            name="nature_business"
-                            class="form-control"
-                            placeholder="Ex. Manufacturer, Dealer, Trader"
-                          />
-                          <ErrorMessage
-                            name="nature_business"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
+                          <Field name="nature_business">
+                            {({ field, form }) => (
+                              <Select
+                                isMulti
+                                name="nature_business"
+                                options={businessOptions}
+                                value={
+                                  field.value
+                                    ? businessOptions.filter((option) =>
+                                        field.value
+                                          .split(",")
+                                          .includes(option.value)
+                                      )
+                                    : []
+                                }
+                                onChange={(selectedOptions) => {
+                                  const values = selectedOptions
+                                    .map((opt) => opt.value)
+                                    .join(",");
+                                  form.setFieldValue("nature_business", values);
+                                }}
+                                onBlur={() =>
+                                  form.setFieldTouched("nature_business", true)
+                                }
+                                placeholder="Select Nature of Business"
+                              />
                             )}
+                          </Field>
+                          <ErrorMessage
+                            name="nature_business_variable"
+                            component="div"
+                            className="form-error"
                           />
                         </div>
                         <div class="col-6">
