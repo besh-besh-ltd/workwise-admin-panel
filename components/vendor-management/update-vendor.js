@@ -645,8 +645,8 @@ useEffect(() => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
-                          <label htmlFor="nature_of_business">
+                       <div className="col-6">
+                          <label htmlFor="nature_business">
                             Nature of Business
                           </label>
                           <Field name="nature_business">
