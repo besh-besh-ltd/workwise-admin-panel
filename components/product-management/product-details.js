@@ -37,10 +37,6 @@ const ProductDetails = () => {
                 } else {
                     setError("Failed to load product details: Invalid response format");
                 }
-                
-                if (response?.data?.data) {
-                    setProductData(response.data.data);
-                }
             }
         } catch (error) {
             setError(`Failed to load product details: ${error.message || "Unknown error"}`);
@@ -146,7 +142,19 @@ const ProductDetails = () => {
                                     {productData.created_at && (
                                         <p>
                                             <strong>Created:</strong>{" "}
-                                            {productData.created_at_formatted || new Date(productData.created_at).toLocaleString()}
+                                            {new Date(productData.created_at).toLocaleDateString()} - {productData.created_by}
+                                        </p>
+                                    )}
+                                    {productData.updated_at && (
+                                        <p>
+                                            <strong>Last Updated:</strong>{" "}
+                                            {new Date(productData.created_at).toLocaleDateString()} - {productData.updated_by}
+                                        </p>
+                                    )}
+                                    {productData.approved_at && (
+                                        <p>
+                                            <strong>Last Approved:</strong>{" "}
+                                            {new Date(productData.approved_at).toLocaleDateString()} - {productData.vendor_approved_by}
                                         </p>
                                     )}
                                 </div>

@@ -47,10 +47,14 @@ export const categoryList = (values) => {
   });
 };
 
-export const vendorList = (values) => {
+export const vendorList = (vendorSearchTerm) => {
   return new Promise(async (resolve, reject) => {
     try {
-      let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/vendor-dropdown-list`);
+      let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/vendor-dropdown-list`, {
+        params: {
+          search: vendorSearchTerm
+        }
+      });
       resolve(response);
     } catch (error) {
       reject({ message: error });
