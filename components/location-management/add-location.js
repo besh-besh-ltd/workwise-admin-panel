@@ -190,7 +190,7 @@ const AddLocation = () => {
 
   // Function to handle update location
   const handleUpdateLocation = () => {
-    if (!newState || !newCity) {
+    if (!newStateId || !newCity) {
       window.alert("Please fill in all details");
       return;
     }
