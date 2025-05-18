@@ -266,27 +266,9 @@ const EditProduct = () => {
 
 				// Handle approved_id array
 				payload.approved_id = '';
-				// values.approved_id?.length > 0 ? values.approved_id : [];
-
-				// Handle variations array
-				// if (values.variations?.length > 0) {
-				// 	const filteredVariations = values.variations.filter(
-				// 		v => v.attribute.trim() !== '' || v.attributeValue.trim() !== ''
-				// 	);
-
-				// 	payload.variations = filteredVariations.map(variation => ({
-				// 		attribute: variation.attribute || '',
-				// 		attributeValue: variation.attributeValue || ''
-				// 	}));
-				// } else {
-				// 	payload.variations = [{ attribute: '', attributeValue: '' }];
-				// }
+				
 			}
-
-			console.log(payload);
-
-
-			setMainLoading(true);
+        	setMainLoading(true);
 			handleUpdateProduct(payload, id)
 				.then((res) => {
 					toast.success(res.message);
