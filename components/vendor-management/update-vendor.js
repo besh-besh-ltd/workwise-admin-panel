@@ -18,6 +18,7 @@ import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
 import SpocAddModal from "../modal/spoc-add-modal";
 import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
+import Select from "react-select";
 
 const UpdateVendor = () => {
   const [dtaCount, setdtaCount] = useState(0);
@@ -63,7 +64,30 @@ const UpdateVendor = () => {
       });
     } 
     
-    
+    const businessOptions = [
+      {value : "Authorised Distributor", label : "Authorised Distributor"},
+      {value : "Authorised Dealer", label : "Authorised Dealer"},
+      {value : "Branch", label : "Branch"},
+      {value : "Channel Partner", label : "Channel Partner"},
+      {value : "Distributor", label : "Distributor"},
+      {value : "Constructor", label : "Constructor"},
+      {value : "Contractor", label : "Contractor"},
+      {value : "Dealer", label: "Dealer" },
+      {value : "Designer", label : "Designer"},
+      {value : "Exporter", label : "Exporter"},
+      {value : "Importer", label : "Importer"},
+      {value : 'Manufacturer', label: 'Manufacturer' },
+      {value : "OEM (Original EquipmentManufacturer)", label : "OEM (Original EquipmentManufacturer)"},
+      {value : "Official Distributor", label : "Official Distributor"},
+      {Value : "Partner", label : "Partner"},
+      {value : "Retailer", label : "Retailer"},
+      {value : "Service Provider", label : "Service Provider"},
+      {value : "Supplier", label : "Supplier"},
+      {value : "Stockist", label : "Stockist"},
+      {value : "Trader", label : "Trader"},
+      { value: 'Wholesaler', label: 'Wholesaler' } 
+];
+
     
     const handleSpocSubmit = (object,resetForm) => {
    
@@ -215,7 +239,6 @@ useEffect(() => {
     email: editDetails?.vendorDetails?.email || "",
     mobile: editDetails?.vendorDetails?.mobile ? editDetails?.vendorDetails?.mobile.replace(/^\+?\d+-/, "") : "",
     organization_name: editDetails?.vendorDetails?.organization_name || "",
-    image: editDetails?.vendorDetails?.original_profile_image || "",
     logo: editDetails?.logo,
     ptr_track: editDetails?.ptr_track,
     address: editDetails?.vendorDetails?.address || "",
@@ -450,49 +473,7 @@ useEffect(() => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
-                          <label htmlFor="image">Image</label>
-                          <Field
-                            name="image"
-                            type="file"
-                            value={undefined}
-                            className="form-control"
-                            onChange={(event) => {
-                              let files = event.target.files[0];
-                              setFieldValue("image", files);
-                            }}
-                          />
-                          {editDetails?.vendorDetails?.original_profile_image !=
-                            null && (
-                            <div className="mt-3" style={{ display: "flex" }}>
-                              <label htmlFor="year">
-                                Prefilled Image -&nbsp;{" "}
-                              </label>
-                              <p htmlFor="year">
-                                <Image
-                                  width={30}
-                                  height={30}
-                                  src={
-                                    editDetails?.vendorDetails
-                                      ?.original_profile_image == null
-                                      ? img1
-                                      : editDetails?.vendorDetails
-                                          ?.original_profile_image
-                                  }
-                                  unoptimized
-                                  className="rounded prof-img"
-                                  alt="..."
-                                />
-                              </p>
-                            </div>
-                          )}
-                          <ErrorMessage
-                            name="image"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
+
                         <div class="col-6">
                           <label htmlFor="logo">Logo</label>
                           <Field
@@ -533,35 +514,54 @@ useEffect(() => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
-                          <label htmlFor="about-vendro">Address</label>
-                          <Field
-                            type="text"
-                            name="address"
-                            class="form-control"
-                            placeholder="Address"
-                          />
-                          <ErrorMessage
-                            name="about_vendor"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
+                        <div className="row">
+                          <div className="col-md-6 mb-3">
+                            <label htmlFor="address" className="form-label">
+                              Address
+                            </label>
+                            <Field
+                              type="text"
+                              name="address"
+                              id="address"
+                              className="form-control"
+                              placeholder="Address"
+                            />
+                            <ErrorMessage
+                              name="address"
+                              render={(msg) => (
+                                <div className="form-error text-danger">
+                                  {msg}
+                                </div>
+                              )}
+                            />
+                          </div>
+
+                          <div className="col-md-6 mb-3">
+                            <label
+                              htmlFor="about_vendor_company"
+                              className="form-label"
+                            >
+                              About Vendor
+                            </label>
+                            <Field
+                              name="about_vendor_company"
+                              as="textarea"
+                              id="about_vendor_company"
+                              className="form-control"
+                              placeholder="Write about the vendor..."
+                              rows={3}
+                            />
+                            <ErrorMessage
+                              name="about_vendor_company"
+                              render={(msg) => (
+                                <div className="form-error text-danger">
+                                  {msg}
+                                </div>
+                              )}
+                            />
+                          </div>
                         </div>
-                        <div class="col-6">
-                          <label htmlFor="about-vendor">About Vendor</label>
-                          <Field
-                            name="about_vendor_company"
-                            as="textarea"
-                            className="form-control"
-                          />
-                          <ErrorMessage
-                            name="about_vendor_company"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
+
                         <div class="col-6">
                           <label htmlFor="about-vendro">Postal Code</label>
                           <Field
@@ -645,21 +645,42 @@ useEffect(() => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
-                          <label htmlFor="nature_of_business">
+                       <div className="col-6">
+                          <label htmlFor="nature_business">
                             Nature of Business
                           </label>
-                          <Field
-                            type="text"
-                            name="nature_business"
-                            class="form-control"
-                            placeholder="Ex. Manufacturer, Dealer, Trader"
-                          />
-                          <ErrorMessage
-                            name="nature_business"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
+                          <Field name="nature_business">
+                            {({ field, form }) => (
+                              <Select
+                                isMulti
+                                name="nature_business"
+                                options={businessOptions}
+                                value={
+                                  field.value
+                                    ? businessOptions.filter((option) =>
+                                        field.value
+                                          .split(",")
+                                          .includes(option.value)
+                                      )
+                                    : []
+                                }
+                                onChange={(selectedOptions) => {
+                                  const values = selectedOptions
+                                    .map((opt) => opt.value)
+                                    .join(",");
+                                  form.setFieldValue("nature_business", values);
+                                }}
+                                onBlur={() =>
+                                  form.setFieldTouched("nature_business", true)
+                                }
+                                placeholder="Select Nature of Business"
+                              />
                             )}
+                          </Field>
+                          <ErrorMessage
+                            name="nature_business_variable"
+                            component="div"
+                            className="form-error"
                           />
                         </div>
                         <div class="col-6">
@@ -758,6 +779,7 @@ useEffect(() => {
                             )}
                           />
                         </div>
+                        <div className= "row">
                         <div class="col-6">
                           <label htmlFor="ptr">PTR</label>
                           <Field
@@ -800,6 +822,7 @@ useEffect(() => {
                               <div className="form-error">{msg}</div>
                             )}
                           />
+                        </div>
                         </div>
                         <div class="col-6">
                           <label htmlFor="about-vendro">
@@ -950,7 +973,6 @@ useEffect(() => {
                             id="select-input"
                             className="form-control"
                             value={selectedSpocOption.name}
-                            
                             onChange={(e) => {
                               const selectedValue = e.target.value;
                               if (!selectedValue) {
@@ -958,7 +980,7 @@ useEffect(() => {
                                 setSelectedSpocOption({});
                                 setSpocId(null);
                                 return;
-                              } 
+                              }
 
                               const selectedOption = JSON.parse(selectedValue);
                               setSpocCountryCode(
@@ -1078,7 +1100,7 @@ useEffect(() => {
                               name="spoc_mobile"
                               className="form-control"
                               placeholder="Mobile"
-                              value={values.spoc_mobile }
+                              value={values.spoc_mobile}
                               onChange={handleChange}
                               style={{ flex: "1" }} // Takes remaining space
                             />
@@ -1096,7 +1118,7 @@ useEffect(() => {
                             <button
                               type="button"
                               className="btn btn-danger"
-                              style={{marginRight: "10px"}}
+                              style={{ marginRight: "10px" }}
                               onClick={() => handleDeleteSpocdata()}
                             >
                               Delete
