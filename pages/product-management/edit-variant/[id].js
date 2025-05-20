@@ -33,7 +33,7 @@ const EditVariant = () => {
     setLoadingProducts(true);
     // Use getAllProducts with search parameter
     getAllProducts(
-     50, // Limit to 20 results for better performance
+     50, // Limit to 50 results for better performance
       1,  // First page
       searchTerm
     )
