@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getAdminProfile } from "@/utils/services/login";
 import { searchAllVariants, updateProductVariant, getAllProducts } from '@/utils/services/product-management';
 import { useRouter } from 'next/router';
@@ -22,27 +22,62 @@ const EditVariant = () => {
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [vendorApprovedBy, setVendorApprovedBy] = useState(null);
+  const [initialProductsLoaded, setInitialProductsLoaded] = useState(false);
 
   useEffect(() => {
     getUserProfile();
     fetchProducts();
   }, []);
+  const searchProducts = useCallback((searchTerm) => {
+
+    setLoadingProducts(true);
+    // Use getAllProducts with search parameter
+    getAllProducts(
+     50, // Limit to 20 results for better performance
+      1,  // First page
+      searchTerm
+    )
+      .then((response) => {
+        if (response?.data) {
+          const productsData = response.data.map(product => ({
+            value: product.id,
+            label: product.name,
+            data: product
+          }));
+          setProducts(productsData);
+        }
+      })
+      .catch((error) => {
+        console.error("Error searching products:", error);
+      })
+      .finally(() => {
+        setLoadingProducts(false);
+      });
+  }, []);
+  // Debounce function for product search
+  const debounceSearchProducts = useCallback((inputValue) => {
+    const debounceTimeout = 300; // 300ms debounce
+    clearTimeout(window.productSearchDebounceTimer);
+    window.productSearchDebounceTimer = setTimeout(() => {
+      searchProducts(inputValue);
+    }, debounceTimeout);
+  }, [searchProducts]);
 
   useEffect(() => {
     if (id) {
       fetchVariantDetails();
     }
   }, [id]);
-  
+
   // Changes by Agnij May 20, 2025 [Added effect to handle missing products]
   useEffect(() => {
     // This effect runs when both products and formData.product_id are available
-    if (products.length > 0 && formData.product_id && 
+    if (initialProductsLoaded && formData.product_id &&
         !products.some(p => p.value === formData.product_id)) {
       // If product_id exists but doesn't match any product in the list,
       // try to fetch product details again or fetch the specific product
       console.log(`Product ID ${formData.product_id} not found in products list, trying to fetch product details...`);
-      
+
       // Simulate fetching the specific product for now
       getAllProducts(1, 1, formData.product_id)
         .then(response => {
@@ -55,7 +90,7 @@ const EditVariant = () => {
                 label: product.name,
                 data: product
               };
-              
+
               console.log("Adding missing product to options:", newProduct);
               setProducts(prev => [...prev, newProduct]);
             }
@@ -65,7 +100,7 @@ const EditVariant = () => {
           console.error("Error fetching specific product:", error);
         });
     }
-  }, [products, formData.product_id]);
+  }, [initialProductsLoaded, products, formData.product_id]);
 
   const getUserProfile = async () => {
     try {
@@ -88,6 +123,7 @@ const EditVariant = () => {
           data: product
         }));
         setProducts(productsData);
+        setInitialProductsLoaded(true);
       }
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -98,60 +134,60 @@ const EditVariant = () => {
 
   const fetchVariantDetails = async () => {
     if (!id) return;
-    
+
     setLoading(true);
     try {
       // Direct approach - search for variant by ID
       console.log("Fetching variant details for ID:", id);
       const searchResponse = await searchAllVariants(id);
-      
+
       console.log("Search response:", searchResponse?.data);
-      
+
       if (searchResponse?.data && Array.isArray(searchResponse.data)) {
         // First try exact match
-        let variantData = searchResponse.data.find(v => 
+        let variantData = searchResponse.data.find(v =>
           v.id === parseInt(id) || v.id === id
         );
-        
+
         // If no exact match, try to find any variant (there should be at least one if API returned data)
         if (!variantData && searchResponse.data.length > 0) {
           variantData = searchResponse.data[0];
           console.log("Using first available variant:", variantData);
         }
-        
+
         if (variantData) {
           console.log("Found variant:", variantData);
-          
+
           // Changes by Agnij August 15, 2024 [Ensuring product_id is correctly extracted from various possible response formats]
           // Different backend endpoints may return product_id in different formats
-          const productId = variantData.product_id || 
-                           (variantData.product && variantData.product.id) || 
+          const productId = variantData.product_id ||
+                           (variantData.product && variantData.product.id) ||
                            '';
-          
+
           console.log("Extracted product ID:", productId);
-          
+
           setVariant(variantData);
-          
+
           // Initialize form data with variant details
           setFormData({
             name: variantData.name || variantData.variant_name || '',
             description: variantData.description || '',
             product_id: productId
           });
-          
+
           // Set vendor approved by
           setVendorApprovedBy(variantData.vendor_approved_by || null);
-          
+
           setLoading(false);
           return;
         }
       }
-      
+
       // If direct search fails, try alternative approach
       console.log("Direct search failed, no variant found");
       setLoading(false);
       toast.error("Could not find variant with ID: " + id);
-      
+
     } catch (error) {
       console.error("Error fetching variant details:", error);
       toast.error("Failed to load variant details");
@@ -178,12 +214,12 @@ const EditVariant = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       toast.error("Variant name is required");
       return;
     }
-    
+
     setSaving(true);
     try {
       // Changes by Agnij July 25, 2025 [Updated to set is_approve to 0 when edited]
@@ -193,11 +229,11 @@ const EditVariant = () => {
         product_id: formData.product_id,
         is_approve: 0 // Auto-disapprove when edited
       };
-      
+
       console.log("Submitting update with payload:", payload);
       const response = await updateProductVariant(id, payload);
       console.log("Update response:", response);
-      
+
       if (response && (response.status === 1 || response.status === "1" || response.status === 200)) {
         toast.success("Variant updated successfully and set to 'Disapproved' status");
         router.push(`/product-management/variant/${id}`);
@@ -213,7 +249,7 @@ const EditVariant = () => {
   };
 
   return (
-    
+
       <section className="content">
         <div className="container-fluid">
           <div className="row mb-2">
@@ -261,7 +297,7 @@ const EditVariant = () => {
                           required
                         />
                       </div>
-                      
+
                       <div className="form-group">
                         <label htmlFor="description">Description</label>
                         <textarea
@@ -273,7 +309,7 @@ const EditVariant = () => {
                           onChange={handleInputChange}
                         ></textarea>
                       </div>
-                      
+
                       <div className="form-group">
                         <label htmlFor="product_id">Parent Product</label>
                         <Select
@@ -286,24 +322,31 @@ const EditVariant = () => {
                           onChange={handleProductChange}
                           className="basic-select"
                           classNamePrefix="select"
+                          onInputChange={(inputValue) => debounceSearchProducts(inputValue)}
+                          filterOption={() => true} // Disable client-side filtering
+                          noOptionsMessage={({ inputValue }) =>
+                            inputValue.length < 3
+                              ? "Type at least 3 characters to search"
+                              : "No products found"
+                          }
                         />
                         <small className="form-text text-muted">
                           Changing the parent product will affect variant relationships
                         </small>
                       </div>
-                      
+
                       {vendorApprovedBy && (
                         <div className="form-group">
                           <label>Approved By:</label>
                           <p className="form-control-static">{vendorApprovedBy}</p>
                         </div>
                       )}
-                      
+
                       <div className="alert alert-warning">
                         <i className="fas fa-exclamation-triangle mr-2"></i>
                         Editing this variant will automatically set its status to "Disapproved"
                       </div>
-                      
+
                       <div className="form-group">
                         <button
                           type="submit"
@@ -325,7 +368,7 @@ const EditVariant = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="col-md-4">
                 <div className="card">
                   <div className="card-header">
@@ -335,26 +378,26 @@ const EditVariant = () => {
                     <dl className="row">
                       <dt className="col-sm-4">Variant ID:</dt>
                       <dd className="col-sm-8">{variant.id}</dd>
-                      
+
                       <dt className="col-sm-4">Categories:</dt>
                       <dd className="col-sm-8">
                         {variant.category_names && variant.category_names.length > 0
                           ? variant.category_names.join(", ")
                           : "No categories"}
                       </dd>
-                      
+
                       <dt className="col-sm-4">Status:</dt>
                       <dd className="col-sm-8">
                         <span className={`badge ${variant.is_approve === 1 ? 'badge-success' : 'badge-danger'}`}>
                           {variant.is_approve === 1 ? "Approved" : "Disapproved"}
                         </span>
                       </dd>
-                      
+
                       <dt className="col-sm-4">Created:</dt>
                       <dd className="col-sm-8">
                         {variant.created_at ? new Date(variant.created_at).toLocaleString() : "N/A"}
                       </dd>
-                      
+
                       <dt className="col-sm-4">Last Updated:</dt>
                       <dd className="col-sm-8">
                         {variant.updated_at ? new Date(variant.updated_at).toLocaleString() : "N/A"}
@@ -375,4 +418,4 @@ const EditVariant = () => {
   );
 };
 
-export default EditVariant; 
+export default EditVariant;
