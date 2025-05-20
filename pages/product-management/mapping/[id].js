@@ -93,7 +93,7 @@ const MappingDetail = () => {
     const mapping = mappingsData[0]; // ✅ Declare `mapping` before using it
 
     if (!mapping) {
-     
+
       setLoading(false);
       return;
     }
@@ -116,11 +116,11 @@ const MappingDetail = () => {
     }
 
     setAllMappings(mappingsData);
- 
+
     setLoading(false);
-    
+
   } catch (error) {
-    
+
     toast.error("Failed to load mapping details");
     setLoading(false);
   }
@@ -129,7 +129,7 @@ const MappingDetail = () => {
   const handleChange = (selected) => {
     setSelectedOptions(selected); // selected is an array of selected option objects
   };
- 
+
  const handleSave = async () => {
     setSaving(true);
     try {
@@ -140,9 +140,9 @@ const MappingDetail = () => {
       };
 
       const response = await addVendorApproveVariant(data);
-      
+
      if (response.status === 1) {
-      
+
        toast.success("Mapping updated successfully");
      } else {
        toast.error("Failed to update mapping");
@@ -335,12 +335,13 @@ const MappingDetail = () => {
                     </div>
                     <div className="col-md-8">
                       <strong>
-                        {mapping?.vendor_details?.name || "Unknown"}
+                        {mapping?.vendor_organization || "No organization available"}
                       </strong>
                       <br />
-                      <small>
-                        {mapping?.vendor_details?.email || "No email available"}
-                      </small>
+                      <div className="mt-1">
+                        <strong>Email: </strong>
+                        {mapping?.vendor_email || "No email available"}
+                      </div>
                     </div>
                   </div>
 
@@ -430,4 +431,4 @@ const MappingDetail = () => {
   );
 };
 
-export default MappingDetail; 
+export default MappingDetail;
