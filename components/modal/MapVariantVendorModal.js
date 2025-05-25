@@ -253,6 +253,16 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     toast.success('Vendor added to mapping list');
   };
 
+
+// setMappings(prev => [...prev, {
+//   ...formData,
+//   id: Date.now(), // Use timestamp as unique ID
+//   variant: selectedVariant,
+//   make_list: [] // Initialize make_list as an empty array
+// }]);
+
+
+
   const handleRemoveMapping = (id) => {
     setMappings(prev => prev.filter(mapping => mapping.id !== id));
     toast.success('Vendor removed from mapping list');
@@ -292,7 +302,8 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
         const payload = {
           variant_id: mapping.variant_id,
           vendor_id: mapping.vendor.value,
-          approved_by: mapping.approved_by?.map(item => item.value) || null
+          approved_by: mapping.approved_by?.map(item => item.value) || null,
+          make_list: mapping.make_list || [] // Ensure make_list is included
         };
         
         const response = await mapVariantWithVendor(payload);
@@ -470,9 +481,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     );
   };
 
-  const handleDecouncedVendorSearch = (search) => {
-    console.log("Searched for: ", search)
-  }
+
 
   // If modal isn't visible or the portal element isn't ready, don't render anything
   if (!isVisible || !modalElement) return null;
@@ -493,7 +502,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
     }}>
       <div className="modal-dialog modal-lg" style={{
         maxHeight: 650,
-        width: 800,
+        width: 1000,
         overflow: 'auto'
       }} onClick={e => e.stopPropagation()}>
         <div className="modal-content">
@@ -613,6 +622,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
                         <th>Variant</th>
                         <th>Vendor</th>
                         <th>Approved By</th>
+                        <th>Make List</th> 
                         <th>Action</th>
                       </tr>
                     </thead>
@@ -648,6 +658,60 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
                               <i className="fas fa-trash-alt mr-1"></i> Remove
                             </button>
                           </td>
+
+                          <td>
+                           {mapping.make_list?.map((make, index) => (
+                             <div key={index} className="d-flex align-items-center mb-1">
+                               <input
+                                 type="text"
+                                 className="form-control form-control-sm"
+                                 value={make}
+                                 onChange={(e) => {
+                                   const updatedMappings = mappings.map(m => {
+                                     if (m.id === mapping.id) {
+                                       const updatedMakeList = [...m.make_list];
+                                       updatedMakeList[index] = e.target.value;
+                                       return { ...m, make_list: updatedMakeList };
+                                     }
+                                     return m;
+                                   });
+                                   setMappings(updatedMappings);
+                                 }}
+                               />
+                               <button
+                                 type="button"
+                                 className="btn btn-sm btn-danger ml-1"
+                                 onClick={() => {
+                                   const updatedMappings = mappings.map(m => {
+                                     if (m.id === mapping.id) {
+                                       const updatedMakeList = m.make_list.filter((_, i) => i !== index);
+                                       return { ...m, make_list: updatedMakeList };
+                                     }
+                                     return m;
+                                   });
+                                   setMappings(updatedMappings);
+                                 }}
+                               >
+                                 <i className="fas fa-times"></i>
+                               </button>
+                             </div>
+                           ))}
+                           <button
+                             type="button"
+                             className="btn btn-sm btn-secondary"
+                             onClick={() => {
+                               const updatedMappings = mappings.map(m => {
+                                 if (m.id === mapping.id) {
+                                   return { ...m, make_list: [...(m.make_list || []), ''] };
+                                 }
+                                 return m;
+                               });
+                               setMappings(updatedMappings);
+                             }}
+                           >
+                             Add Make
+                           </button>
+                         </td>
                         </tr>
                       ))}
                     </tbody>
