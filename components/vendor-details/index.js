@@ -157,9 +157,7 @@ const VendorDetails = () => {
                     <Image
                       fill
                       src={
-                        vendorDeails?.profile_image == null
-                          ? img1
-                          : vendorDeails?.profile_image
+                        vendorDeails?.new_profile_image || vendorDeails?.profile_image || img1
                       }
                       unoptimized
                       className="rounded prof-img-vendor"
