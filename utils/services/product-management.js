@@ -988,12 +988,12 @@ export const getVariantMappingById = (id = null) => {
 };
 
 
-//This function is used to approve the vendor mapping eg: IOCL, GAIL, etc
+//This function is used to approve the vendor mapping eg: IOCL, GAIL, etc, and update product make list
 export const addVendorApproveVariant =(payload) =>{
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.post(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-mapping-approve`,
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-vendor-mapping`,
         payload
       );
       resolve(response);
