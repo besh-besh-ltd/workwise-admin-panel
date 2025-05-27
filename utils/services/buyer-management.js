@@ -17,6 +17,20 @@ export const AddBuyerOnPortalByAdmin = (values) => {
 	});
 };
 
+export const RegisterCompanyByAdmin = (values) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let response = await axiosFormData.post(
+				`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/company-registration`,
+				values
+			);
+			resolve(response);
+		} catch (error) {
+			reject({ message: error });
+		}
+	});
+};
+
 function handleGetBuyerList(limit = 10, page = 1, verified, organization, name) {
   return new Promise(async (resolve, reject) => {
     try {
