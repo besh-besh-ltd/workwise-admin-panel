@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAdminProfile } from "@/utils/services/login";
-import { searchAllVariants, getVariantMappings, mapVariantWithVendor, getVariantMappingById, addVendorApproveVariant } from '@/utils/services/product-management';
+import { getVariantMappingById, addVendorApproveVariant } from '@/utils/services/product-management';
 import { useRouter } from 'next/router';
 import { toast, ToastContainer } from 'react-toastify';
 import FullLoading from '@/components/loading/FullLoading';
@@ -12,15 +12,18 @@ const MappingDetail = () => {
   const router = useRouter();
   const { id } = router.query;
   const [mapping, setMapping] = useState(null);
-  const [variant, setVariant] = useState(null);
+  const [variant, setVariant] = useState(null); // not in use - cross check and remove
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedVendor, setSelectedVendor] = useState(null);
-  const [userType, setUserType] = useState(null);
-  const [allMappings, setAllMappings] = useState([]);
+  const [selectedVendor, setSelectedVendor] = useState(null); // not in use - cross check and remove
+  const [userType, setUserType] = useState(null); // not in use - cross check and remove
+  const [allMappings, setAllMappings] = useState([]); // not in use - cross check and remove
   const [selectedOptions, setSelectedOptions] = useState([]);
   const [vendorApprovedList, setVendorApprovedList] = useState([]);
  const  [initialApprovedList, setInitialApprovedList] = useState([]);
+ const [makeList, setMakeList] = useState([]);            // Full make list
+const [newMakeInput, setNewMakeInput] = useState("");    // For adding new makes
+
 
 
   const getVendorApproveList = () => {
@@ -35,15 +38,7 @@ const MappingDetail = () => {
         console.log(error)
       });
   };
-  // Custom styles for Select Component
-  const customStyles = {
-    option: (provided, state) => ({
-      ...provided,
-      marginBottom: '1px solid #000',
-      color: state.isSelected ? '#0d6efd' : '#212529',
-      backgroundColor: state.isSelected ? '#f0f0f0' : provided.backgroundColor,
-    }),
-  };
+
 
   useEffect(() => {
     getUserProfile();
@@ -101,6 +96,14 @@ const MappingDetail = () => {
     // Now it's safe to use `mapping`
     setMapping(mapping);
 
+    // Extract make_list if available
+    if (mapping.make_list && Array.isArray(mapping.make_list)) {
+      setMakeList(mapping.make_list); // Directly set make list
+    } else {
+      setMakeList([]); // Ensure empty list if not present
+    }
+
+
     const approvedIds = mapping.approved_ids;
    const approverOptions = vendorApprovedList
      .filter((approver) => approvedIds.includes(approver.value)) // <-- use `value`, not `id`
@@ -137,6 +140,7 @@ const MappingDetail = () => {
       const data = {
         mapping_id: id,
         approved_id: selectedApprovers,
+        make_list: makeList.map(make => make.make_name), // Extract make names from the list
       };
 
       const response = await addVendorApproveVariant(data);
@@ -359,6 +363,54 @@ const MappingDetail = () => {
                       />
                     </div>
                   </div>
+
+
+              <div className="row mb-3">
+                <div className="col-md-4">
+                  <strong>Product Makes:</strong>
+                </div>
+                <div className="col-md-8">
+                  {/* Display existing makes */}
+                  <div className="d-flex flex-wrap gap-2 mb-2">
+                    {makeList.map((make, index) => (
+                      <div  key={index}>
+                        {make.make_name}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setMakeList((prev) => prev.filter((_, i) => i !== index))
+                          }
+                        >
+                          X
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+    
+          {/* Add new make */}
+          <div className="input-group">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Add new make"
+              value={newMakeInput}
+              onChange={(e) => setNewMakeInput(e.target.value)}
+            />
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={() => {
+                if (newMakeInput.trim() !== "") {
+                  setMakeList((prev) => [...prev, { make_name: newMakeInput.trim() }]);
+                  setNewMakeInput("");
+                }
+              }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      </div>
 
                   <div className="row mb-3">
                     <div className="col-md-4">
