@@ -50,31 +50,26 @@ const AddVendor = () => {
 ];
 
   const submitHandler = (values, resetForm) => {
-    const orgName = values.organization_name;
-    const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
+    const cleanedMobile = values.mobile.trim().replace(/^0+/, "");
+    const fullMobile = `${values.countryCode}-${cleanedMobile}`.substring(0, 15);
 
-   values.spocs.forEach((spoc) => {
-     const rawMobile = spoc.spoc_mobile || "";
+    values.spocs.forEach((spoc) => {
+      const rawMobile = spoc.spoc_mobile || "";
 
-     // Remove any existing country code or prefix like "+91-", "undefined-", etc.
-     const sanitizedMobile = rawMobile
-       .replace(/^\+?\w*-/, "")
-       .trim()
-       .replace(/^0+/, "");
+      const sanitizedMobile = rawMobile
+        .replace(/^\+?\w*-/, "")
+        .trim()
+        .replace(/^0+/, "");
 
-     const countryCode = spoc.country_code || "+91"; // fallback if undefined
+      const countryCode = spoc.country_code || "+91"; // fallback if undefined
 
-     spoc.spoc_mobile = `${countryCode}-${sanitizedMobile}`;
-     delete spoc.country_code;
-   });
-
-   
-    
+      spoc.spoc_mobile = `${countryCode}-${sanitizedMobile}`.substring(0, 15);
+      delete spoc.country_code;
+    });
 
     const { countryCode, ...updatedValues } = { 
       ...values, 
-      mobile: fullMobile,
-      name:orgName
+      mobile: fullMobile
     };
 
    
@@ -210,10 +205,6 @@ const handleCountryChange = (event) => {
     cin: "",
     turn_over: "",
     total_employees: "",
-    ptr_project_name: "",
-    ptr_project_description: "",
-    ptr_project_start_date: "",
-    ptr_project_end_date: "",
     spocs: [],
   };
 
@@ -262,21 +253,21 @@ const handleCountryChange = (event) => {
                   return (
                     <Form>
                       <div class="row form-common-row mb-4">
-                        {/* <div class="col-6">
-                        <label htmlFor="name">Name</label>
-                        <Field
-                          type="text"
-                          name="name"
-                          class="form-control"
-                          placeholder="Name"
-                        />
-                        <ErrorMessage
-                          name="name"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div> */}
+                        <div class="col-6">
+                          <label htmlFor="name">Contact Person Name</label>
+                          <Field
+                            type="text"
+                            name="name"
+                            class="form-control"
+                            placeholder="Contact Person Name"
+                          />
+                          <ErrorMessage
+                            name="name"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
                         <div class="col-6">
                           <label htmlFor="organization_Name">
                             Organization Name
@@ -636,69 +627,6 @@ const handleCountryChange = (event) => {
                           />
                           <ErrorMessage
                             name="ptr_track"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="ptr_project_name">
-                            Ptr Project Name
-                          </label>
-                          <Field
-                            type="text"
-                            name="ptr_project_name"
-                            class="form-control"
-                            placeholder="Ptr project name"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_name"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="about-vendro">
-                            PTR Project Description
-                          </label>
-                          <Field
-                            name="ptr_project_description"
-                            as="textarea"
-                            className="form-control"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_description"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="gstin">Ptr Project Start Date</label>
-                          <Field
-                            type="date"
-                            name="ptr_project_start_date"
-                            class="form-control"
-                            placeholder="ptr_project_start_date"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_start_date"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="gstin">Ptr Project End Date</label>
-                          <Field
-                            type="date"
-                            name="ptr_project_end_date"
-                            class="form-control"
-                            placeholder="ptr_project_end_date"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_end_date"
                             render={(msg) => (
                               <div className="form-error">{msg}</div>
                             )}

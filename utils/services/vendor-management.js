@@ -75,9 +75,23 @@ function handleGetCities(id) {
 function handleAddVendor(values) {
   return new Promise(async (resolve, reject) => {
     try {
+      let mobile = values.mobile;
+      if (values.mobile) {
+        const cleanMobile = values.mobile.replace(/^\+\d+\-\+\d+/, '+91').trim();
+        mobile = cleanMobile.substring(0, 15);
+      }
+      
+      const requestData = {
+        ...values,
+        mobile: mobile,
+        user_type: 3, // Vendor type
+        organization_name: values.organization_name,
+        // Generate password if not provided (admin doesn't have password field)
+        password: values.password || `${values.organization_name?.substring(0, 4) || 'Work'}@123`
+      };
       let response = await axiosFormData.post(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/create-vendor`,
-        values
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/users/company-registration`,
+        requestData
       );
       resolve(response);
     } catch (error) {
