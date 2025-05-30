@@ -24,6 +24,33 @@ const AddVendor = () => {
   const[countryCode , setCountryCode] = useState([]);
   
   const router = useRouter();
+  
+  const initialValues = {
+    countryCode: "+91",
+    name: "",
+    organization_name: "",
+    email: "",
+    mobile: "",
+    logo: "",
+    certifications: "",
+    brochure: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "",
+    website: "",
+    postal_code: "",
+    about_vendor_company: "",
+    // contact_number: "",
+    nature_business: "",
+    estd_year: "",
+    gstin: "",
+    import_export_code: "",
+    cin: "",
+    turn_over: "",
+    total_employees: "",
+    spocs: [],
+  };
 
   	const businessOptions = [
       {value : "Authorised Distributor", label : "Authorised Distributor"},
@@ -96,27 +123,6 @@ const AddVendor = () => {
       });
   };
  
-  useEffect(() => {
-    if (selectedCountryOption) {
-      handleGetStates(selectedCountryOption)
-        .then((res) => {
-          setStates(res.data.data); // Populate the states list
-        })
-        .catch((err) => console.log("Error fetching states:", err));
-    } else {
-      setStates([]); // Clear states if no country is selected
-    }
-  }, [selectedCountryOption]);
-  
-
-useEffect(() => {
-  fetchCountryCodes()
-  getCountries()
-  .then((res) => {
-       setCountryList(res.data) // Set country list state
-    })
-    .catch((err) => console.error("Error fetching countries:", err));
-}, []);
 
  const fetchCountryCodes = () => {
     getCountryCodes()
@@ -180,33 +186,29 @@ const handleCountryChange = (event) => {
     let id = event.target.value;
     setSelectedCityOption(id);
   };
-  const initialValues = {
-    countryCode: "+91",
-    name: "",
-    organization_name: "",
-    email: "",
-    mobile: "",
-    logo: "",
-    ptr_track: "",
-    certifications: "",
-    brochure: "",
-    address: "",
-    city: "",
-    state: "",
-    country: "",
-    website: "",
-    postal_code: "",
-    about_vendor_company: "",
-    // contact_number: "",
-    nature_business: "",
-    estd_year: "",
-    gstin: "",
-    import_export_code: "",
-    cin: "",
-    turn_over: "",
-    total_employees: "",
-    spocs: [],
-  };
+  
+
+  useEffect(() => {
+    if (selectedCountryOption) {
+      handleGetStates(selectedCountryOption)
+        .then((res) => {
+          setStates(res.data.data); // Populate the states list
+        })
+        .catch((err) => console.log("Error fetching states:", err));
+    } else {
+      setStates([]); // Clear states if no country is selected
+    }
+  }, [selectedCountryOption]);
+  
+
+  useEffect(() => {
+    fetchCountryCodes()
+    getCountries()
+    .then((res) => {
+        setCountryList(res.data) // Set country list state
+      })
+      .catch((err) => console.error("Error fetching countries:", err));
+  }, []);
 
   return (
     <>
@@ -222,7 +224,7 @@ const handleCountryChange = (event) => {
               <Formik
                 initialValues={initialValues}
                 validationSchema={yup.object().shape({
-                  // name: yup.string().required("Name is required"),
+                  name: yup.string().required("Contact Person Name is required"),
                   organization_name: yup
                     .string()
                     .required("Organization is required"),
@@ -608,25 +610,6 @@ const handleCountryChange = (event) => {
                           />
                           <ErrorMessage
                             name="total_employees"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="ptr">PTR</label>
-                          <Field
-                            name="ptr_track"
-                            type="file"
-                            value={undefined}
-                            className="form-control"
-                            onChange={(event) => {
-                              let files = event.target.files[0];
-                              setFieldValue("ptr_track", files);
-                            }}
-                          />
-                          <ErrorMessage
-                            name="ptr_track"
                             render={(msg) => (
                               <div className="form-error">{msg}</div>
                             )}
