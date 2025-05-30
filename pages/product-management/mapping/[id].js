@@ -113,6 +113,7 @@ const [newMakeInput, setNewMakeInput] = useState("");    // For adding new makes
      }));
 
     setInitialApprovedList(approverOptions);
+    setSelectedOptions(approverOptions);
 
     if (mapping.vendor_details) {
       setSelectedVendor(mapping.vendor_details ?? null);
