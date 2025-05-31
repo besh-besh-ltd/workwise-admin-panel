@@ -61,11 +61,10 @@ export default function AddBuyerPage() {
     email: "",
     mobile: "",
     organization_name: "",
-    register_as: "2",
+    register_as: "7",
     password: "",
     address: "",
     country: "India",
-    whatsapp: "",
     state: "",
     city: "",
     postal_code: "",
@@ -123,11 +122,6 @@ export default function AddBuyerPage() {
     // Concatenate country code and mobile number
     const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
     
-    // Format whatsapp number if provided
-    const fullWhatsapp = values.whatsapp ? 
-      `${values.countryCode}-${values.whatsapp.trim().replace(/^0+/, "")}` : 
-      "";
-
     // Generate password if not provided
     const password = values.password.trim() || generatePassword(values.organization_name, values.mobile);
     setGeneratedPassword(password);
@@ -146,8 +140,6 @@ export default function AddBuyerPage() {
     formData.append("created_by", 1); // Default admin value
     formData.append("country", values.country.trim());
     
-    // Append optional fields only if they have values
-    if (fullWhatsapp) formData.append("whatsapp", fullWhatsapp);
     if (values.state.trim()) formData.append("state", values.state.trim());
     if (values.city.trim()) formData.append("city", values.city.trim());
     if (values.postal_code.trim()) formData.append("postal_code", values.postal_code.trim());
@@ -250,12 +242,6 @@ export default function AddBuyerPage() {
                   <Field type="text" name="mobile" className="form-control" style={{ flex: "1" }} />
                 </div>
                 <ErrorMessage name="mobile" component="div" className="text-danger" />
-              </div>
-
-              {/* WhatsApp Field */}
-              <div className="mb-3">
-                <label className="form-label">WhatsApp (optional)</label>
-                <Field type="text" name="whatsapp" className="form-control" />
               </div>
 
               {/* Password Field */}
