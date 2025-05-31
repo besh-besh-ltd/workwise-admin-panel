@@ -31,7 +31,7 @@ export const RegisterCompanyByAdmin = (values) => {
 	});
 };
 
-function handleGetBuyerList(limit = 10, page = 1, verified, organization, name) {
+function handleGetBuyerList(limit = 10, page = 1, verified, organization, name, user_type) {
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.get(
