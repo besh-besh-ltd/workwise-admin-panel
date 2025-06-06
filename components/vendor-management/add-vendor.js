@@ -14,7 +14,6 @@ import Select from "react-select";
 const AddVendor = () => {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
-  const [spocs, setSpocs] = useState([]);
   const [selectedCountryOption, setSelectedCountryOption] = useState("");
   const [selectedStateOption, setSelectedStateOption] = useState("");
   const [selectedCityOption, setSelectedCityOption] = useState("");
@@ -24,33 +23,6 @@ const AddVendor = () => {
   const[countryCode , setCountryCode] = useState([]);
   
   const router = useRouter();
-  
-  const initialValues = {
-    countryCode: "+91",
-    name: "",
-    organization_name: "",
-    email: "",
-    mobile: "",
-    logo: "",
-    certifications: "",
-    brochure: "",
-    address: "",
-    city: "",
-    state: "",
-    country: "",
-    website: "",
-    postal_code: "",
-    about_vendor_company: "",
-    // contact_number: "",
-    nature_business: "",
-    estd_year: "",
-    gstin: "",
-    import_export_code: "",
-    cin: "",
-    turn_over: "",
-    total_employees: "",
-    spocs: [],
-  };
 
   	const businessOptions = [
       {value : "Authorised Distributor", label : "Authorised Distributor"},
@@ -77,26 +49,31 @@ const AddVendor = () => {
 ];
 
   const submitHandler = (values, resetForm) => {
-    const cleanedMobile = values.mobile.trim().replace(/^0+/, "");
-    const fullMobile = `${values.countryCode}-${cleanedMobile}`.substring(0, 15);
+    const orgName = values.organization_name;
+    const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
 
-    values.spocs.forEach((spoc) => {
-      const rawMobile = spoc.spoc_mobile || "";
+   values.spocs.forEach((spoc) => {
+     const rawMobile = spoc.spoc_mobile || "";
 
-      const sanitizedMobile = rawMobile
-        .replace(/^\+?\w*-/, "")
-        .trim()
-        .replace(/^0+/, "");
+     // Remove any existing country code or prefix like "+91-", "undefined-", etc.
+     const sanitizedMobile = rawMobile
+       .replace(/^\+?\w*-/, "")
+       .trim()
+       .replace(/^0+/, "");
 
-      const countryCode = spoc.country_code || "+91"; // fallback if undefined
+     const countryCode = spoc.country_code || "+91"; // fallback if undefined
 
-      spoc.spoc_mobile = `${countryCode}-${sanitizedMobile}`.substring(0, 15);
-      delete spoc.country_code;
-    });
+     spoc.spoc_mobile = `${countryCode}-${sanitizedMobile}`;
+     delete spoc.country_code;
+   });
+
+   
+    
 
     const { countryCode, ...updatedValues } = { 
       ...values, 
-      mobile: fullMobile
+      mobile: fullMobile,
+      name:orgName
     };
 
    
@@ -123,6 +100,27 @@ const AddVendor = () => {
       });
   };
  
+  useEffect(() => {
+    if (selectedCountryOption) {
+      handleGetStates(selectedCountryOption)
+        .then((res) => {
+          setStates(res.data.data); // Populate the states list
+        })
+        .catch((err) => console.log("Error fetching states:", err));
+    } else {
+      setStates([]); // Clear states if no country is selected
+    }
+  }, [selectedCountryOption]);
+  
+
+useEffect(() => {
+  fetchCountryCodes()
+  getCountries()
+  .then((res) => {
+       setCountryList(res.data) // Set country list state
+    })
+    .catch((err) => console.error("Error fetching countries:", err));
+}, []);
 
  const fetchCountryCodes = () => {
     getCountryCodes()
@@ -186,29 +184,30 @@ const handleCountryChange = (event) => {
     let id = event.target.value;
     setSelectedCityOption(id);
   };
-  
-
-  useEffect(() => {
-    if (selectedCountryOption) {
-      handleGetStates(selectedCountryOption)
-        .then((res) => {
-          setStates(res.data.data); // Populate the states list
-        })
-        .catch((err) => console.log("Error fetching states:", err));
-    } else {
-      setStates([]); // Clear states if no country is selected
-    }
-  }, [selectedCountryOption]);
-  
-
-  useEffect(() => {
-    fetchCountryCodes()
-    getCountries()
-    .then((res) => {
-        setCountryList(res.data) // Set country list state
-      })
-      .catch((err) => console.error("Error fetching countries:", err));
-  }, []);
+  const initialValues = {
+    countryCode: "+91",
+    name: "",
+    organization_name: "",
+    email: "",
+    mobile: "",
+    logo: "",
+    ptr_track: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "",
+    website: "",
+    postal_code: "",
+    about_vendor_company: "",
+    nature_business: "",
+    estd_year: "",
+    gstin: "",
+    import_export_code: "",
+    cin: "",
+    turn_over: "",
+    total_employees: "",
+    spocs: [],
+  };
 
   return (
     <>
@@ -224,7 +223,7 @@ const handleCountryChange = (event) => {
               <Formik
                 initialValues={initialValues}
                 validationSchema={yup.object().shape({
-                  name: yup.string().required("Contact Person Name is required"),
+                  // name: yup.string().required("Name is required"),
                   organization_name: yup
                     .string()
                     .required("Organization is required"),
@@ -255,21 +254,7 @@ const handleCountryChange = (event) => {
                   return (
                     <Form>
                       <div class="row form-common-row mb-4">
-                        <div class="col-6">
-                          <label htmlFor="name">Contact Person Name</label>
-                          <Field
-                            type="text"
-                            name="name"
-                            class="form-control"
-                            placeholder="Contact Person Name"
-                          />
-                          <ErrorMessage
-                            name="name"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
+   
                         <div class="col-6">
                           <label htmlFor="organization_Name">
                             Organization Name
@@ -616,43 +601,25 @@ const handleCountryChange = (event) => {
                           />
                         </div>
                         <div class="col-6">
-                          <label htmlFor="certifications">Certification</label>
+                          <label htmlFor="ptr">PTR</label>
                           <Field
-                            name="certifications"
+                            name="ptr_track"
                             type="file"
                             value={undefined}
                             className="form-control"
                             onChange={(event) => {
                               let files = event.target.files[0];
-                              setFieldValue("certifications", files);
+                              setFieldValue("ptr_track", files);
                             }}
                           />
                           <ErrorMessage
-                            name="certification"
+                            name="ptr_track"
                             render={(msg) => (
                               <div className="form-error">{msg}</div>
                             )}
                           />
                         </div>
-                        <div class="col-6">
-                          <label htmlFor="brochure">Brochure</label>
-                          <Field
-                            name="brochure"
-                            type="file"
-                            value={undefined}
-                            className="form-control"
-                            onChange={(event) => {
-                              let files = event.target.files[0];
-                              setFieldValue("brochure", files);
-                            }}
-                          />
-                          <ErrorMessage
-                            name="brochure"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
+
 
                         {/* SPOC Section */}
                         <div className="mt-4">
