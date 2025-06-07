@@ -252,28 +252,9 @@ useEffect(() => {
     cin: editDetails?.companyDetails?.cin || "",
     turn_over: editDetails?.companyDetails?.turnover || "",
     total_employees: editDetails?.companyDetails?.no_of_employess || "",
-    ptr_project_name: editDetails?.companyDetails?.project_name || "",
-    ptr_project_description: editDetails?.companyDetails?.project_description || "",
-    ptr_project_start_date: editDetails?.companyDetails?.project_start_date || "",
-    ptr_project_end_date: editDetails?.companyDetails?.project_end_date || ""
   };
 
-  // let spocInitialValues = {
-  //   spoc_name: "",
-  //   spoc_position: "",
-  //   spoc_business_email: "",
-  //   spoc_mobile: "",
-  // };
-  // // initial values of first spoc
-  // if (editDetails.spocDetails && editDetails.spocDetails.length > 0) {
-  //   spocInitialValues = {
-  //     spoc_name: editDetails.spocDetails[0]?.name || "",
-  //     spoc_position: editDetails.spocDetails[0]?.role || "",
-  //     spoc_business_email: editDetails.spocDetails[0]?.email || "",
-  //     spoc_mobile: editDetails.spocDetails[0]?.mobile || "",
-  //   };
-  //   console.log(spocInitialValues);
-  // }
+ 
 
   function getVendorDetails(id){
     handleGetVendorEditDetails(id)
@@ -806,121 +787,7 @@ useEffect(() => {
                                 )
                             )}
                         </div>
-                        <div class="col-6">
-                          <label htmlFor="total_employes">
-                            Ptr Project Name
-                          </label>
-                          <Field
-                            type="text"
-                            name="ptr_project_name"
-                            class="form-control"
-                            placeholder="Ptr project name"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_name"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="about-vendro">
-                            PTR Project Description
-                          </label>
-                          <Field
-                            name="ptr_project_description"
-                            as="textarea"
-                            className="form-control"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_description"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="gstin">Ptr Project Start Date</label>
-                          <Field
-                            type="date"
-                            name="ptr_project_start_date"
-                            class="form-control"
-                            placeholder="ptr_project_start_date"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_start_date"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="gstin">Ptr Project End Date</label>
-                          <Field
-                            type="date"
-                            name="ptr_project_end_date"
-                            class="form-control"
-                            placeholder="ptr_project_end_date"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_end_date"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="certifications">Certification</label>
-                          <Field
-                            name="certifications"
-                            type="file"
-                            value={undefined}
-                            className="form-control"
-                            onChange={(event) => {
-                              let files = event.target.files[0];
-                              setFieldValue("certifications", files);
-                            }}
-                          />
-                          {editDetails?.files &&
-                            editDetails?.files.length != 0 &&
-                            editDetails?.files.map(
-                              (data) =>
-                                data.doc_type == "crt" && (
-                                  <span>
-                                    <a href={data.file_path} target="_blank">
-                                      <i class="fa fa-file"></i>{" "}
-                                      {data.file_name}
-                                    </a>
-                                  </span>
-                                )
-                            )}
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="brochure">Brochure</label>
-                          <Field
-                            name="brochure"
-                            type="file"
-                            value={undefined}
-                            className="form-control"
-                            onChange={(event) => {
-                              let files = event.target.files[0];
-                              setFieldValue("brochure", files);
-                            }}
-                          />
-                          {editDetails?.files &&
-                            editDetails?.files.length != 0 &&
-                            editDetails?.files.map(
-                              (data) =>
-                                data.doc_type == "brochure" && (
-                                  <span>
-                                    <a href={data.file_path} target="_blank">
-                                      <i class="fa fa-file"></i>{" "}
-                                      {data.file_name}
-                                    </a>
-                                  </span>
-                                )
-                            )}
+
                         </div>
                       </div>
                     )}

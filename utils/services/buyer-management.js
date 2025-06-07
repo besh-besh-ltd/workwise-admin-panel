@@ -44,6 +44,7 @@ function handleGetBuyerList(limit = 10, page = 1, verified, organization, name, 
   });
 }
 
+// mukul 07-06-2025 , function is not in use, cross check and remove
 function handleApproveBuyer(id, status) {
   let payload = {};
   payload.status = status;
