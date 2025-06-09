@@ -17,7 +17,21 @@ export const AddBuyerOnPortalByAdmin = (values) => {
 	});
 };
 
-function handleGetBuyerList(limit = 10, page = 1, verified, organization, name) {
+export const RegisterCompanyByAdmin = (values) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let response = await axiosFormData.post(
+				`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/company-registration`,
+				values
+			);
+			resolve(response);
+		} catch (error) {
+			reject({ message: error });
+		}
+	});
+};
+
+function handleGetBuyerList(limit = 10, page = 1, verified, organization, name, user_type) {
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.get(
@@ -30,6 +44,7 @@ function handleGetBuyerList(limit = 10, page = 1, verified, organization, name) 
   });
 }
 
+// mukul 07-06-2025 , function is not in use, cross check and remove
 function handleApproveBuyer(id, status) {
   let payload = {};
   payload.status = status;
