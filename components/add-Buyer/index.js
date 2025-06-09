@@ -6,115 +6,91 @@ import * as yup from "yup";
 import { useRouter } from "next/router";
 import { ToastContainer, toast } from "react-toastify";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { AddBuyerOnPortalByAdmin } from "@/utils/services/buyer-management";
+import { RegisterCompanyByAdmin } from "@/utils/services/buyer-management";
 import { getCountryCodes } from "@/utils/services/location-management";
-
-// Function to generate a default password if none is provided
-const generatePassword = (orgName, mobile) => {
-  if (!orgName || !mobile) return "Default@123"; // Fallback password
-
-  const specialChars = "!@#$%^&*";
-  const randomSpecialChar =
-    specialChars[Math.floor(Math.random() * specialChars.length)];
-
-  const orgPart = orgName.replace(/\s+/g, "").substring(0, 4).toLowerCase();
-  const mobilePart = mobile.slice(-4);
-
-  // Generate one random uppercase letter
-  const randomUpperChar = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-
-  return `${randomUpperChar}${orgPart}${randomSpecialChar}${mobilePart}`;
-};
+import Image from "next/image";
 
 export default function AddBuyerPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [generatedPassword, setGeneratedPassword] = useState(""); // To store password
-  const [apiError, setApiError] = useState(null);
+  const [generatedPassword, setGeneratedPassword] = useState("");
   const [countryCode, setCountryCode] = useState([]);
+  const [profilePreview, setProfilePreview] = useState(null);
 
   useEffect(() => {
-    fetchCountryCodes();
+    getCountryCodes()
+      .then((res) => setCountryCode(res?.data || []))
+      .catch(() => setCountryCode([]));
   }, []);
 
-  const fetchCountryCodes = () => {
-    getCountryCodes()
-      .then((response) => {
-        if (response?.data) {
-          setCountryCode(response.data);
-        } else {
-          setCountryCode([]);
-        }
-      })
-      .catch((error) => {
-        console.log("Error fetching countries:", error);
-        setCountryCode([]);
-      });
-  };
-
-  // Initial form values
   const initialValues = {
-    countryCode:"+91",
+    countryCode: "+91",
     name: "",
     email: "",
-    countryCode: "+91", // Default to +91 or any appropriate value
     mobile: "",
-    organization_name: "",
-    register_as: "2",
     password: "",
+    organization_name: "",
+    gstin: "",
+    cin: "",
+    profile: null,
+    max_top_management: 2,
+    max_procurement: 5,
+    max_engineering: 15,
+    max_finance: 3
   };
 
-  // Validation schema using Yup
   const validationSchema = yup.object().shape({
     name: yup.string().required("Name is required"),
-    email: yup.string().email("Invalid email format").required("Email is required"),
-    countryCode: yup.string().required("Country code is required"),
-    mobile: yup.string().matches(/^\d{7,15}$/, "Please enter a valid mobile number").required("Mobile is required"),
-    organization_name: yup.string().required("Organization is required"),
-    register_as: yup.string().required("Registration type is required"),
+    email: yup.string().email("Invalid email").required("Email is required"),
+    countryCode: yup.string().required("Required"),
+    mobile: yup.string().matches(/^\d{7,15}$/, "Invalid number").required("Mobile is required"),
+    password: yup.string(),
+    organization_name: yup.string().required("Organization name is required"),
+    gstin: yup.string(),
+    cin: yup.string(),
+    max_top_management: yup.number().min(1).required("Required"),
+    max_procurement: yup.number().min(1).required("Required"),
+    max_engineering: yup.number().min(1).required("Required"),
+    max_finance: yup.number().min(1).required("Required")
   });
 
-  // Form submission handler
-  const submitHandler = async (values, { resetForm }) => {
-    setLoading(true);
-
-    // Concatenate country code and mobile number
-    const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
-
-    // Trim all input fields
-    const trimmedValues = {
-      name: values.name.trim(),
-      email: values.email.trim(),
-      mobile: fullMobile, // Use concatenated mobile number
-      organization_name: values.organization_name.trim(),
-      register_as: values.register_as.trim(),
-      password: values.password.trim(),
-    };
-
-    // Generate password only if not provided
-    if (!trimmedValues.password) {
-      trimmedValues.password = generatePassword(
-        trimmedValues.organization_name,
-        trimmedValues.mobile
-      );
-      setGeneratedPassword(trimmedValues.password);
+  const handleProfileChange = (event, setFieldValue) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setFieldValue("profile", file);
+      setProfilePreview(URL.createObjectURL(file));
     }
+  };
 
-    // API requires confirm_password
-    trimmedValues.confirm_password = trimmedValues.password;
+  const submitHandler = async (values) => {
+    setLoading(true);
+    const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
+    const password = values.password.trim() || "Auto@123";
+    setGeneratedPassword(password);
 
-    console.log("Submitting values:", trimmedValues);
-    await AddBuyerOnPortalByAdmin(trimmedValues)
-      .then((response) => {
-        toast.success("Buyer added successfully!");
-        console.log("API Response:", response);
-        router.push("/buyer-management"); // Redirect to buyer list page
-      })
-      .catch((error) => {
-        console.error("Error Adding Buyer:", error);
-        setApiError(error?.message?.response?.data?.errors || "Registration failed");
-        toast.error("Failed to add buyer. Please try again.");
-      });
+    const formData = new FormData();
+    formData.append("name", values.name.trim());
+    formData.append("email", values.email.trim());
+    formData.append("mobile", fullMobile);
+    formData.append("organization_name", values.organization_name.trim());
+    formData.append("user_type", 7);
+    formData.append("password", password);
+    if (values.gstin) formData.append("gstin", values.gstin);
+    if (values.cin) formData.append("cin", values.cin);
+    if (values.profile instanceof File) formData.append("file", values.profile);
+    formData.append("max_top_management", values.max_top_management);
+    formData.append("max_procurement", values.max_procurement);
+    formData.append("max_engineering", values.max_engineering);
+    formData.append("max_finance", values.max_finance);
+
+    try {
+      await RegisterCompanyByAdmin(formData);
+      toast.success("Company registered successfully!");
+      router.push("/buyer-management");
+    } catch (error) {
+      console.error("Registration Error:", error);
+      toast.error("Failed to register company. Try again.");
+    }
 
     setLoading(false);
   };
@@ -123,60 +99,26 @@ export default function AddBuyerPage() {
     <div className="container mt-5">
       <h2 className="text-center mb-4">Add New Buyer</h2>
       <div className="card p-4 shadow-sm">
-        {apiError && (
-          <div
-            style={{
-              color: "red",
-              fontWeight: "bold",
-              borderBottom: "2px solid red",
-              margin: "15px",
-            }}
-          >
-            <h2> Failed To Add Buyer </h2>
-            <ol>
-              {Object.values(apiError).map((error, index) => (
-                <li className="mb-0" key={index}>
-                  {error}
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
-
-        <Formik
-          initialValues={initialValues}
-          validationSchema={validationSchema}
-          onSubmit={submitHandler}
-        >
+        <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={submitHandler}>
           {({ values, setFieldValue }) => (
             <Form>
-              {/* Name Field */}
+              <h4 className="mb-3">Basic Information</h4>
+
               <div className="mb-3">
                 <label className="form-label">Name *</label>
                 <Field type="text" name="name" className="form-control" />
-                <ErrorMessage
-                  name="name"
-                  component="div"
-                  className="text-danger"
-                />
+                <ErrorMessage name="name" component="div" className="text-danger" />
               </div>
 
-              {/* Email Field */}
               <div className="mb-3">
                 <label className="form-label">Email *</label>
                 <Field type="email" name="email" className="form-control" />
-                <ErrorMessage
-                  name="email"
-                  component="div"
-                  className="text-danger"
-                />
+                <ErrorMessage name="email" component="div" className="text-danger" />
               </div>
 
-              {/* Mobile Field with Country Code */}
               <div className="mb-3">
                 <label className="form-label">Mobile *</label>
                 <div className="d-flex">
-                  {/* Country Code Dropdown */}
                   <Field as="select" name="countryCode" className="form-select me-2" style={{ width: "30%", maxWidth: "160px" }}>
                     {countryCode.map((item) => (
                       <option key={item.id} value={item.phone_code}>
@@ -184,29 +126,61 @@ export default function AddBuyerPage() {
                       </option>
                     ))}
                   </Field>
-
-                  {/* Mobile Number Input */}
                   <Field type="text" name="mobile" className="form-control" style={{ flex: "1" }} />
                 </div>
                 <ErrorMessage name="mobile" component="div" className="text-danger" />
               </div>
 
-              {/* Organization Name Field */}
+              <div className="mb-3">
+                <label className="form-label">Password</label>
+                <Field type="text" name="password" className="form-control" value={values.password || generatedPassword} />
+                <small className="text-muted">Leave blank to use auto generated password.</small>
+              </div>
+
               <div className="mb-3">
                 <label className="form-label">Organization Name *</label>
                 <Field type="text" name="organization_name" className="form-control" />
                 <ErrorMessage name="organization_name" component="div" className="text-danger" />
               </div>
 
-              {/* Password Field (Always Displayed) */}
-              <div className="mb-3">
-                <label className="form-label">Password </label>
-                <Field type="text" name="password" className="form-control" value={values.password || generatedPassword} />
-                <small className="text-muted">Leave blank to use auto generated password.</small>
+              <h4 className="mt-4 mb-3">Company Information</h4>
+
+              <div className="row mb-3">
+                <div className="col">
+                  <label className="form-label">GSTIN</label>
+                  <Field type="text" name="gstin" className="form-control" />
+                </div>
+                <div className="col">
+                  <label className="form-label">CIN</label>
+                  <Field type="text" name="cin" className="form-control" />
+                </div>
               </div>
 
-              {/* Submit Button with Loader */}
-              <div className="d-grid">
+              <div className="mb-3">
+                <label className="form-label">Company Profile Image (Optional)</label>
+                <input type="file" className="form-control" accept="image/*" onChange={(event) => handleProfileChange(event, setFieldValue)} />
+                {profilePreview && (
+                  <div className="mt-2">
+                    <Image src={profilePreview} width={100} height={100} className="img-thumbnail" alt="Profile Preview" />
+                  </div>
+                )}
+              </div>
+
+              <h4 className="mt-4 mb-3">Account Limits</h4>
+
+              <div className="row mb-3">
+                {["max_top_management", "max_procurement", "max_engineering", "max_finance"].map((field) => (
+                  <div className="col-md-6 col-lg-3" key={field}>
+                    <label className="form-label">
+                      {field.replace("max_", "Max ").replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} *
+                    </label>
+                    <Field type="number" name={field} className="form-control" />
+                    <ErrorMessage name={field} component="div" className="text-danger" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="d-grid mt-4">
                 <button type="submit" className="btn btn-primary" disabled={loading}>
                   {loading ? (
                     <>
@@ -222,7 +196,6 @@ export default function AddBuyerPage() {
           )}
         </Formik>
       </div>
-
       <ToastContainer />
     </div>
   );

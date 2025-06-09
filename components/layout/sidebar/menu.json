@@ -34,13 +34,6 @@
         "class": "",
         "icon": "",
         "active": false
-      },
-      {
-        "title": "Other User Management",
-        "link": "/other-user-management",
-        "class": "",
-        "icon": "",
-        "active": false
       }
     ]
   },
