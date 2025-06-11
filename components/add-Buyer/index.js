@@ -44,7 +44,11 @@ export default function AddBuyerPage() {
     name: yup.string().required("Name is required"),
     email: yup.string().email("Invalid email").required("Email is required"),
     countryCode: yup.string().required("Required"),
-    mobile: yup.string().matches(/^\d{7,15}$/, "Invalid number").required("Mobile is required"),
+    mobile: yup.string().when("countryCode", {
+      is: "+91",
+      then: () => yup.string().matches(/^\d{10}$/, "Invalid number").required("Mobile is required"),
+      otherwise: () => yup.string().matches(/^\d{7,15}$/, "Invalid number").required("Mobile is required")
+    }),
     password: yup.string(),
     organization_name: yup.string().required("Organization name is required"),
     gstin: yup.string(),
