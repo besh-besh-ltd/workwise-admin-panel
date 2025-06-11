@@ -44,6 +44,15 @@ function handleGetBuyerList(limit = 10, page = 1, verified, organization, name, 
   });
 }
 
+function generateRandomPassword() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$";
+  let password = "";
+  for (let i = 0; i < 8; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
 // mukul 07-06-2025 , function is not in use, cross check and remove
 function handleApproveBuyer(id, status) {
   let payload = {};
@@ -135,5 +144,6 @@ export {
   handleUpdateBuyer,
   handleGetBuyerDetails,
   handleGetBuyerRfqList,
-  handleGetSubscriptionDetails
+  handleGetSubscriptionDetails,
+  generateRandomPassword
 };

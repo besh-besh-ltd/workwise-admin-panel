@@ -9,6 +9,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { RegisterCompanyByAdmin } from "@/utils/services/buyer-management";
 import { getCountryCodes } from "@/utils/services/location-management";
 import Image from "next/image";
+import { generateRandomPassword } from "@/utils/services/buyer-management";
 
 export default function AddBuyerPage() {
   const router = useRouter();
@@ -43,7 +44,11 @@ export default function AddBuyerPage() {
     name: yup.string().required("Name is required"),
     email: yup.string().email("Invalid email").required("Email is required"),
     countryCode: yup.string().required("Required"),
-    mobile: yup.string().matches(/^\d{7,15}$/, "Invalid number").required("Mobile is required"),
+    mobile: yup.string().when("countryCode", {
+      is: "+91",
+      then: () => yup.string().matches(/^\d{10}$/, "Invalid number").required("Mobile is required"),
+      otherwise: () => yup.string().matches(/^\d{7,15}$/, "Invalid number").required("Mobile is required")
+    }),
     password: yup.string(),
     organization_name: yup.string().required("Organization name is required"),
     gstin: yup.string(),
@@ -65,7 +70,7 @@ export default function AddBuyerPage() {
   const submitHandler = async (values) => {
     setLoading(true);
     const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
-    const password = values.password.trim() || "Auto@123";
+    const password = values.password.trim() || generateRandomPassword();
     setGeneratedPassword(password);
 
     const formData = new FormData();
@@ -77,7 +82,7 @@ export default function AddBuyerPage() {
     formData.append("password", password);
     if (values.gstin) formData.append("gstin", values.gstin);
     if (values.cin) formData.append("cin", values.cin);
-    if (values.profile instanceof File) formData.append("file", values.profile);
+    if (values.profile instanceof File) formData.append("profile", values.profile);
     formData.append("max_top_management", values.max_top_management);
     formData.append("max_procurement", values.max_procurement);
     formData.append("max_engineering", values.max_engineering);
