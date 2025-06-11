@@ -9,6 +9,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { RegisterCompanyByAdmin } from "@/utils/services/buyer-management";
 import { getCountryCodes } from "@/utils/services/location-management";
 import Image from "next/image";
+import { generateRandomPassword } from "@/utils/services/buyer-management";
 
 export default function AddBuyerPage() {
   const router = useRouter();
@@ -65,7 +66,7 @@ export default function AddBuyerPage() {
   const submitHandler = async (values) => {
     setLoading(true);
     const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
-    const password = values.password.trim() || "Auto@123";
+    const password = values.password.trim() || generateRandomPassword();
     setGeneratedPassword(password);
 
     const formData = new FormData();
