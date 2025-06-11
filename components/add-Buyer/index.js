@@ -82,7 +82,7 @@ export default function AddBuyerPage() {
     formData.append("password", password);
     if (values.gstin) formData.append("gstin", values.gstin);
     if (values.cin) formData.append("cin", values.cin);
-    if (values.profile instanceof File) formData.append("file", values.profile);
+    if (values.profile instanceof File) formData.append("profile", values.profile);
     formData.append("max_top_management", values.max_top_management);
     formData.append("max_procurement", values.max_procurement);
     formData.append("max_engineering", values.max_engineering);
