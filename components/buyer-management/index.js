@@ -259,9 +259,9 @@ const BuyerManagement = () => {
                         <th scope="col">Email</th>
                         <th scope="col">Contacts</th>
                         <th scope="col">User Type</th>
+                        <th scope="col">Company Name</th>
+                        <th scope="col">Status</th>
                         <th scope="col">Created At</th>
-                        {/* <th scope="col">Region</th> */}
-                        {/* <th scope="col">Approval Status</th> */}
                         <th scope="col">Action</th>
                       </tr>
                     </thead>
@@ -283,6 +283,12 @@ const BuyerManagement = () => {
                             <td>{item.email}</td>
                             <td>{item.mobile}</td>
                             <td>{userTypeMap[item.user_type] || `Type ${item.user_type}`}</td>
+                            <td>{item.company_name || item.organization_name}</td>
+                            <td>
+                              <span className={`badge ${item.status === 1 ? 'bg-success' : 'bg-danger'}`}>
+                                {item.status === 1 ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
                             <td style={{ width: "100px" }}>
                             {new Date(item.created_at).toLocaleDateString("en-GB", {
                               day: "numeric",
