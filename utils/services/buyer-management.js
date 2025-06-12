@@ -35,7 +35,7 @@ function handleGetBuyerList(limit = 10, page = 1, verified, organization, name, 
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/buyer-list?limit=${limit}&page=${page}&verified=${verified}&organization=${organization}&name=${name}`
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/buyer-list?limit=${limit}&page=${page}&verified=${verified}&organization=${organization}&name=${name}&user_type=${user_type}&include_company=true`
       );
       resolve(response);
     } catch (error) {
