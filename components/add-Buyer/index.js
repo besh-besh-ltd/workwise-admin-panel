@@ -8,7 +8,6 @@ import { ToastContainer, toast } from "react-toastify";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { RegisterCompanyByAdmin } from "@/utils/services/buyer-management";
 import { getCountryCodes } from "@/utils/services/location-management";
-import Image from "next/image";
 import { generateRandomPassword } from "@/utils/services/buyer-management";
 
 export default function AddBuyerPage() {
@@ -16,7 +15,6 @@ export default function AddBuyerPage() {
   const [loading, setLoading] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [countryCode, setCountryCode] = useState([]);
-  const [profilePreview, setProfilePreview] = useState(null);
 
   useEffect(() => {
     getCountryCodes()
@@ -31,13 +29,27 @@ export default function AddBuyerPage() {
     mobile: "",
     password: "",
     organization_name: "",
-    gstin: "",
-    cin: "",
-    profile: null,
-    max_top_management: 2,
-    max_procurement: 5,
-    max_engineering: 15,
-    max_finance: 3
+    max_top_management: 0,
+    max_procurement: 0,
+    max_engineering: 0,
+    max_finance: 0
+  };
+
+  // Custom validation function to check if at least one account type is > 0
+  const validateAccountLimits = (values) => {
+    const errors = {};
+    const accountTypes = [
+      values.max_top_management,
+      values.max_procurement, 
+      values.max_engineering,
+      values.max_finance
+    ];
+    
+    if (!accountTypes.some(val => val > 0)) {
+      errors.account_limits = "At least one account type must have a limit greater than 0";
+    }
+    
+    return errors;
   };
 
   const validationSchema = yup.object().shape({
@@ -51,23 +63,20 @@ export default function AddBuyerPage() {
     }),
     password: yup.string(),
     organization_name: yup.string().required("Organization name is required"),
-    gstin: yup.string(),
-    cin: yup.string(),
-    max_top_management: yup.number().min(1).required("Required"),
-    max_procurement: yup.number().min(1).required("Required"),
-    max_engineering: yup.number().min(1).required("Required"),
-    max_finance: yup.number().min(1).required("Required")
+    max_top_management: yup.number().min(0).required("Required"),
+    max_procurement: yup.number().min(0).required("Required"),
+    max_engineering: yup.number().min(0).required("Required"),
+    max_finance: yup.number().min(0).required("Required")
   });
 
-  const handleProfileChange = (event, setFieldValue) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setFieldValue("profile", file);
-      setProfilePreview(URL.createObjectURL(file));
+  const submitHandler = async (values, { setErrors }) => {
+    // Validate that at least one account type is > 0
+    const validationErrors = validateAccountLimits(values);
+    if (validationErrors.account_limits) {
+      setErrors(validationErrors);
+      return;
     }
-  };
 
-  const submitHandler = async (values) => {
     setLoading(true);
     const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
     const password = values.password.trim() || generateRandomPassword();
@@ -80,9 +89,6 @@ export default function AddBuyerPage() {
     formData.append("organization_name", values.organization_name.trim());
     formData.append("user_type", 7);
     formData.append("password", password);
-    if (values.gstin) formData.append("gstin", values.gstin);
-    if (values.cin) formData.append("cin", values.cin);
-    if (values.profile instanceof File) formData.append("profile", values.profile);
     formData.append("max_top_management", values.max_top_management);
     formData.append("max_procurement", values.max_procurement);
     formData.append("max_engineering", values.max_engineering);
@@ -105,7 +111,7 @@ export default function AddBuyerPage() {
       <h2 className="text-center mb-4">Add New Buyer</h2>
       <div className="card p-4 shadow-sm">
         <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={submitHandler}>
-          {({ values, setFieldValue }) => (
+          {({ values, errors, touched, setErrors }) => (
             <Form>
               <h4 className="mb-3">Basic Information</h4>
 
@@ -148,38 +154,20 @@ export default function AddBuyerPage() {
                 <ErrorMessage name="organization_name" component="div" className="text-danger" />
               </div>
 
-              <h4 className="mt-4 mb-3">Company Information</h4>
-
-              <div className="row mb-3">
-                <div className="col">
-                  <label className="form-label">GSTIN</label>
-                  <Field type="text" name="gstin" className="form-control" />
-                </div>
-                <div className="col">
-                  <label className="form-label">CIN</label>
-                  <Field type="text" name="cin" className="form-control" />
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label">Company Profile Image (Optional)</label>
-                <input type="file" className="form-control" accept="image/*" onChange={(event) => handleProfileChange(event, setFieldValue)} />
-                {profilePreview && (
-                  <div className="mt-2">
-                    <Image src={profilePreview} width={100} height={100} className="img-thumbnail" alt="Profile Preview" />
-                  </div>
-                )}
-              </div>
-
               <h4 className="mt-4 mb-3">Account Limits</h4>
+              <p className="text-muted">At least one account type must have a limit greater than 0.</p>
+
+              {errors.account_limits && (
+                <div className="alert alert-danger">{errors.account_limits}</div>
+              )}
 
               <div className="row mb-3">
                 {["max_top_management", "max_procurement", "max_engineering", "max_finance"].map((field) => (
                   <div className="col-md-6 col-lg-3" key={field}>
                     <label className="form-label">
-                      {field.replace("max_", "Max ").replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} *
+                      {field.replace("max_", "Max ").replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                     </label>
-                    <Field type="number" name={field} className="form-control" />
+                    <Field type="number" min="0" name={field} className="form-control" />
                     <ErrorMessage name={field} component="div" className="text-danger" />
                   </div>
                 ))}
