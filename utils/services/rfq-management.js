@@ -32,3 +32,15 @@ export const updateStatus = (payload) => {
         }
     });
 };
+
+
+export const sendRFQReminderToVendor = (id) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/rfq/send-reminder/${id}`);
+            resolve(response);
+        } catch (error) {
+            reject({ message: error });
+        }
+    });
+};
