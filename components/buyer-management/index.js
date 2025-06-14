@@ -255,7 +255,6 @@ const BuyerManagement = () => {
                     <thead>
                       <tr>
                         <th scope="col">Buyer Name</th>
-                        <th scope="col">Spoc</th>
                         <th scope="col">Email</th>
                         <th scope="col">Contacts</th>
                         <th scope="col">User Type</th>
@@ -279,7 +278,6 @@ const BuyerManagement = () => {
                         return (
                           <tr key={item.name} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
                             <td>{item.name}</td>
-                            <td>{item.organization_name}</td>
                             <td>{item.email}</td>
                             <td>{item.mobile}</td>
                             <td>{userTypeMap[item.user_type] || `Type ${item.user_type}`}</td>
