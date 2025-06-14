@@ -137,6 +137,33 @@ function handleGetSubscriptionDetails(id){
   });
 }
 
+function handleGetBuyerAccountLimits(company_id) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/account-limits/${company_id}`
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  });
+}
+
+function handleUpdateBuyerAccountLimits(company_id, limitsData) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.put(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/update-account-limits/${company_id}`,
+        limitsData
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  });
+}
+
 export {
   handleGetBuyerList,
   handleApproveBuyer,
@@ -145,5 +172,7 @@ export {
   handleGetBuyerDetails,
   handleGetBuyerRfqList,
   handleGetSubscriptionDetails,
+  handleGetBuyerAccountLimits,
+  handleUpdateBuyerAccountLimits,
   generateRandomPassword
 };
