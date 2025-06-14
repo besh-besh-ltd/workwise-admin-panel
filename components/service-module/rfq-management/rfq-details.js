@@ -1,12 +1,12 @@
 import FullLoading from '@/components/loading/FullLoading';
-import { getRFQDetails, updateStatus } from '@/utils/services/rfq-management';
+import { getRFQDetails, sendRFQReminderToVendor, updateStatus } from '@/utils/services/rfq-management';
 import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react'
 import VendorCard from './vendor-card';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faEdit } from '@fortawesome/free-solid-svg-icons';
 import StatusModal from '@/components/modal/status-modal';
-import { toast } from 'react-toastify';
+import { ToastContainer, toast } from "react-toastify";
 
 const RFQDetails = () => {
     const router = useRouter();
@@ -62,6 +62,24 @@ const RFQDetails = () => {
             })
     }
 
+
+    const handleSendReminder = async () => {
+       setLoading(true);
+         sendRFQReminderToVendor(rfq_id)
+            .then((res) => {
+                console.log(res)
+                toast.success("Reminder sent successfully");
+            })
+            .catch((error) => {
+                toast.error("Reminder sent Failed");
+                
+            })
+            .finally(() => {
+                setLoading(false)
+            })
+    }
+
+
     useEffect(() => {
         if (rfq_id) {
             getRfqById();
@@ -91,10 +109,18 @@ const RFQDetails = () => {
                             <>
                                 <div className="d-flex justify-content-between mb-2">
                                     <h2 className="fs-5 ">Rfq No. #{` ${rfqDetails?.rfq_no}`}</h2>
+                                    <div>
+
+                                   <button type="button" className="btn btn-secondary mr-3" onClick={() => handleSendReminder(true)}>
+                                     <FontAwesomeIcon icon={faPaperPlane} className="me-2" />
+                                     Send Reminder
+                                   </button>
+
                                     <button type="button" className="btn btn-primary" onClick={() => setOpenUpdateStatus(true)}>
                                         <FontAwesomeIcon icon={faEdit} className="me-2" />
                                         Status
                                     </button>
+                                    </div>
                                 </div>
                                 <div className="row border rounded-2 p-2">
                                     <div className="col-md-5">
@@ -197,6 +223,9 @@ const RFQDetails = () => {
                     updateAdminStatus={updateAdminStatus}
                 />
             }
+
+           <ToastContainer />
+            
         </>
     )
 }

@@ -17,11 +17,25 @@ export const AddBuyerOnPortalByAdmin = (values) => {
 	});
 };
 
-function handleGetBuyerList(limit = 10, page = 1, verified, organization, name) {
+export const RegisterCompanyByAdmin = (values) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let response = await axiosFormData.post(
+				`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/company-registration`,
+				values
+			);
+			resolve(response);
+		} catch (error) {
+			reject({ message: error });
+		}
+	});
+};
+
+function handleGetBuyerList(limit = 10, page = 1, verified, organization, name, user_type) {
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/buyer-list?limit=${limit}&page=${page}&verified=${verified}&organization=${organization}&name=${name}`
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/buyer-list?limit=${limit}&page=${page}&verified=${verified}&organization=${organization}&name=${name}&user_type=${user_type}&include_company=true`
       );
       resolve(response);
     } catch (error) {
@@ -30,6 +44,16 @@ function handleGetBuyerList(limit = 10, page = 1, verified, organization, name) 
   });
 }
 
+function generateRandomPassword() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$";
+  let password = "";
+  for (let i = 0; i < 8; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
+// mukul 07-06-2025 , function is not in use, cross check and remove
 function handleApproveBuyer(id, status) {
   let payload = {};
   payload.status = status;
@@ -113,6 +137,33 @@ function handleGetSubscriptionDetails(id){
   });
 }
 
+function handleGetBuyerAccountLimits(company_id) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/account-limits/${company_id}`
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  });
+}
+
+function handleUpdateBuyerAccountLimits(company_id, limitsData) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.put(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/update-account-limits/${company_id}`,
+        limitsData
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  });
+}
+
 export {
   handleGetBuyerList,
   handleApproveBuyer,
@@ -120,5 +171,8 @@ export {
   handleUpdateBuyer,
   handleGetBuyerDetails,
   handleGetBuyerRfqList,
-  handleGetSubscriptionDetails
+  handleGetSubscriptionDetails,
+  handleGetBuyerAccountLimits,
+  handleUpdateBuyerAccountLimits,
+  generateRandomPassword
 };

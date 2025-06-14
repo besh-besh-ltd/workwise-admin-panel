@@ -14,7 +14,6 @@ import Select from "react-select";
 const AddVendor = () => {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
-  const [spocs, setSpocs] = useState([]);
   const [selectedCountryOption, setSelectedCountryOption] = useState("");
   const [selectedStateOption, setSelectedStateOption] = useState("");
   const [selectedCityOption, setSelectedCityOption] = useState("");
@@ -193,8 +192,6 @@ const handleCountryChange = (event) => {
     mobile: "",
     logo: "",
     ptr_track: "",
-    certifications: "",
-    brochure: "",
     address: "",
     city: "",
     state: "",
@@ -202,7 +199,6 @@ const handleCountryChange = (event) => {
     website: "",
     postal_code: "",
     about_vendor_company: "",
-    // contact_number: "",
     nature_business: "",
     estd_year: "",
     gstin: "",
@@ -210,10 +206,6 @@ const handleCountryChange = (event) => {
     cin: "",
     turn_over: "",
     total_employees: "",
-    ptr_project_name: "",
-    ptr_project_description: "",
-    ptr_project_start_date: "",
-    ptr_project_end_date: "",
     spocs: [],
   };
 
@@ -262,21 +254,7 @@ const handleCountryChange = (event) => {
                   return (
                     <Form>
                       <div class="row form-common-row mb-4">
-                        {/* <div class="col-6">
-                        <label htmlFor="name">Name</label>
-                        <Field
-                          type="text"
-                          name="name"
-                          class="form-control"
-                          placeholder="Name"
-                        />
-                        <ErrorMessage
-                          name="name"
-                          render={(msg) => (
-                            <div className="form-error">{msg}</div>
-                          )}
-                        />
-                      </div> */}
+   
                         <div class="col-6">
                           <label htmlFor="organization_Name">
                             Organization Name
@@ -641,107 +619,7 @@ const handleCountryChange = (event) => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
-                          <label htmlFor="ptr_project_name">
-                            Ptr Project Name
-                          </label>
-                          <Field
-                            type="text"
-                            name="ptr_project_name"
-                            class="form-control"
-                            placeholder="Ptr project name"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_name"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="about-vendro">
-                            PTR Project Description
-                          </label>
-                          <Field
-                            name="ptr_project_description"
-                            as="textarea"
-                            className="form-control"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_description"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="gstin">Ptr Project Start Date</label>
-                          <Field
-                            type="date"
-                            name="ptr_project_start_date"
-                            class="form-control"
-                            placeholder="ptr_project_start_date"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_start_date"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="gstin">Ptr Project End Date</label>
-                          <Field
-                            type="date"
-                            name="ptr_project_end_date"
-                            class="form-control"
-                            placeholder="ptr_project_end_date"
-                          />
-                          <ErrorMessage
-                            name="ptr_project_end_date"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="certifications">Certification</label>
-                          <Field
-                            name="certifications"
-                            type="file"
-                            value={undefined}
-                            className="form-control"
-                            onChange={(event) => {
-                              let files = event.target.files[0];
-                              setFieldValue("certifications", files);
-                            }}
-                          />
-                          <ErrorMessage
-                            name="certification"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
-                        <div class="col-6">
-                          <label htmlFor="brochure">Brochure</label>
-                          <Field
-                            name="brochure"
-                            type="file"
-                            value={undefined}
-                            className="form-control"
-                            onChange={(event) => {
-                              let files = event.target.files[0];
-                              setFieldValue("brochure", files);
-                            }}
-                          />
-                          <ErrorMessage
-                            name="brochure"
-                            render={(msg) => (
-                              <div className="form-error">{msg}</div>
-                            )}
-                          />
-                        </div>
+
 
                         {/* SPOC Section */}
                         <div className="mt-4">

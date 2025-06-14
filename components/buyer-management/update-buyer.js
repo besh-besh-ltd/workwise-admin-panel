@@ -4,25 +4,33 @@ import * as yup from "yup";
 import Image from "next/image";
 import {
   handleUpdateBuyer,
+  handleGetBuyerAccountLimits,
+  handleUpdateBuyerAccountLimits,
 } from "@/utils/services/buyer-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
 import { getCountryCodes } from "@/utils/services/location-management";
+import { getAdminProfile } from "@/utils/services/login";
 
-const UpdateVendor = () => {
+const UpdateBuyer = () => {
   const [editDetails, setEditDetails] = useState(null);
-  const [dtaCount, setdtaCount] = useState(0);
-  const [onecountrycode,setonecountrycode] =useState("");
   const [countryCode, setCountryCode] = useState([]);
+  const [accountLimits, setAccountLimits] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const router = useRouter();
   const { id } = router.query;
 
   useEffect(() => {
     if (id) {
-      setEditDetails(JSON.parse(localStorage.getItem("buyerUpdate")));
+      const buyerData = JSON.parse(localStorage.getItem("buyerUpdate"));
+      setEditDetails(buyerData);
+      getCurrentUser(buyerData);
+      
+      if (buyerData?.user_type === 7 && buyerData?.company_id) {
+        fetchAccountLimits(buyerData.company_id);
+      }
     }
-    setdtaCount(1);
     fetchCountryCodes();
   }, [id]);
 
@@ -31,36 +39,66 @@ const UpdateVendor = () => {
       const response = await getCountryCodes();
       setCountryCode(response?.data || []);
     } catch (error) {
-      console.error("Error fetching countries:", error);
       setCountryCode([]);
     }
   };
 
-  const initialValues = {
-    name: editDetails?.name || "",
-    email: editDetails?.email || "",
-    mobile: editDetails?.mobile ? editDetails.mobile.replace(/^\+?\d+-/, "") : "",
-    organization_name: editDetails?.organization_name || "",
-    image: editDetails?.profile_image || null,
+  const getCurrentUser = async () => {
+    try {
+      const response = await getAdminProfile();
+      setCurrentUser(response?.data || {});
+    } catch (error) {
+      setCurrentUser({});
+    }
   };
 
-  
+  const fetchAccountLimits = async (company_id) => {
+    try {
+      const response = await handleGetBuyerAccountLimits(company_id);
+      setAccountLimits(response?.data || null);
+    } catch (error) {
+      setAccountLimits(null);
+    }
+  };
+
+  const getUserTypeLabel = (userType) => {
+    const userTypeMap = {
+      2: "Procurement",
+      7: "Company Admin",
+      8: "Top Management",
+      9: "Engineering Account",
+      10: "Finance Account"
+    };
+    return userTypeMap[userType] || `Type ${userType}`;
+  };
+
+  const isAdmin = () => {
+    return currentUser?.user_type === 1 || currentUser?.user_type === 5;
+  };
+
+  const canEditUser = () => {
+    return editDetails?.user_type === 7 ? isAdmin() : true;
+  };
 
   const submitHandler = (values, { resetForm }) => {
-    let fullMobile;
-    if(values.countryCode)
-      {
-        fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
+    if (!canEditUser()) {
+      toast.error("You don't have permission to update this user");
+      return;
+    }
+
+    const selectedCountry = countryCode.find(
+      (item) => item.phone_code === (editDetails?.mobile.match(/^\+?\d+/)?.[0] || "+91")
+    );
+
+    const fullMobile = values.countryCode 
+      ? `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`
+      : `${selectedCountry?.phone_code || "+91"}-${values.mobile.trim().replace(/^0+/, "")}`;
     
-      }    else{
-        fullMobile = `${selectedCountry.phone_code}-${values.mobile.trim().replace(/^0+/, "")}`;
-      }
-    const { countryCode, ...updatedValues } = { 
+    const { countryCode: _, ...updatedValues } = { 
       ...values, 
       mobile: fullMobile 
     };
     
-   
     handleUpdateBuyer(updatedValues, editDetails)
       .then((res) => {
         resetForm();
@@ -68,48 +106,85 @@ const UpdateVendor = () => {
         router.push("/buyer-management");
       })
       .catch((error) => {
-        console.log("err", error);
-        let txt = "";
-        for (let x in error?.error?.response?.data?.errors) {
-          txt = error?.error?.response?.data?.errors[x];
-        }
-        toast(txt);  
-          });
+        const errorMsg = Object.values(error?.error?.response?.data?.errors || {})[0] || "Update failed";
+        toast.error(errorMsg);
+      });
   };
+
+  const submitAccountLimits = (values) => {
+    if (!isAdmin()) {
+      toast.error("Only Workwise Admin/Subadmin can update account limits");
+      return;
+    }
+
+    handleUpdateBuyerAccountLimits(editDetails.company_id, values)
+      .then((res) => {
+        toast.success(res.message);
+        fetchAccountLimits(editDetails.company_id);
+      })
+      .catch((error) => {
+        const errorMsg = Object.values(error?.error?.response?.data?.errors || {})[0] || "Update failed";
+        toast.error(errorMsg);
+      });
+  };
+
+  if (!editDetails) {
+    return <div>Loading...</div>;
+  }
+
   const extractedCountryCode = editDetails?.mobile.match(/^\+?\d+/)?.[0] || "+91";
- 
-  
   const selectedCountry = countryCode.find(
     (item) => item.phone_code === extractedCountryCode
   );
 
- 
+  const initialValues = {
+    name: editDetails?.name || "",
+    email: editDetails?.email || "",
+    mobile: editDetails?.mobile ? editDetails.mobile.replace(/^\+?\d+-/, "") : "",
+    organization_name: editDetails?.company_name || editDetails?.organization_name || "",
+    image: editDetails?.profile_image || null,
+  };
+
+  const accountLimitsInitialValues = {
+    max_top_management: accountLimits?.max_top_management || 0,
+    max_procurement: accountLimits?.max_procurement || 0,
+    max_engineering: accountLimits?.max_engineering || 0,
+    max_finance: accountLimits?.max_finance || 0,
+  };
+
+  const validationSchema = yup.object({
+    name: yup.string().required("Name is required"),
+    email: yup
+      .string()
+      .email("Please enter valid email address")
+      .required("Email is required"),
+    mobile: yup
+      .string()
+      .matches(/^[0-9]{10,15}$/, "Enter a valid mobile number")
+      .required("Mobile is required"),
+  });
+
+  const accountLimitsSchema = yup.object({
+    max_top_management: yup.number().min(0).required("Required"),
+    max_procurement: yup.number().min(0).required("Required"),
+    max_engineering: yup.number().min(0).required("Required"),
+    max_finance: yup.number().min(0).required("Required"),
+  });
+
   return (
     <div className="container mt-4">
       <h5 className="mb-3">Update Buyer</h5>
-      <div className="card">
+      
+      {/* User Information Card */}
+      <div className="card mb-4">
+        <div className="card-header">
+          <h6 className="mb-0">User Information</h6>
+        </div>
         <div className="card-body">
           <Formik
             initialValues={initialValues}
             enableReinitialize
-            validationSchema={yup.object({
-              name: yup.string().required("Name is required"),
-              organization_name: yup.string().required("Organization is required"),
-              email: yup
-                .string()
-                    .email()
-                    .matches(
-                      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
-                      "please enter valid email address"
-                    )
-                    .required("email is required"),
-              mobile: yup
-                .string()
-                .matches(/^[0-9]{10,15}$/, "Enter a valid mobile number")
-                .min(10)
-                    .max(11)
-                .required("Mobile is required"),
-            })}
+            validationSchema={validationSchema}
             onSubmit={submitHandler}
           >
             {({ setFieldValue }) => (
@@ -117,12 +192,22 @@ const UpdateVendor = () => {
                 <div className="row mb-3">
                   <div className="col-md-6">
                     <label className="form-label">Name</label>
-                    <Field type="text" name="name" className="form-control" />
+                    <Field 
+                      type="text" 
+                      name="name" 
+                      className="form-control" 
+                      readOnly={!canEditUser()}
+                    />
                     <ErrorMessage name="name" component="div" className="text-danger" />
                   </div>
                   <div className="col-md-6">
                     <label className="form-label">Email</label>
-                    <Field type="email" name="email" className="form-control" />
+                    <Field 
+                      type="email" 
+                      name="email" 
+                      className="form-control" 
+                      readOnly={!canEditUser()}
+                    />
                     <ErrorMessage name="email" component="div" className="text-danger" />
                   </div>
                 </div>
@@ -130,54 +215,168 @@ const UpdateVendor = () => {
                   <div className="col-md-6">
                     <label className="form-label">Mobile</label>
                     <div className="d-flex">
-                      <Field as="select" name="countryCode" className="form-select me-2 w-auto">
-                      <option value="countryCode">{selectedCountry?.country_code} ({selectedCountry?.phone_code})</option> {/* Default selected */}
+                      <Field 
+                        as="select" 
+                        name="countryCode" 
+                        className="form-select me-2 w-auto"
+                        disabled={!canEditUser()}
+                      >
+                        <option value="countryCode">{selectedCountry?.country_code} ({selectedCountry?.phone_code})</option>
                         {countryCode.map((item) => (
                           <option key={item.id} value={item.phone_code}>
                             {item.country_code} ({item.phone_code})
                           </option>
                         ))}
                       </Field>
-                      <Field type="text" name="mobile" className="form-control" />
+                      <Field 
+                        type="text" 
+                        name="mobile" 
+                        className="form-control" 
+                        readOnly={!canEditUser()}
+                      />
                     </div>
                     <ErrorMessage name="mobile" component="div" className="text-danger" />
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label">Organization</label>
-                    <Field type="text" name="organization_name" className="form-control" />
-                    <ErrorMessage name="organization_name" component="div" className="text-danger" />
+                    <label className="form-label">Role</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      value={getUserTypeLabel(editDetails.user_type)}
+                      readOnly
+                    />
                   </div>
                 </div>
-                <div className="mb-3">
-                  <label className="form-label">Image</label>
-                  <input
-                    type="file"
-                    className="form-control"
-                    onChange={(event) => setFieldValue("image", event.target.files[0])}
-                  />
-                  {editDetails?.profile_image && (
-                    <div className="mt-2">
-                      <Image
-                        src={editDetails.profile_image || img1}
-                        width={100}
-                        height={100}
-                        className="img-thumbnail"
-                        alt="Profile"
-                      />
-                    </div>
-                  )}
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <label className="form-label">Company Name</label>
+                    <Field 
+                      type="text" 
+                      name="organization_name" 
+                      className="form-control" 
+                      readOnly
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Image</label>
+                    <input
+                      type="file"
+                      className="form-control"
+                      onChange={(event) => setFieldValue("image", event.target.files[0])}
+                      disabled={!canEditUser()}
+                    />
+                    {editDetails?.profile_image && (
+                      <div className="mt-2">
+                        <Image
+                          src={editDetails.profile_image || img1}
+                          width={100}
+                          height={100}
+                          className="img-thumbnail"
+                          alt="Profile"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="text-end">
-                  <button type="submit" className="btn btn-primary">Save</button>
-                </div>
+                {canEditUser() && (
+                  <div className="text-end">
+                    <button type="submit" className="btn btn-primary">Save User Details</button>
+                  </div>
+                )}
+                {!canEditUser() && (
+                  <div className="alert alert-info">
+                    <small>Only Workwise Admin/Subadmin can edit Company Admin details.</small>
+                  </div>
+                )}
               </Form>
             )}
           </Formik>
         </div>
       </div>
+
+      {/* Account Limits Card - Only for Company Admin (user_type 7) */}
+      {editDetails.user_type === 7 && accountLimits && (
+        <div className="card">
+          <div className="card-header">
+            <h6 className="mb-0">Company Account Limits</h6>
+          </div>
+          <div className="card-body">
+            <Formik
+              initialValues={accountLimitsInitialValues}
+              enableReinitialize
+              validationSchema={accountLimitsSchema}
+              onSubmit={submitAccountLimits}
+            >
+              <Form>
+                <div className="row mb-3">
+                  <div className="col-md-3">
+                    <label className="form-label">Max Top Management</label>
+                    <Field 
+                      type="number" 
+                      name="max_top_management" 
+                      className="form-control" 
+                      min="0"
+                      readOnly={!isAdmin()}
+                    />
+                    <small className="text-muted">Used: {accountLimits.used_top_management || 0}</small>
+                    <ErrorMessage name="max_top_management" component="div" className="text-danger" />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Max Procurement</label>
+                    <Field 
+                      type="number" 
+                      name="max_procurement" 
+                      className="form-control" 
+                      min="0"
+                      readOnly={!isAdmin()}
+                    />
+                    <small className="text-muted">Used: {accountLimits.used_procurement || 0}</small>
+                    <ErrorMessage name="max_procurement" component="div" className="text-danger" />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Max Engineering</label>
+                    <Field 
+                      type="number" 
+                      name="max_engineering" 
+                      className="form-control" 
+                      min="0"
+                      readOnly={!isAdmin()}
+                    />
+                    <small className="text-muted">Used: {accountLimits.used_engineering || 0}</small>
+                    <ErrorMessage name="max_engineering" component="div" className="text-danger" />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Max Finance</label>
+                    <Field 
+                      type="number" 
+                      name="max_finance" 
+                      className="form-control" 
+                      min="0"
+                      readOnly={!isAdmin()}
+                    />
+                    <small className="text-muted">Used: {accountLimits.used_finance || 0}</small>
+                    <ErrorMessage name="max_finance" component="div" className="text-danger" />
+                  </div>
+                </div>
+                {isAdmin() && (
+                  <div className="text-end">
+                    <button type="submit" className="btn btn-success">Update Account Limits</button>
+                  </div>
+                )}
+                {!isAdmin() && (
+                  <div className="alert alert-info">
+                    <small>Only Workwise Admin/Subadmin can edit account limits.</small>
+                  </div>
+                )}
+              </Form>
+            </Formik>
+          </div>
+        </div>
+      )}
+
       <ToastContainer />
     </div>
   );
 };
 
-export default UpdateVendor;
+export default UpdateBuyer;

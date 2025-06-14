@@ -25,7 +25,8 @@ const BuyerManagement = () => {
   const [filter, setFilter] = useState({
     verified: "",
     organization: router.query.organization || "",
-    name: router.query.name || ""
+    name: router.query.name || "",
+    user_type: router.query.user_type || ""
   });
 
   const handleClose = () => setShowModal(false);
@@ -49,7 +50,8 @@ const BuyerManagement = () => {
         currentPage,
         currentFilter.verified,
         currentFilter.organization,
-        currentFilter.name
+        currentFilter.name,
+        currentFilter.user_type
       );
       if (res?.data) {
         setBuyerData(res.data);
@@ -101,6 +103,7 @@ const BuyerManagement = () => {
       verified: values.verified || "",
       organization: values.organization || "",
       name: values.name || "",
+      user_type: values.user_type || ""
     };
     setFilter(newFilter);
     await getBuyerList(1, newFilter);
@@ -112,12 +115,13 @@ const BuyerManagement = () => {
   useEffect(() => {
     if (!router.isReady) return;
 
-    const { page: urlPage, verified, organization, name } = router.query;
+    const { page: urlPage, verified, organization, name, user_type } = router.query;
     const newPage = urlPage ? parseInt(urlPage) : 1;
     const newFilter = {
       verified: verified || "",
       organization: organization || "",
-      name: name || ""
+      name: name || "",
+      user_type: user_type || ""
     };
 
     setPage(newPage);
@@ -151,11 +155,13 @@ const BuyerManagement = () => {
                 verified: filter.verified,
                 organization: filter.organization,
                 name: filter.name,
+                user_type: filter.user_type
               }}
               validationSchema={yup.object().shape({
                 verified: yup.string(),
                 organization: yup.string(),
                 name: yup.string(),
+                user_type: yup.string()
               })}
               onSubmit={(values, { resetForm }) => {
                 submitHandler(values);
@@ -190,6 +196,23 @@ const BuyerManagement = () => {
                         value={values.name}
                       />
                     </div>
+
+                    <div class="col-3">
+                      <Field
+                        as="select"
+                        name="user_type"
+                        class="form-control"
+                        value={values.user_type}
+                      >
+                        <option value="">All User Types</option>
+                        <option value="2">Procurement</option>
+                        <option value="7">Company Admin</option>
+                        <option value="8">Top Management</option>
+                        <option value="9">Engineering Account</option>
+                        <option value="10">Finance Account</option>
+                      </Field>
+                    </div>
+
                     <div className="col-2 d-flex flex-column">
                       <button type="submit" class="btn btn-info ">
                         Search
@@ -205,6 +228,7 @@ const BuyerManagement = () => {
                               verified: "",
                               organization: "",
                               name: "",
+                              user_type: ""
                             });
                         }}
                       >
@@ -231,23 +255,38 @@ const BuyerManagement = () => {
                     <thead>
                       <tr>
                         <th scope="col">Buyer Name</th>
-                        <th scope="col">Spoc</th>
                         <th scope="col">Email</th>
                         <th scope="col">Contacts</th>
+                        <th scope="col">User Type</th>
+                        <th scope="col">Company Name</th>
+                        <th scope="col">Status</th>
                         <th scope="col">Created At</th>
-                        {/* <th scope="col">Region</th> */}
-                        {/* <th scope="col">Approval Status</th> */}
                         <th scope="col">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {BuyerData.map((item) => {
+                        // User type mapping
+                        const userTypeMap = {
+                          2: "Procurement",
+                          7: "Company Admin",
+                          8: "Top Management",
+                          9: "Engineering Account",
+                          10: "Finance Account"
+                        };
+                        
                         return (
                           <tr key={item.name} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
                             <td>{item.name}</td>
-                            <td>{item.organization_name}</td>
                             <td>{item.email}</td>
                             <td>{item.mobile}</td>
+                            <td>{userTypeMap[item.user_type] || `Type ${item.user_type}`}</td>
+                            <td>{item.company_name || item.organization_name}</td>
+                            <td>
+                              <span className={`badge ${item.status === 1 ? 'bg-success' : 'bg-danger'}`}>
+                                {item.status === 1 ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
                             <td style={{ width: "100px" }}>
                             {new Date(item.created_at).toLocaleDateString("en-GB", {
                               day: "numeric",
@@ -352,7 +391,8 @@ const BuyerManagement = () => {
                               page: pageNum,
                               organization: filter.organization,
                               name: filter.name,
-                              verified: filter.verified 
+                              verified: filter.verified,
+                              user_type: filter.user_type
                             });
                           }}
                         />
@@ -367,7 +407,8 @@ const BuyerManagement = () => {
                                 page: pageNum,
                                 organization: filter.organization,
                                 name: filter.name,
-                                verified: filter.verified 
+                                verified: filter.verified,
+                                user_type: filter.user_type
                               });
                             }
                           }}

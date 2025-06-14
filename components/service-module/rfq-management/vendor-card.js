@@ -54,7 +54,7 @@ const VendorCard = ({ data }) => {
                                 <tbody>
                                     {data.products.map((prodItem, index) => {
                                         let prod_size, prod_spec, prod_qty, prod_unit;
-                                        prodItem?.product_specs.forEach(({ title, value }) => {
+                                        prodItem?.product_specs?.forEach(({ title, value }) => {
                                             if (title === "Spec") prod_spec = value;
                                             else if (title === "Size") prod_size = value;
                                             else if (title === "Quantity") prod_qty = value;
