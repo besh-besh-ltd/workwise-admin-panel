@@ -4,6 +4,7 @@ import * as yup from "yup";
 import Image from "next/image";
 import {
   handleUpdateBuyer,
+  handleGetBuyerDetails,
   handleGetBuyerAccountLimits,
   handleUpdateBuyerAccountLimits,
 } from "@/utils/services/buyer-management";
@@ -18,21 +19,37 @@ const UpdateBuyer = () => {
   const [countryCode, setCountryCode] = useState([]);
   const [accountLimits, setAccountLimits] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { id } = router.query;
 
   useEffect(() => {
     if (id) {
-      const buyerData = JSON.parse(localStorage.getItem("buyerUpdate"));
-      setEditDetails(buyerData);
-      getCurrentUser(buyerData);
-      
-      if (buyerData?.user_type === 7 && buyerData?.company_id) {
-        fetchAccountLimits(buyerData.company_id);
-      }
+      fetchBuyerDetails();
+      getCurrentUser();
     }
     fetchCountryCodes();
   }, [id]);
+
+  const fetchBuyerDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await handleGetBuyerDetails(id);
+      const buyerData = response?.data?.[0];
+      
+      setEditDetails(buyerData);
+      
+      // Fetch account limits if this is a company admin
+      if (buyerData?.user_type === 7 && buyerData?.company_id) {
+        fetchAccountLimits(buyerData.company_id);
+      }
+    } catch (error) {
+      toast.error("Failed to load buyer details");
+      router.push("/buyer-management");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchCountryCodes = async () => {
     try {
