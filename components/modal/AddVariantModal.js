@@ -2,6 +2,65 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { addProductVariant, getAllProducts, searchProductsV2 } from '../../utils/services/product-management';
 
+// Variant specification keys
+const variantSpecKeys = [
+  // Dimensions & Size
+  "Length",
+  "Width", 
+  "Height",
+  "Diameter",
+  "Thickness",
+  "Size",
+
+  // Material & Build
+  "Material",
+  "Grade",
+  "Surface Finish",
+  "Coating",
+
+  // Appearance
+  "Color",
+  "Shape",
+  "Pattern",
+
+  // Mechanical Properties
+  "Strength",
+  "Hardness",
+  "Tolerance",
+  "Load Capacity",
+
+  // Electrical Properties
+  "Voltage Rating",
+  "Current Rating",
+  "Frequency",
+  "Power Rating",
+  "Connector Type",
+
+  // Functional Details
+  "Type",
+  "Operation Type",
+  "Compatibility",
+  "Application Area",
+
+  // Chemical/Environmental
+  "Corrosion Resistance",
+  "Temperature Range",
+  "IP Rating",
+  "Chemical Compatibility",
+
+  // Packaging & Delivery
+  "Packaging Type",
+  "Unit of Measurement",
+  "MOQ",
+  "Lead Time",
+
+  // Certification & Compliance
+  "IS Code / BIS Standard",
+  "ISO Certification",
+  "Warranty Period",
+  "Country of Origin"
+];
+
 const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -11,6 +70,7 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [productLoading, setProductLoading] = useState(false);
   const [productsList, setProductsList] = useState([]);
+  const [specifications, setSpecifications] = useState([{ key: '', value: '' }]);
 
   useEffect(() => {
     // Reset form when modal opens/closes
@@ -81,6 +141,23 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
     }));
   };
 
+  const handleSpecificationChange = (index, field, value) => {
+    const updatedSpecs = [...specifications];
+    updatedSpecs[index][field] = value;
+    setSpecifications(updatedSpecs);
+  };
+
+  const addSpecification = () => {
+    setSpecifications([...specifications, { key: '', value: '' }]);
+  };
+
+  const removeSpecification = (index) => {
+    if (specifications.length > 1) {
+      const updatedSpecs = specifications.filter((_, i) => i !== index);
+      setSpecifications(updatedSpecs);
+    }
+  };
+
   const handleProductSelection = (product) => {
     setFormData((prev) => ({
       ...prev,
@@ -109,9 +186,12 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
     
     try {
       // Changes by Agnij April 30, 2025 [Fixed response handling for variant creation]
+      const validSpecifications = specifications.filter(spec => spec.key && spec.value);
+      
       const payload = {
         product_id: formData.product.value,
         variant_name: formData.variant_name.trim(),
+        specifications: validSpecifications.length > 0 ? validSpecifications : undefined
       };
       
       
@@ -141,13 +221,14 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
     });
     setProductSearchTerm('');
     setProductsList([]);
+    setSpecifications([{ key: '', value: '' }]);
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="modal show d-block" tabIndex="-1" role="dialog">
-      <div className="modal-dialog" role="document">
+      <div className="modal-dialog modal-lg" role="document">
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">Add Product Variant</h5>
@@ -245,6 +326,61 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
                   placeholder="Enter variant name"
                 />
               </div>
+
+              {/* Start Variant Specifications */}
+              <div className="mb-3">
+                <label className="form-label">Variant Specifications</label>
+                {specifications.map((spec, index) => (
+                  <div key={index} className="row mb-2">
+                    <div className="col-4">
+                      <select
+                        className="form-control form-control-sm"
+                        value={spec.key}
+                        onChange={(e) => handleSpecificationChange(index, 'key', e.target.value)}
+                      >
+                        <option value="">Select Specification</option>
+                        {variantSpecKeys.map((key) => (
+                          <option key={key} value={key}>
+                            {key}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-6">
+                      <input
+                        type="text"
+                        className="form-control form-control-sm"
+                        placeholder="Enter value"
+                        value={spec.value}
+                        onChange={(e) => handleSpecificationChange(index, 'value', e.target.value)}
+                      />
+                    </div>
+                    <div className="col-2">
+                      {specifications.length > 1 && (
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-sm"
+                          onClick={() => removeSpecification(index)}
+                          style={{ fontSize: '12px', padding: '2px 6px' }}
+                        >
+                          -
+                        </button>
+                      )}
+                      {index === specifications.length - 1 && (
+                        <button
+                          type="button"
+                          className="btn btn-success btn-sm ml-1"
+                          onClick={addSpecification}
+                          style={{ fontSize: '12px', padding: '2px 6px' }}
+                        >
+                          +
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* End Variant Specifications */}
               <div className="text-center mt-4">
                 <button
                   type="button"
