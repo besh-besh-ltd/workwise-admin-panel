@@ -1002,3 +1002,36 @@ export const addVendorApproveVariant =(payload) =>{
     }
   });
 }
+
+// Variant Specification Services
+export const getVariantSpecifications = (variantId) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+
+      let response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-specifications/${variantId}`
+      );
+
+      resolve({
+        status: response.data?.status || 1,
+        data: response.data?.data || response.data || []
+      });
+    } catch (error) {
+      reject(error?.response?.data || { message: 'Network or server error' });
+    }
+  });
+};
+
+export const updateVariantSpecifications = (variantId, specifications) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.put(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-specifications/${variantId}`,
+        { specifications }
+      );
+      resolve(response.data);
+    } catch (error) {
+      reject(error?.response?.data || { message: 'Network or server error' });
+    }
+  });
+};
