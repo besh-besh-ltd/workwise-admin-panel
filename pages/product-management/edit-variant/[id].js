@@ -310,6 +310,14 @@ const EditVariant = () => {
       return;
     }
 
+    for (let i = 0; i < specifications.length; i++) {
+      const spec = specifications[i];
+      if (!spec.key || !spec.value) {
+        toast.error(`Specification ${i + 1}: Both specification type and value must be provided`);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       // Changes by Agnij July 25, 2025 [Updated to set is_approve to 0 when edited]
@@ -445,53 +453,58 @@ const EditVariant = () => {
                       {/* Start Variant Specifications */}
                       <div className="form-group">
                         <label>Variant Specifications</label>
-                        {specifications.map((spec, index) => (
-                          <div key={index} className="row mb-2">
-                            <div className="col-md-4">
-                              <select
-                                className="form-control"
-                                value={spec.key}
-                                onChange={(e) => handleSpecificationChange(index, 'key', e.target.value)}
-                              >
-                                <option value="">Select Specification</option>
-                                {variantSpecKeys.map((key) => (
-                                  <option key={key} value={key}>
-                                    {key}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="col-md-6">
-                              <input
-                                type="text"
-                                className="form-control"
-                                placeholder="Enter value"
-                                value={spec.value}
-                                onChange={(e) => handleSpecificationChange(index, 'value', e.target.value)}
-                              />
-                            </div>
-                            <div className="col-md-2">
-                              {specifications.length > 1 && (
-                                <button
-                                  type="button"
-                                  className="btn btn-danger btn-sm"
-                                  onClick={() => removeSpecification(index)}
+                        <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="specifications-container">
+                          {specifications.map((spec, index) => (
+                            <div key={index} className="row mb-2">
+                              <div className="col-md-4">
+                                <select
+                                  className="form-control"
+                                  value={spec.key}
+                                  onChange={(e) => handleSpecificationChange(index, 'key', e.target.value)}
                                 >
-                                  -
-                                </button>
-                              )}
-                              {index === specifications.length - 1 && (
-                                <button
-                                  type="button"
-                                  className="btn btn-success btn-sm ml-1"
-                                  onClick={addSpecification}
-                                >
-                                  +
-                                </button>
-                              )}
+                                  <option value="">Select Specification</option>
+                                  {variantSpecKeys.map((key) => (
+                                    <option key={key} value={key}>
+                                      {key}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="col-md-6">
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  placeholder="Enter value"
+                                  value={spec.value}
+                                  onChange={(e) => handleSpecificationChange(index, 'value', e.target.value)}
+                                />
+                              </div>
+                              <div className="col-md-2">
+                                {specifications.length > 1 && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-danger btn-sm"
+                                    onClick={() => removeSpecification(index)}
+                                  >
+                                    -
+                                  </button>
+                                )}
+                                {index === specifications.length - 1 && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-success btn-sm ml-1"
+                                    onClick={addSpecification}
+                                  >
+                                    +
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                        <small className="form-text text-muted">
+                          Both specification type and value must be provided if you want to add a specification.
+                        </small>
                       </div>
                       {/* End Variant Specifications */}
 
