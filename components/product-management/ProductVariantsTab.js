@@ -4,7 +4,7 @@ import {
   deleteProductVariant
 } from "@/utils/services/product-management";
 import { toast } from 'react-toastify';
-import AddProductVariantModal from './AddProductVariantModal';
+import AddVariantModal from '../modal/AddVariantModal';
 import MapVariantVendorModal from '../modal/MapVariantVendorModal';
 
 const ProductVariantsTab = ({ product }) => {
@@ -423,7 +423,7 @@ const ProductVariantsTab = ({ product }) => {
         </div>
       </div>
 
-      <AddProductVariantModal
+      <AddVariantModal
         isVisible={showAddModal}
         onCancel={() => setShowAddModal(false)}
         productId={product?.id}
