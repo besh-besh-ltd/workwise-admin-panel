@@ -61,7 +61,17 @@ const variantSpecKeys = [
   "Country of Origin"
 ];
 
-const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
+// Consolidated modal that supports both use cases
+const AddVariantModal = ({ 
+  isOpen, 
+  onClose, 
+  onSuccess,
+  // Legacy props from AddProductVariantModal for compatibility
+  isVisible,
+  onCancel,
+  productId,
+  productName
+}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     product: null,
@@ -174,6 +184,14 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
       toast.error('Please enter a variant name');
       return false;
     }
+    for (let i = 0; i < specifications.length; i++) {
+      const spec = specifications[i];
+      if ((spec.key && !spec.value.trim()) || (!spec.key && spec.value.trim())) {
+        toast.error(`Specification ${i + 1}: Both specification type and value must be provided`);
+        return false;
+      }
+    }
+    
     return true;
   };
 
@@ -330,85 +348,91 @@ const AddVariantModal = ({ isOpen, onClose, onSuccess }) => {
               {/* Start Variant Specifications */}
               <div className="mb-3">
                 <label className="form-label">Variant Specifications</label>
-                {specifications.map((spec, index) => (
-                  <div key={index} className="row mb-2">
-                    <div className="col-4">
-                      <select
-                        className="form-control form-control-sm"
-                        value={spec.key}
-                        onChange={(e) => handleSpecificationChange(index, 'key', e.target.value)}
-                      >
-                        <option value="">Select Specification</option>
-                        {variantSpecKeys.map((key) => (
-                          <option key={key} value={key}>
-                            {key}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="col-6">
-                      <input
-                        type="text"
-                        className="form-control form-control-sm"
-                        placeholder="Enter value"
-                        value={spec.value}
-                        onChange={(e) => handleSpecificationChange(index, 'value', e.target.value)}
-                      />
-                    </div>
-                    <div className="col-2">
-                      {specifications.length > 1 && (
-                        <button
-                          type="button"
-                          className="btn btn-danger btn-sm"
-                          onClick={() => removeSpecification(index)}
-                          style={{ fontSize: '12px', padding: '2px 6px' }}
+                <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="specifications-container">
+                  {specifications.map((spec, index) => (
+                    <div key={index} className="row mb-2">
+                      <div className="col-4">
+                        <select
+                          className="form-control form-control-sm"
+                          value={spec.key}
+                          onChange={(e) => handleSpecificationChange(index, 'key', e.target.value)}
                         >
-                          -
-                        </button>
-                      )}
-                      {index === specifications.length - 1 && (
-                        <button
-                          type="button"
-                          className="btn btn-success btn-sm ml-1"
-                          onClick={addSpecification}
-                          style={{ fontSize: '12px', padding: '2px 6px' }}
-                        >
-                          +
-                        </button>
-                      )}
+                          <option value="">Select Specification</option>
+                          {variantSpecKeys.map((key) => (
+                            <option key={key} value={key}>
+                              {key}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-6">
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          placeholder="Enter value"
+                          value={spec.value}
+                          onChange={(e) => handleSpecificationChange(index, 'value', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-2">
+                        {specifications.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            onClick={() => removeSpecification(index)}
+                            style={{ fontSize: '12px', padding: '2px 6px' }}
+                          >
+                            -
+                          </button>
+                        )}
+                        {index === specifications.length - 1 && (
+                          <button
+                            type="button"
+                            className="btn btn-success btn-sm ml-1"
+                            onClick={addSpecification}
+                            style={{ fontSize: '12px', padding: '2px 6px' }}
+                          >
+                            +
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <small className="form-text text-muted">
+                  Both specification type and value must be provided if you want to add a specification.
+                </small>
               </div>
               {/* End Variant Specifications */}
-              <div className="text-center mt-4">
-                <button
-                  type="button"
-                  className="btn btn-secondary me-2"
-                  onClick={() => {
-                    resetForm();
-                    onClose();
-                  }}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit'
-                  )}
-                </button>
-              </div>
             </form>
+          </div>
+          <div className="modal-footer">
+            <button
+              type="button"
+              className="btn btn-secondary me-2"
+              onClick={() => {
+                resetForm();
+                    onClose();
+              }}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isSubmitting}
+              onClick={handleSubmit}
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Submitting...
+                </>
+              ) : (
+                'Add Variant'
+              )}
+            </button>
           </div>
         </div>
       </div>
