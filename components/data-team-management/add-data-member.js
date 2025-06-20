@@ -8,21 +8,21 @@ import { useRouter } from "next/router";
 import { createSubAdmin } from '@/utils/services/subadmin-management';
 import { getCountryCodes } from '@/utils/services/location-management';
 
-const AddDataMemberPage = () => {
-    const router = useRouter();
-    const userTypeRef = useRef(6);
-    const [countryCode, setCountryCode] = useState([]);
-  
     const initialValues = {
         name: "",
         email: "",
         mobile: "",
         password: "",
         confirm_password: "",
-        image: "",
         countryCode:"+91"
     }
     
+
+const AddDataMemberPage = () => {
+    const router = useRouter();
+    const userTypeRef = useRef(6);
+    const [countryCode, setCountryCode] = useState([]);
+  
 
      useEffect(() => {
         fetchCountryCodes();
@@ -69,7 +69,6 @@ const AddDataMemberPage = () => {
         .oneOf([yup.ref("password")], "Password must match")
         .required("Confirm Password field is required"),
       // .matches(/^(?=.*\d)(?=.*[A-Z]).{6,16}$/, "Password should be atleast 6 characters one UpperCase one Number"),
-      image: yup.mixed().nullable().required("Please select a file"),
     });
 
     const submitHandler = (values, resetForm) => {
@@ -246,28 +245,6 @@ const AddDataMemberPage = () => {
                                     errors={errors}
                                   />
                                 </div>
-                              </div>
-                            </div>
-
-                            <div class="row mb-4">
-                              <div class="col">
-                                <label htmlFor="subadmin-image">Image</label>
-                                <Field
-                                  name="image"
-                                  type="file"
-                                  value={undefined}
-                                  className="form-control p-1"
-                                  onChange={(event) => {
-                                    let files = event.target.files[0];
-                                    setFieldValue("image", files);
-                                  }}
-                                />
-                                <ErrorMessage
-                                  name="image"
-                                  render={(msg) => (
-                                    <div className="form-error">{msg}</div>
-                                  )}
-                                />
                               </div>
                             </div>
 
