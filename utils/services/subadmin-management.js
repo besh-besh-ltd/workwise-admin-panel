@@ -7,7 +7,7 @@ export const createSubAdmin = (values) => {
     }
     return new Promise(async (resolve, reject) => {
         try {
-            let response = await axiosFormData.post(
+            let response = await axiosInstance.post(
                 `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/roles/create-sub-admin`,
                 values
             );
