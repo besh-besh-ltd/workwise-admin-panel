@@ -46,7 +46,7 @@ const VariantView = () => {
 
   useEffect(() => {
     getUserProfile();
-    getVendors();
+    // getVendors(); // No Need to fetch
   }, []);
 
   useEffect(() => {
