@@ -75,7 +75,6 @@ const EditVariant = () => {
   const [userType, setUserType] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
     product_id: ''
   });
   const [products, setProducts] = useState([]);
@@ -231,7 +230,6 @@ const EditVariant = () => {
           // Initialize form data with variant details
           setFormData({
             name: variantData.name || variantData.variant_name || '',
-            description: variantData.description || '',
             product_id: productId
           });
 
@@ -323,7 +321,6 @@ const EditVariant = () => {
       // Changes by Agnij July 25, 2025 [Updated to set is_approve to 0 when edited]
       const payload = {
         variant_name: formData.name,
-        description: formData.description,
         product_id: formData.product_id,
         is_approve: 0 // Auto-disapprove when edited
       };
@@ -404,18 +401,6 @@ const EditVariant = () => {
                           onChange={handleInputChange}
                           required
                         />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="description">Description</label>
-                        <textarea
-                          className="form-control"
-                          id="description"
-                          name="description"
-                          rows="3"
-                          value={formData.description}
-                          onChange={handleInputChange}
-                        ></textarea>
                       </div>
 
                       <div className="form-group">
