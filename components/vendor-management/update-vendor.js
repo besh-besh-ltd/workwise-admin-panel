@@ -41,6 +41,7 @@ const UpdateVendor = () => {
   const [openAddSpoc,setOpenAddSpoc] = useState(false);
   const [countryList,setCountryList] = useState([]);
   const [countryCode , setCountryCode] = useState([]);
+ 
   const [spocCountryCode, setSpocCountryCode] = useState("+91");
 
 
@@ -83,9 +84,11 @@ const UpdateVendor = () => {
       {value : "Retailer", label : "Retailer"},
       {value : "Service Provider", label : "Service Provider"},
       {value : "Supplier", label : "Supplier"},
+      {value : "Subsidiary" , label : 'Subsidiary'},
       {value : "Stockist", label : "Stockist"},
       {value : "Trader", label : "Trader"},
       { value: 'Wholesaler', label: 'Wholesaler' } 
+      
 ];
 
     
@@ -238,11 +241,11 @@ useEffect(() => {
     name: editDetails?.vendorDetails?.name || "",
     email: editDetails?.vendorDetails?.email || "",
     mobile: editDetails?.vendorDetails?.mobile ? editDetails?.vendorDetails?.mobile.replace(/^\+?\d+-/, "") : "",
-    organization_name: editDetails?.vendorDetails?.organization_name || "",
+    organization_name: editDetails?.companyDetails?.company_name || "",
     logo: editDetails?.logo,
     ptr_track: editDetails?.ptr_track,
     address: editDetails?.vendorDetails?.address || "",
-    website: editDetails?.vendorDetails?.website || "",
+    website: editDetails?.companyDetails?.website || "",
     postal_code: editDetails?.vendorDetails?.postal_code || "",
     about_vendor_company: editDetails?.companyDetails?.profile || "",
     nature_business: editDetails?.companyDetails?.nature_of_business || "",
