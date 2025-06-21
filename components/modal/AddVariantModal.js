@@ -247,7 +247,7 @@ const AddVariantModal = ({
   return (
     <div className="modal show d-block" tabIndex="-1" role="dialog">
       <div className="modal-dialog modal-lg" role="document">
-        <div className="modal-content">
+        <div className="modal-content" style={{maxHeight: '90vh', overflow: 'auto'}}>
           <div className="modal-header">
             <h5 className="modal-title">Add Product Variant</h5>
             <button
