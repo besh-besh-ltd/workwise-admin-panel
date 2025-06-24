@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAdminProfile } from "@/utils/services/login";
-import { getVariantMappingById, addVendorApproveVariant } from '@/utils/services/product-management';
+import { getVariantMappingById, addVendorApproveVariant, getVariantSpecifications } from '@/utils/services/product-management';
 import { useRouter } from 'next/router';
 import { toast, ToastContainer } from 'react-toastify';
 import FullLoading from '@/components/loading/FullLoading';
@@ -21,8 +21,9 @@ const MappingDetail = () => {
   const [selectedOptions, setSelectedOptions] = useState([]);
   const [vendorApprovedList, setVendorApprovedList] = useState([]);
  const  [initialApprovedList, setInitialApprovedList] = useState([]);
- const [makeList, setMakeList] = useState([]);            // Full make list
+   const [makeList, setMakeList] = useState([]);            // Full make list
 const [newMakeInput, setNewMakeInput] = useState("");    // For adding new makes
+const [specifications, setSpecifications] = useState([]);
 
 
 
@@ -101,6 +102,21 @@ const [newMakeInput, setNewMakeInput] = useState("");    // For adding new makes
       setMakeList(mapping.make_list); // Directly set make list
     } else {
       setMakeList([]); // Ensure empty list if not present
+    }
+
+    // Fetch variant specifications if variant_id exists
+    if (mapping.variant_id) {
+      try {
+        const specsResponse = await getVariantSpecifications(mapping.variant_id);
+        
+        if (specsResponse?.status === 1) {
+          setSpecifications(specsResponse.data || []);
+        } else {
+          setSpecifications([]);
+        }
+      } catch (specsError) {
+        setSpecifications([]);
+      }
     }
 
 
@@ -436,6 +452,33 @@ const [newMakeInput, setNewMakeInput] = useState("");    // For adding new makes
                       )}
                     </div>
                   </div>
+
+                  {/* Variant Specifications */}
+                  {specifications.length > 0 && (
+                    <div className="row mb-3">
+                      <div className="col-md-12">
+                        <h5><strong>Variant Specifications:</strong></h5>
+                        <div className="table-responsive">
+                          <table className="table table-striped table-sm">
+                            <thead>
+                              <tr>
+                                <th>Specification</th>
+                                <th>Value</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {specifications.map((spec, index) => (
+                                <tr key={index}>
+                                  <td><strong>{spec.key}</strong></td>
+                                  <td>{spec.value}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

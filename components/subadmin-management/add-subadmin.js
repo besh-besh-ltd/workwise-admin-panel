@@ -33,7 +33,6 @@ const AddSubadmin = () => {
         mobile: "",
         password: "",
         confirm_password: "",
-        image: "",
         country_code:"+91"
     }
 
@@ -62,7 +61,6 @@ const AddSubadmin = () => {
             .oneOf([yup.ref("password"),], "Password must match")
             .required("Cinfirm Password field is required"),
         // .matches(/^(?=.*\d)(?=.*[A-Z]).{6,16}$/, "Password should be atleast 6 characters one UpperCase one Number"),
-        image: yup.mixed().nullable().required("Please select a file"),
     });
 
     const submitHandler = (values, resetForm) => {
@@ -236,29 +234,7 @@ const AddSubadmin = () => {
                                 </div>
                               </div>
                             </div>
-
-                            <div class="row mb-4">
-                              <div class="col">
-                                <label htmlFor="subadmin-image">Image</label>
-                                <Field
-                                  name="image"
-                                  type="file"
-                                  value={undefined}
-                                  className="form-control p-1"
-                                  onChange={(event) => {
-                                    let files = event.target.files[0];
-                                    setFieldValue("image", files);
-                                  }}
-                                />
-                                <ErrorMessage
-                                  name="image"
-                                  render={(msg) => (
-                                    <div className="form-error">{msg}</div>
-                                  )}
-                                />
-                              </div>
-                            </div>
-
+                            
                             <div className="d-flex float-left">
                               <button
                                 type="submit"

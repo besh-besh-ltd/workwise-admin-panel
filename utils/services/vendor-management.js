@@ -11,7 +11,7 @@ function handleGetVendorList(limit = 10, page = 1, verified, organization, name,
       if (verified) url += `&verified=${verified}`;
       if (organization) url += `&organization=${organization}`;
       if (name) url += `&name=${name}`;
-      if (email) url += `&email=${email}`;
+      if (email) url += `&email=${encodeURIComponent(email)}`;
       if (dateFrom) url += `&date_from=${dateFrom}`;
       if (dateTo) url += `&date_to=${dateTo}`;
       if (status) url += `&status=${status}`;

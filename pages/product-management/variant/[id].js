@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from "../../../components/layout";
 import { getAdminProfile } from "@/utils/services/login";
-import { searchAllVariants, getProductVariants, mapVariantWithVendor } from '@/utils/services/product-management';
+import { searchAllVariants, getProductVariants, mapVariantWithVendor, getVariantSpecifications } from '@/utils/services/product-management';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 import FullLoading from '@/components/loading/FullLoading';
@@ -18,6 +18,7 @@ const VariantView = () => {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [currentVendors, setCurrentVendors] = useState([]);
   const [userType, setUserType] = useState(null);
+  const [specifications, setSpecifications] = useState([]);
 
   // Modified Select Component to show email along with vendor Name
   const CustomSelectOption = (props) => (
@@ -45,7 +46,7 @@ const VariantView = () => {
 
   useEffect(() => {
     getUserProfile();
-    getVendors();
+    // getVendors(); // No Need to fetch
   }, []);
 
   useEffect(() => {
@@ -106,6 +107,19 @@ const VariantView = () => {
         if (variantData) {
           console.log("Found variant:", variantData);
           setVariant(variantData);
+          
+          // Fetch variant specifications
+          try {
+            const specsResponse = await getVariantSpecifications(variantData.id);
+            
+            if (specsResponse?.status === 1 && specsResponse.data?.length > 0) {
+              setSpecifications(specsResponse.data);
+            } else {
+              setSpecifications([]);
+            }
+          } catch (specsError) {
+            setSpecifications([]);
+          }
           
           // Find vendor mappings if available
           try {
@@ -286,6 +300,35 @@ const VariantView = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Variant Specifications */}
+                {specifications.length > 0 && (
+                  <div className="card mt-3">
+                    <div className="card-header">
+                      <h3 className="card-title">Variant Specifications</h3>
+                    </div>
+                    <div className="card-body">
+                      <div className="table-responsive">
+                        <table className="table table-striped">
+                          <thead>
+                            <tr>
+                              <th>Specification</th>
+                              <th>Value</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {specifications.map((spec, index) => (
+                              <tr key={index}>
+                                <td><strong>{spec.key}</strong></td>
+                                <td>{spec.value}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* REMOVED AFTER PRODUCT -> VARAINT PATCH 2 */}

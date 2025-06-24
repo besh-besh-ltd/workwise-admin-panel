@@ -1,10 +1,69 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getAdminProfile } from "@/utils/services/login";
-import { searchAllVariants, updateProductVariant, getAllProducts } from '@/utils/services/product-management';
+import { searchAllVariants, updateProductVariant, getAllProducts, getVariantSpecifications, updateVariantSpecifications } from '@/utils/services/product-management';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 import FullLoading from '@/components/loading/FullLoading';
 import Select from 'react-select';
+
+// Variant specification keys
+const variantSpecKeys = [
+  // Dimensions & Size
+  "Length",
+  "Width", 
+  "Height",
+  "Diameter",
+  "Thickness",
+  "Size",
+
+  // Material & Build
+  "Material",
+  "Grade",
+  "Surface Finish",
+  "Coating",
+
+  // Appearance
+  "Color",
+  "Shape",
+  "Pattern",
+
+  // Mechanical Properties
+  "Strength",
+  "Hardness",
+  "Tolerance",
+  "Load Capacity",
+
+  // Electrical Properties
+  "Voltage Rating",
+  "Current Rating",
+  "Frequency",
+  "Power Rating",
+  "Connector Type",
+
+  // Functional Details
+  "Type",
+  "Operation Type",
+  "Compatibility",
+  "Application Area",
+
+  // Chemical/Environmental
+  "Corrosion Resistance",
+  "Temperature Range",
+  "IP Rating",
+  "Chemical Compatibility",
+
+  // Packaging & Delivery
+  "Packaging Type",
+  "Unit of Measurement",
+  "MOQ",
+  "Lead Time",
+
+  // Certification & Compliance
+  "IS Code / BIS Standard",
+  "ISO Certification",
+  "Warranty Period",
+  "Country of Origin"
+];
 
 // Changes by Agnij May 20, 2025 [Created variant edit page]
 const EditVariant = () => {
@@ -16,13 +75,13 @@ const EditVariant = () => {
   const [userType, setUserType] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
     product_id: ''
   });
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [vendorApprovedBy, setVendorApprovedBy] = useState(null);
   const [initialProductsLoaded, setInitialProductsLoaded] = useState(false);
+  const [specifications, setSpecifications] = useState([{ key: '', value: '' }]);
 
   useEffect(() => {
     getUserProfile();
@@ -171,12 +230,24 @@ const EditVariant = () => {
           // Initialize form data with variant details
           setFormData({
             name: variantData.name || variantData.variant_name || '',
-            description: variantData.description || '',
             product_id: productId
           });
 
           // Set vendor approved by
           setVendorApprovedBy(variantData.vendor_approved_by || null);
+
+          // Fetch variant specifications
+          try {
+            const specsResponse = await getVariantSpecifications(variantData.id);
+            
+            if (specsResponse?.status === 1 && specsResponse.data?.length > 0) {
+              setSpecifications(specsResponse.data);
+            } else {
+              setSpecifications([{ key: '', value: '' }]);
+            }
+          } catch (specsError) {
+            setSpecifications([{ key: '', value: '' }]);
+          }
 
           setLoading(false);
           return;
@@ -212,6 +283,23 @@ const EditVariant = () => {
     }
   };
 
+  const handleSpecificationChange = (index, field, value) => {
+    const updatedSpecs = [...specifications];
+    updatedSpecs[index][field] = value;
+    setSpecifications(updatedSpecs);
+  };
+
+  const addSpecification = () => {
+    setSpecifications([...specifications, { key: '', value: '' }]);
+  };
+
+  const removeSpecification = (index) => {
+    if (specifications.length > 1) {
+      const updatedSpecs = specifications.filter((_, i) => i !== index);
+      setSpecifications(updatedSpecs);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -220,12 +308,19 @@ const EditVariant = () => {
       return;
     }
 
+    for (let i = 0; i < specifications.length; i++) {
+      const spec = specifications[i];
+      if (!spec.key || !spec.value) {
+        toast.error(`Specification ${i + 1}: Both specification type and value must be provided`);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       // Changes by Agnij July 25, 2025 [Updated to set is_approve to 0 when edited]
       const payload = {
         variant_name: formData.name,
-        description: formData.description,
         product_id: formData.product_id,
         is_approve: 0 // Auto-disapprove when edited
       };
@@ -235,6 +330,16 @@ const EditVariant = () => {
       console.log("Update response:", response);
 
       if (response && (response.status === 1 || response.status === "1" || response.status === 200)) {
+        // Update specifications if there are any valid ones
+        const validSpecifications = specifications.filter(spec => spec.key && spec.value);
+        if (validSpecifications.length > 0) {
+          try {
+            await updateVariantSpecifications(id, validSpecifications);
+          } catch (specsError) {
+            toast.warning("Variant updated but specifications update failed");
+          }
+        }
+        
         toast.success("Variant updated successfully and set to 'Disapproved' status");
         router.push(`/product-management/variant/${id}`);
       } else {
@@ -299,18 +404,6 @@ const EditVariant = () => {
                       </div>
 
                       <div className="form-group">
-                        <label htmlFor="description">Description</label>
-                        <textarea
-                          className="form-control"
-                          id="description"
-                          name="description"
-                          rows="3"
-                          value={formData.description}
-                          onChange={handleInputChange}
-                        ></textarea>
-                      </div>
-
-                      <div className="form-group">
                         <label htmlFor="product_id">Parent Product</label>
                         <Select
                           id="product_id"
@@ -341,6 +434,64 @@ const EditVariant = () => {
                           <p className="form-control-static">{vendorApprovedBy}</p>
                         </div>
                       )}
+
+                      {/* Start Variant Specifications */}
+                      <div className="form-group">
+                        <label>Variant Specifications</label>
+                        <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="specifications-container">
+                          {specifications.map((spec, index) => (
+                            <div key={index} className="row mb-2">
+                              <div className="col-md-4">
+                                <select
+                                  className="form-control"
+                                  value={spec.key}
+                                  onChange={(e) => handleSpecificationChange(index, 'key', e.target.value)}
+                                >
+                                  <option value="">Select Specification</option>
+                                  {variantSpecKeys.map((key) => (
+                                    <option key={key} value={key}>
+                                      {key}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="col-md-6">
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  placeholder="Enter value"
+                                  value={spec.value}
+                                  onChange={(e) => handleSpecificationChange(index, 'value', e.target.value)}
+                                />
+                              </div>
+                              <div className="col-md-2">
+                                {specifications.length > 1 && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-danger btn-sm"
+                                    onClick={() => removeSpecification(index)}
+                                  >
+                                    -
+                                  </button>
+                                )}
+                                {index === specifications.length - 1 && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-success btn-sm ml-1"
+                                    onClick={addSpecification}
+                                  >
+                                    +
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <small className="form-text text-muted">
+                          Both specification type and value must be provided if you want to add a specification.
+                        </small>
+                      </div>
+                      {/* End Variant Specifications */}
 
                       <div className="alert alert-warning">
                         <i className="fas fa-exclamation-triangle mr-2"></i>

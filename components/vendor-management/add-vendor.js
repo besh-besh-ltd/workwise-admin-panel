@@ -43,6 +43,7 @@ const AddVendor = () => {
       {value : "Retailer", label : "Retailer"},
       {value : "Service Provider", label : "Service Provider"},
       {value : "Supplier", label : "Supplier"},
+      {value : "Subsidiary" , label : 'Subsidiary'},
       {value : "Stockist", label : "Stockist"},
       {value : "Trader", label : "Trader"},
       { value: 'Wholesaler', label: 'Wholesaler' } 
