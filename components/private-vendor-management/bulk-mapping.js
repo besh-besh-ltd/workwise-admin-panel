@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
+import * as XLSX from 'xlsx';
 import Loader from '../shared/Loader';
 import { handleBulkBuyerVendorMapping } from '../../utils/services/private-vendor-management';
 
@@ -16,20 +17,6 @@ const BulkBuyerVendorMapping = () => {
         const selectedFile = e.target.files[0];
         if (!selectedFile) return;
 
-        const fileType = selectedFile.name.split('.').pop().toLowerCase();
-        const validTypes = ['xlsx', 'csv'];
-        const maxSize = 2 * 1024 * 1024; // 2MB
-
-        if (!validTypes.includes(fileType)) {
-            toast.error('Please upload only .xlsx or .csv files');
-            return;
-        }
-
-        if (selectedFile.size > maxSize) {
-            toast.error('File size should not exceed 2MB');
-            return;
-        }
-
         setFile(selectedFile);
         setFileName(selectedFile.name);
         setResults(null);
@@ -37,25 +24,17 @@ const BulkBuyerVendorMapping = () => {
 
     const downloadSampleFile = () => {
         const sampleData = [
-            { 'Buyer Email': 'buyer1@example.com', 'Vendor Email': 'vendor1@example.com' },
-            { 'Buyer Email': 'buyer2@example.com', 'Vendor Email': 'vendor2@example.com' },
+            { 'buyer_email': 'buyer1@example.com', 'vendor_email': 'vendor1@example.com' },
+            { 'buyer_email': 'buyer2@example.com', 'vendor_email': 'vendor2@example.com' },
         ];
 
-        const headers = ['Buyer Email', 'Vendor Email'];
-        const csvContent = [
-            headers.join(','),
-            ...sampleData.map(row => headers.map(header => row[header]).join(','))
-        ].join('\n');
+        // Create workbook and worksheet
+        const worksheet = XLSX.utils.json_to_sheet(sampleData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'BuyerVendorMapping');
 
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'buyer_vendor_mapping_sample.csv';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        // Download file
+        XLSX.writeFile(workbook, 'buyer_vendor_mapping_sample.xlsx');
     };
 
     const handleUpload = async () => {
@@ -162,7 +141,7 @@ const BulkBuyerVendorMapping = () => {
                                     <input
                                         ref={fileInputRef}
                                         type="file"
-                                        accept=".xlsx,.csv"
+                                        accept=".xlsx"
                                         style={{ display: 'none' }}
                                         onChange={handleFileUpload}
                                     />
