@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
-import * as XLSX from 'xlsx';
 import Loader from '../shared/Loader';
 import { handleBulkBuyerVendorMapping } from '../../utils/services/private-vendor-management';
 
@@ -23,18 +22,12 @@ const BulkBuyerVendorMapping = () => {
     };
 
     const downloadSampleFile = () => {
-        const sampleData = [
-            { 'buyer_email': 'buyer1@example.com', 'vendor_email': 'vendor1@example.com' },
-            { 'buyer_email': 'buyer2@example.com', 'vendor_email': 'vendor2@example.com' },
-        ];
-
-        // Create workbook and worksheet
-        const worksheet = XLSX.utils.json_to_sheet(sampleData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'BuyerVendorMapping');
-
-        // Download file
-        XLSX.writeFile(workbook, 'buyer_vendor_mapping_sample.xlsx');
+        const link = document.createElement('a');
+        link.href = '/buyer_vendor_mapping_sample.xlsx';
+        link.download = 'buyer_vendor_mapping_sample.xlsx';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const handleUpload = async () => {
