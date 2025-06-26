@@ -61,9 +61,24 @@ function rejectList() {
     });
 }
 
+function handleBulkBuyerVendorMapping(formData) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let response = await axiosFormData.post(
+                `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/buyer-vendor-mapping`,
+                formData
+            );
+            resolve(response);
+        } catch (error) {
+            reject({ error });
+        }
+    });
+}
+
 export {
     handleGetPrivateVendorList,
     handleApprovePrivateVendor,
     handleUpdatePrivateVendor,
     rejectList,
+    handleBulkBuyerVendorMapping,
 };
