@@ -4,6 +4,7 @@ import React from "react";
 const FormikField = ({
 	label,
 	isRequired,
+	disabled,
 	name,
 	touched,
 	type = "text",
@@ -13,6 +14,7 @@ const FormikField = ({
 	rows = 2,
 	cols = 2,
 	className = "",
+	onChange,
 }) => {
 	return (
 		<>
@@ -28,6 +30,8 @@ const FormikField = ({
 						id={`${name}`}
 						name={`${name}`}
 						placeholder={`Enter ${label}`}
+						onChange={onChange}
+						disabled={disabled}
 					>
 						{selectOptions?.map((item, index) => {
 							return (
