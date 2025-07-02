@@ -233,6 +233,22 @@ const EditVariant = () => {
             product_id: productId
           });
 
+          // Ensure parent product is in the products list for auto-selection
+          if (productId && variantData.product_name) {
+            setProducts(prevProducts => {
+              const productExists = prevProducts.some(p => p.value === productId);
+              if (!productExists) {
+                const parentProduct = {
+                  value: productId,
+                  label: variantData.product_name,
+                  data: { id: productId, name: variantData.product_name }
+                };
+                return [parentProduct, ...prevProducts];
+              }
+              return prevProducts;
+            });
+          }
+
           // Set vendor approved by
           setVendorApprovedBy(variantData.vendor_approved_by || null);
 
@@ -310,7 +326,7 @@ const EditVariant = () => {
 
     for (let i = 0; i < specifications.length; i++) {
       const spec = specifications[i];
-      if (!spec.key || !spec.value) {
+      if ((spec.key && !spec.value.trim()) || (!spec.key && spec.value.trim())) {
         toast.error(`Specification ${i + 1}: Both specification type and value must be provided`);
         return;
       }
