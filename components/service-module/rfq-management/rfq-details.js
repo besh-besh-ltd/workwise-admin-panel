@@ -126,7 +126,11 @@ const RFQDetails = () => {
                                     <div className="col-md-5">
                                         <div className="mb-2">
                                             <strong>Buyer Name : </strong>
-                                            <span className="fw-medium text-muted px-2">{rfqDetails?.company_name || rfqDetails?.contact_name || "---"}</span>
+                                            <span className="fw-medium text-muted px-2">{rfqDetails?.contact_name || "---"}</span>
+                                        </div>
+                                        <div className="mb-2">
+                                            <strong>Company Name : </strong>
+                                            <span className="fw-medium text-muted px-2">{rfqDetails?.company_name || "---"}</span>
                                         </div>
                                         <div className="mb-2">
                                             <strong>Buyer Email : </strong>
@@ -136,13 +140,17 @@ const RFQDetails = () => {
                                             <strong>Contact No : </strong>
                                             <span className="fw-medium text-muted px-2">{rfqDetails?.contact_number || "---"}</span>
                                         </div>
+                                    </div>
+
+                                    <div className="col-md-3">
                                         <div className="mb-2">
                                             <strong>Project Name : </strong>
                                             <span className="fw-medium text-muted px-2">{rfqDetails?.project_name || "---"}</span>
                                         </div>
-                                    </div>
-
-                                    <div className="col-md-3">
+                                        <div className="mb-2">
+                                            <strong>Created At : </strong>
+                                            <span className="fw-medium text-muted px-2">{rfqDetails?.timestamp ? new Date(rfqDetails.timestamp).toLocaleString('en-IN', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }) : "---"}</span>
+                                        </div>
                                         <div className="mb-2">
                                             <strong>RFQ Status : </strong>
                                             {rfqDetails?.status == 1
@@ -154,6 +162,9 @@ const RFQDetails = () => {
                                             <strong>RFQ Type : </strong>
                                             <span className="fw-medium text-muted px-2">{textCapitalize(rfqDetails?.rfq_type || "---")}</span>
                                         </div>
+                                    </div>
+
+                                    <div className="col-md-4">
                                         <div className="mb-2">
                                             <strong>Reverse Auction : </strong>
                                             {rfqDetails?.reverse_auction == 1
@@ -165,9 +176,6 @@ const RFQDetails = () => {
                                             <strong>Bid End Date : </strong>
                                             <span className="fw-medium text-muted px-2">{rfqDetails?.bid_end_date || "---"}</span>
                                         </div>
-                                    </div>
-
-                                    <div className="col-md-4">
                                         <div className="mb-2">
                                             <strong>Admin Status : </strong>
                                             {rfqDetails.admin_service_details ?

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify';
 import VendorApprovalModal from '../modal/vendor-approval-modal';
 import Loader from '../shared/Loader';
+import { useRouter } from 'next/router';
 
 const initialState = {
     title: "",
@@ -13,6 +14,7 @@ const initialState = {
 
 
 const PrivateVendorManagement = () => {
+    const router = useRouter();
     const [vendorReviewList, setVendorReviewList] = useState([]);
     const [selectedVendor, setSelectedVendor] = useState({});
     const [limit, setlimit] = useState(10);
@@ -94,6 +96,10 @@ const PrivateVendorManagement = () => {
         }));
     }
 
+    const handleBulkMapping = () => {
+        router.push('/private-vendor-management/bulk-mapping');
+    };
+
     useEffect(() => {
         getVendorReviewList();
     }, [])
@@ -104,8 +110,19 @@ const PrivateVendorManagement = () => {
             {/* Page Name Section */}
             <section className="content-header">
                 <div className="container-fluid">
-                    <div className="row">
-                        <h1 className="m-0 text-dark">Private Vendors</h1>
+                    <div className="row justify-content-between align-items-center">
+                        <div className="col">
+                            <h1 className="m-0 text-dark">Private Vendors</h1>
+                        </div>
+                        <div className="col-auto">
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={handleBulkMapping}
+                            >
+                                <i className="fa fa-upload"></i> Map Buyer with Vendors
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
