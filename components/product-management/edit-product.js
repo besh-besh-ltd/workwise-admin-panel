@@ -115,7 +115,7 @@ const EditProduct = () => {
 			
 			// Set editability based on conditions
 			const isEditableProduct = (data.added_by === 1 || data.added_by === 111) && !data.vendor;
-			setIsEditable(isEditableProduct);
+			setIsEditable(true);
 
 			setProductDetailsData(data);
 
@@ -318,7 +318,7 @@ const EditProduct = () => {
 						</Link>
 					</div>
 
-					{!isEditable && (
+					{/* {!isEditable && (
 						<div className="alert alert-warning" role="alert" style={{
 							backgroundColor: "#fff3cd",
 							color: "#856404",
@@ -332,7 +332,7 @@ const EditProduct = () => {
 							This product cannot be edited as it is either mapped to a vendor or was not created by an admin. 
 							You can only modify the vendor approvals.
 						</div>
-					)}
+					)} */}
 
 					<div className="card col-12">
 						<div className="card-body mt-3">
