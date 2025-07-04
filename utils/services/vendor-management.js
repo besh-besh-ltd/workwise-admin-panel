@@ -235,6 +235,24 @@ function getAdminsList() {
   });
 }
 
+function handleGetSpocList(limit = 10, page = 1) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const cacheBuster = Date.now();
+      const url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/spoc-list?limit=${limit}&page=${page}&cb=${cacheBuster}`;
+
+      // Fetch paginated SPOCs
+      const response = await axiosInstance.get(url);
+
+      // Return full axios response so caller can access response.data
+      resolve(response);
+    } catch (error) {
+      console.error('Error in handleGetSpocList:', error);
+      reject(error);
+    }
+  });
+}
+
 export {
   handleGetVendorList,
   handleGetVendorDetails,
@@ -251,5 +269,6 @@ export {
   handleUpdateVendorSpoc,
   addNewSpoc,
   handleDeleteSpoc,
-  getAdminsList
+  getAdminsList,
+  handleGetSpocList
 };
