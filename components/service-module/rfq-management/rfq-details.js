@@ -1,11 +1,12 @@
 import FullLoading from '@/components/loading/FullLoading';
-import { getRFQDetails, sendRFQReminderToVendor, updateStatus } from '@/utils/services/rfq-management';
+import { getRFQDetails, sendRFQReminderToVendor, updateStatus, getVendorsForReminder, sendSelectiveReminder } from '@/utils/services/rfq-management';
 import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react'
 import VendorCard from './vendor-card';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane, faEdit } from '@fortawesome/free-solid-svg-icons';
 import StatusModal from '@/components/modal/status-modal';
+import VendorSelectionModal from '@/components/modal/VendorSelectionModal';
 import { ToastContainer, toast } from "react-toastify";
 
 const RFQDetails = () => {
@@ -15,6 +16,9 @@ const RFQDetails = () => {
     const [vendorDetails, setVendorDetails] = useState(null);
     const [loading, setLoading] = useState(false);
     const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
+    const [showVendorModal, setShowVendorModal] = useState(false);
+    const [vendors, setVendors] = useState([]);
+    const [modalLoading, setModalLoading] = useState(false);
 
     const textCapitalize = (str) => {
         if (!str) return str;
@@ -63,21 +67,37 @@ const RFQDetails = () => {
     }
 
 
-    const handleSendReminder = async () => {
-       setLoading(true);
-         sendRFQReminderToVendor(rfq_id)
-            .then((res) => {
-                console.log(res)
-                toast.success("Reminder sent successfully");
-            })
-            .catch((error) => {
-                toast.error("Reminder sent Failed");
-                
-            })
-            .finally(() => {
-                setLoading(false)
-            })
-    }
+    const handleOpenVendorModal = async () => {
+        setModalLoading(true);
+        setShowVendorModal(true);
+        
+        try {
+            const response = await getVendorsForReminder(rfq_id);
+            setVendors(response.data || []);
+        } catch (err) {
+            console.error("Error fetching vendors:", err);
+            toast.error("Failed to fetch vendors for reminder");
+            setShowVendorModal(false);
+        } finally {
+            setModalLoading(false);
+        }
+    };
+
+    const handleCloseModal = () => {
+        setShowVendorModal(false);
+        setVendors([]);
+    };
+
+    const handleSendSelectiveReminder = async (vendorIds) => {
+        try {
+            const response = await sendSelectiveReminder(rfq_id, vendorIds);
+            toast.success(response.data?.message || "Reminder sent successfully to selected vendors!");
+        } catch (err) {
+            console.error("Error sending selective reminder:", err);
+            toast.error(err?.response?.data?.message || "Failed to send reminder");
+            throw err;
+        }
+    };
 
 
     useEffect(() => {
@@ -111,7 +131,7 @@ const RFQDetails = () => {
                                     <h2 className="fs-5 ">Rfq No. #{` ${rfqDetails?.rfq_no}`}</h2>
                                     <div>
 
-                                   <button type="button" className="btn btn-secondary mr-3" onClick={() => handleSendReminder(true)}>
+                                   <button type="button" className="btn btn-secondary mr-3" onClick={handleOpenVendorModal}>
                                      <FontAwesomeIcon icon={faPaperPlane} className="me-2" />
                                      Send Reminder
                                    </button>
@@ -231,6 +251,15 @@ const RFQDetails = () => {
                     updateAdminStatus={updateAdminStatus}
                 />
             }
+
+            {/* Vendor Selection Modal */}
+            <VendorSelectionModal
+                isOpen={showVendorModal}
+                onClose={handleCloseModal}
+                onSendReminder={handleSendSelectiveReminder}
+                vendors={vendors}
+                loading={modalLoading}
+            />
 
            <ToastContainer />
             

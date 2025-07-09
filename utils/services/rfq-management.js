@@ -44,3 +44,27 @@ export const sendRFQReminderToVendor = (id) => {
         }
     });
 };
+
+export const getVendorsForReminder = (id) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/rfq/vendors-for-reminder/${id}`);
+            resolve(response);
+        } catch (error) {
+            reject({ message: error });
+        }
+    });
+};
+
+export const sendSelectiveReminder = (id, vendorIds) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let response = await axiosInstance.post(`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/rfq/send-selective-reminder/${id}`, {
+                vendor_ids: vendorIds
+            });
+            resolve(response);
+        } catch (error) {
+            reject({ message: error });
+        }
+    });
+};
