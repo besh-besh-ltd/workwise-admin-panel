@@ -111,6 +111,10 @@ const AddCoupon = () => {
                                                                             { label: "true", value: "true" },
                                                                         ]
                                                                     }
+                                                                    onChange={(e) => {
+                                                                        const value = e.target.value;
+                                                                        setFieldValue("is_percentage", value);
+                                                                    }}
                                                                     name="is_percentage"
                                                                     touched={touched}
                                                                     errors={errors}
@@ -174,11 +178,40 @@ const AddCoupon = () => {
                                                                             { label: "inactive", value: '0' },
                                                                         ]
                                                                     }
+                                                                    onChange={(e) => {
+                                                                        const value = e.target.value;
+                                                                        setFieldValue("status", value);
+                                                                    }}
                                                                     name="status"
                                                                     touched={touched}
                                                                     errors={errors}
                                                                 />
                                                             </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-sm-4 pl-0">
+                                                        <div className="form-group">
+                                                            <FormikField
+                                                            label="User Type"
+                                                            type="select"
+                                                            isRequired={true}
+                                                            selectOptions={[
+                                                                {
+                                                                label: "Select User Type",
+                                                                value: null,
+                                                                disabled: true,
+                                                                },
+                                                                { label: "Buyer", value: "2" },
+                                                                { label: "Vendor", value: "3" },
+                                                            ]}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                setFieldValue("user_type", value);
+                                                            }}
+                                                            name="user_type"
+                                                            touched={touched}
+                                                            errors={errors}
+                                                            />
                                                         </div>
                                                     </div>
 

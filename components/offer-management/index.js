@@ -34,9 +34,9 @@ const OfferManagement = () => {
     }
 
     let subscriptionUserTypes = {
-		2: 'Buyer',
-		3: 'Vendor',
-	}
+      2: 'Buyer',
+      3: 'Vendor',
+    }
 
     const getOffer = () => {
         setLoading(true);
@@ -113,6 +113,7 @@ const OfferManagement = () => {
                   <th scope="col">Start Date</th>
                   <th scope="col">End Date</th>
                   <th scope="col">Status</th>
+                  <th scope="col">User Type</th>
                   <th scope="col">Action</th>
                 </tr>
               </thead>
@@ -139,6 +140,7 @@ const OfferManagement = () => {
                         <td>{moment(item?.start_date).format("MM/DD/YYYY")}</td>
                         <td>{moment(item?.end_date).format("MM/DD/YYYY")}</td>
                         <td>{item?.status === 1 ? "Active" : "Inactive"}</td>
+                        <td>{item?.user_type == "3" ? "Vendor" : "Buyer"}</td>
                         <td>
                           <span
                             className="fa fa-edit mr-3"

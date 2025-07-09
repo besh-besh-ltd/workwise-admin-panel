@@ -653,6 +653,7 @@ const handleCountryChange = (event) => {
                             name="subscription"
                           >
                             <option value="" disabled>Select</option>
+                            <option value="-1" selected>No Subscription</option>
                             {subscriptionList?.map((subscription) => (
                               <option key={subscription.value} value={subscription.value}>
                                 {subscription.label}
