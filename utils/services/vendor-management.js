@@ -195,19 +195,6 @@ function rejectList() {
   });
 }
 
-function handleVendorRfqList(id) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/vendor-rfq-list/${id}`
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-}
-
 function addNewSpoc(values, vendorId){
   return new Promise(async (resolve, reject) => {
     try {
@@ -265,7 +252,6 @@ export {
   handleUpdateVendor,
   handleApproveVendor,
   rejectList,
-  handleVendorRfqList,
   handleUpdateVendorSpoc,
   addNewSpoc,
   handleDeleteSpoc,
