@@ -29,20 +29,6 @@ const VendorDetails = () => {
     setShowModal(true);
   };
 
-  const getVendorRfqList = () => {
-    handleVendorRfqList(id)
-      .then((res) => setVendorRfqList(res.data))
-      .catch((error) => {
-        let txt = "";
-        for (let x in error.error.response.data.errors) {
-          txt = error.error.response.data.errors[x];
-        }
-        toast.error(txt);
-      });
-  };
-  useEffect(() => {
-    console.log(vendorRfqList, "vendorRfqList *");
-  }, [vendorRfqList]);
   const getVendorDetails = () => {
     if (id != undefined) {
       handleGetVendorDetails(id)
@@ -91,11 +77,6 @@ const VendorDetails = () => {
       });
   };
 
-  useEffect(() => {
-    if (id) {
-      getVendorRfqList();
-    }
-  }, [id]);
 
   return (
     <>
