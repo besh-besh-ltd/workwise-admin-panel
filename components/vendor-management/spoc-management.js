@@ -143,17 +143,38 @@ const SpocManagement = () => {
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
                   />
-                  
-                  {[...Array(totalPages)].map((_, idx) => (
-                    <Pagination.Item
-                      key={idx + 1}
-                      active={currentPage === idx + 1}
-                      onClick={() => setCurrentPage(idx + 1)}
-                    >
-                      {idx + 1}
-                    </Pagination.Item>
-                  ))}
-                  
+                  {/* Windowed Pagination Logic Start */}
+                  {(() => {
+                    const pageWindow = 2; // pages before/after current
+                    let start = Math.max(1, currentPage - pageWindow);
+                    let end = Math.min(totalPages, currentPage + pageWindow);
+                    const items = [];
+                    if (start > 1) {
+                      items.push(
+                        <Pagination.Item key={1} onClick={() => setCurrentPage(1)}>{1}</Pagination.Item>
+                      );
+                      if (start > 2) items.push(<Pagination.Ellipsis key="start-ellipsis" disabled />);
+                    }
+                    for (let i = start; i <= end; i++) {
+                      items.push(
+                        <Pagination.Item
+                          key={i}
+                          active={currentPage === i}
+                          onClick={() => setCurrentPage(i)}
+                        >
+                          {i}
+                        </Pagination.Item>
+                      );
+                    }
+                    if (end < totalPages) {
+                      if (end < totalPages - 1) items.push(<Pagination.Ellipsis key="end-ellipsis" disabled />);
+                      items.push(
+                        <Pagination.Item key={totalPages} onClick={() => setCurrentPage(totalPages)}>{totalPages}</Pagination.Item>
+                      );
+                    }
+                    return items;
+                  })()}
+                  {/* Windowed Pagination Logic End */}
                   <Pagination.Next
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
