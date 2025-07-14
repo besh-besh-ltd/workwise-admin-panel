@@ -195,19 +195,6 @@ function rejectList() {
   });
 }
 
-function handleVendorRfqList(id) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/vendor-rfq-list/${id}`
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-}
-
 function addNewSpoc(values, vendorId){
   return new Promise(async (resolve, reject) => {
     try {
@@ -235,6 +222,24 @@ function getAdminsList() {
   });
 }
 
+function handleGetSpocList(limit = 10, page = 1) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const cacheBuster = Date.now();
+      const url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/spoc-list?limit=${limit}&page=${page}&cb=${cacheBuster}`;
+
+      // Fetch paginated SPOCs
+      const response = await axiosInstance.get(url);
+
+      // Return full axios response so caller can access response.data
+      resolve(response);
+    } catch (error) {
+      console.error('Error in handleGetSpocList:', error);
+      reject(error);
+    }
+  });
+}
+
 export {
   handleGetVendorList,
   handleGetVendorDetails,
@@ -247,9 +252,9 @@ export {
   handleUpdateVendor,
   handleApproveVendor,
   rejectList,
-  handleVendorRfqList,
   handleUpdateVendorSpoc,
   addNewSpoc,
   handleDeleteSpoc,
-  getAdminsList
+  getAdminsList,
+  handleGetSpocList
 };

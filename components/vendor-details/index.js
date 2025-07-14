@@ -6,7 +6,6 @@ import {
   handleDeleteVendorProfile,
   handleDisableVendorProfile,
   handleGetVendorDetails,
-  handleVendorRfqList,
 } from "@/utils/services/vendor-management";
 import { useRouter } from "next/router";
 import { ToastContainer, toast } from "react-toastify";
@@ -19,7 +18,6 @@ const VendorDetails = () => {
   const [vendorSpocDeails, setVendorSpocDeails] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showDisableModal, setShowDisableModal] = useState(false);
-  const [vendorRfqList, setVendorRfqList] = useState([]);
   const handleClose = () => {
     setShowModal(false);
     setShowDisableModal(false);
@@ -31,20 +29,6 @@ const VendorDetails = () => {
     setShowModal(true);
   };
 
-  const getVendorRfqList = () => {
-    handleVendorRfqList(id)
-      .then((res) => setVendorRfqList(res.data))
-      .catch((error) => {
-        let txt = "";
-        for (let x in error.error.response.data.errors) {
-          txt = error.error.response.data.errors[x];
-        }
-        toast.error(txt);
-      });
-  };
-  useEffect(() => {
-    console.log(vendorRfqList, "vendorRfqList *");
-  }, [vendorRfqList]);
   const getVendorDetails = () => {
     if (id != undefined) {
       handleGetVendorDetails(id)
@@ -93,11 +77,6 @@ const VendorDetails = () => {
       });
   };
 
-  useEffect(() => {
-    if (id) {
-      getVendorRfqList();
-    }
-  }, [id]);
 
   return (
     <>
@@ -402,48 +381,6 @@ const VendorDetails = () => {
                 </ul>
               </div>
             </div>
-          )}
-          {vendorRfqList && vendorRfqList.length > 0 && (
-            <>
-              <div>
-                <h5 className="heading-p mt-4">RFQ List</h5>
-              </div>
-              <div className="row">
-                <div className="col-12">
-                  <div className="card product-table">
-                    <div className="card-body">
-                      <table class="table table-striped table-hover">
-                        <thead>
-                          <tr>
-                            <th scope="col">Name</th>
-                            <th scope="col">Company Name</th>
-                            <th scope="col">Contact Number</th>
-                            <th scope="col">Comment</th>
-                            <th scope="col">email</th>
-                            <th scope="col">Bid End Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {vendorRfqList &&
-                            vendorRfqList?.map((item) => {
-                              return (
-                                <tr key={item?.id}>
-                                  <td>{item?.contact_name}</td>
-                                  <td>{item?.company_name}</td>
-                                  <td>{item?.contact_number}</td>
-                                  <td>{item?.comment}</td>
-                                  <td>{item?.response_email}</td>
-                                  <td>{item?.bid_end_date}</td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
           )}
           {/*  <div className="d-flex justify-content-end pb-5">
             <button type="button" class="btn btn-success mr-3">
