@@ -13,6 +13,7 @@ import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
 import { getCountryCodes } from "@/utils/services/location-management";
 import { getAdminProfile } from "@/utils/services/login";
+import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
 
 const UpdateBuyer = () => {
   const [editDetails, setEditDetails] = useState(null);
@@ -20,6 +21,8 @@ const UpdateBuyer = () => {
   const [accountLimits, setAccountLimits] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [subscriptionList, setSubscriptionList] = useState([]);
+
   const router = useRouter();
   const { id } = router.query;
 
@@ -30,6 +33,10 @@ const UpdateBuyer = () => {
     }
     fetchCountryCodes();
   }, [id]);
+
+  useEffect(() => {
+    if(editDetails) getSubscriptionList();
+  }, [editDetails])
 
   const fetchBuyerDetails = async () => {
     try {
@@ -76,6 +83,30 @@ const UpdateBuyer = () => {
     } catch (error) {
       setAccountLimits(null);
     }
+  };
+
+  let getSubscriptionDuration = {
+    "-1": "Lifetime",
+    1: "Monthly",
+    3: "Quarterly",
+    12: "Yearly",
+  };
+
+  const getSubscriptionList = () => {
+    handleGetSubscriptionList(editDetails.user_type)
+      .then((res) => {
+        const formattedData = res.data.map((obj) => ({
+          label: `${obj.plan_name} (${
+            getSubscriptionDuration[parseInt(obj.duration)] ||
+            obj.duration + " Months"
+          })`,
+          value: obj.id.toString(),
+        }));
+        setSubscriptionList(formattedData);
+      })
+      .catch((error) => {
+        toast.error("Internal server error");
+      });
   };
 
   const getUserTypeLabel = (userType) => {
@@ -160,6 +191,7 @@ const UpdateBuyer = () => {
     mobile: editDetails?.mobile ? editDetails.mobile.replace(/^\+?\d+-/, "") : "",
     organization_name: editDetails?.company_name || editDetails?.organization_name || "",
     image: editDetails?.profile_image || null,
+    subscription: editDetails?.subscription_plan_id || "-1",
   };
 
   const accountLimitsInitialValues = {
@@ -293,6 +325,24 @@ const UpdateBuyer = () => {
                         />
                       </div>
                     )}
+                  </div>
+                </div>
+                <div className="row md-6 mb-4">
+                  <div class="col-md-12">
+                    <label htmlFor="subscription">Select Subscription ( Empty for Free )</label>
+                    <Field
+                      as="select"
+                      className="form-control"
+                      name="subscription"
+                    >
+                      <option value="" disabled>Select</option>
+                      <option value="-1" selected>No Subscription</option>
+                      {subscriptionList?.map((subscription) => (
+                        <option key={subscription.value} value={subscription.value}>
+                          {subscription.label}
+                        </option>
+                      ))}
+                    </Field>
                   </div>
                 </div>
                 {canEditUser() && (

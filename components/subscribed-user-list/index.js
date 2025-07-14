@@ -124,7 +124,7 @@ const SubscribedUserList = () => {
 
   const userTypeArr = [
     { label: "Buyer", value: 2 },
-    { label: "Other User", value: 4 },
+    { label: "Vendor", value: 3 },
   ];
 
   const statusArr = [
@@ -158,11 +158,18 @@ const SubscribedUserList = () => {
       });
   };
 
+  let getSubscriptionDuration = {
+    '-1': "Lifetime",
+		1: "Monthly",
+		3: "Quarterly",
+		12: "Yearly",
+	};
+
   const getSubscriptionList = () => {
-    handleGetSubscriptionList()
+    handleGetSubscriptionList('-1')
       .then((res) => {
         const formattedData = res.data.map((obj) => ({
-          label: obj.plan_name,
+          label: `(${obj.user_type == '2' ? 'Buyer' : 'Vendor'}) ${obj.plan_name} (${getSubscriptionDuration[parseInt(obj.duration)] || obj.duration + ' Months'})`,
           value: obj.id.toString(),
         }));
         setSubscriptionList(formattedData);

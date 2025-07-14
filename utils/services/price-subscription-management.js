@@ -1,11 +1,12 @@
 import axiosInstance from "../axios";
 import axiosFormData from "../axios/form-data";
 
-const handleGetSubscriptionFeatureList = (page) => {
+const handleGetSubscriptionFeatureList = (user_type) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			let response = await axiosInstance.get(
-				`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/subscription/subscription-feature-list`
+				`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/subscription/subscription-feature-list`,
+				{params: {user_type}}
 			);
 			resolve(response);
 		} catch (error) {
@@ -28,11 +29,12 @@ const handleAddSubscription = (values) => {
 	});
 };
 
-const handleGetSubscriptionList = (page) => {
+const handleGetSubscriptionList = (user_type) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			let response = await axiosInstance.get(
-				`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/subscription/subscription-list`
+				`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/subscription/subscription-list`,
+				{params: {user_type}}
 			);
 			resolve(response);
 		} catch (error) {

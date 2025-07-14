@@ -24,7 +24,8 @@ const EditCoupon = () => {
         discount_amount: couponCheckingCondition ? (parseInt(couponDetail[0]?.discount_amount)).toFixed(0) : "",
         start_date: couponCheckingCondition ? formatDateForInput(couponDetail[0]?.start_date) : "",
         end_date: couponCheckingCondition ? formatDateForInput(couponDetail[0]?.end_date) : "",
-        status: couponCheckingCondition ? (couponDetail[0]?.status).toString() : ""
+        status: couponCheckingCondition ? (couponDetail[0]?.status).toString() : "",
+        user_type: couponCheckingCondition ? (couponDetail[0]?.user_type).toString() : ""
     }
 
     const validationSchema = yup.object().shape({
@@ -34,6 +35,7 @@ const EditCoupon = () => {
         start_date: yup.string().required("Start Date is required"),
         end_date: yup.string().required("End Date is required"),
         status: yup.string().required("Status is required"),
+        user_type: yup.string().optional(),
     });
 
     const getCoupon = () => {
@@ -200,6 +202,31 @@ const EditCoupon = () => {
                                                                     errors={errors}
                                                                 />
                                                             </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-sm-4 pl-0">
+                                                        <div className="form-group">
+                                                            <FormikField
+                                                            label="User Type"
+                                                            type="select"
+                                                            isRequired={true}
+                                                            selectOptions={[
+                                                                {
+                                                                label: "Select User Type",
+                                                                value: null,
+                                                                disabled: true,
+                                                                },
+                                                                { label: "Buyer", value: "2" },
+                                                                { label: "Vendor", value: "3" },
+                                                            ]}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                setFieldValue("user_type", value);
+                                                            }}
+                                                            name="user_type"
+                                                            touched={touched}
+                                                            errors={errors}
+                                                            />
                                                         </div>
                                                     </div>
 
