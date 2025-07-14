@@ -28,17 +28,17 @@ export const updateCoupon = (values, id) => {
     });
 }
 
-export const getCouponList = (page = 1, limit = 10, couponVal) => {
+export const getCouponList = (page = 1, limit = 10, couponVal, userType) => {
     return new Promise(async (resolve, reject) => {
         try {
             let response;
             if (couponVal) {
                 response = await axiosInstance.get(
-                    `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/coupon/list-coupon?page=${page}&limit=${limit}&coupon=${couponVal}`
+                    `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/coupon/list-coupon?page=${page}&limit=${limit}&coupon=${couponVal}&user_type=${userType}`
                 );
             } else {
                 response = await axiosInstance.get(
-                    `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/coupon/list-coupon?page=${page}&limit=${limit}`
+                    `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/coupon/list-coupon?page=${page}&limit=${limit}&user_type=${userType}`
                 );
             }
             resolve(response);
