@@ -75,9 +75,7 @@ const RFQDetails = () => {
             const response = await getVendorsForReminder(rfq_id);
             setVendors(response.data || []);
         } catch (err) {
-            console.error("Error fetching vendors:", err);
             toast.error("Failed to fetch vendors for reminder");
-            setShowVendorModal(false);
         } finally {
             setModalLoading(false);
         }
@@ -97,6 +95,19 @@ const RFQDetails = () => {
             toast.error(err?.response?.data?.message || "Failed to send reminder");
             throw err;
         }
+    };
+
+    const isAllProductsFinalized = (vendorDetails) => {
+        if (!vendorDetails || vendorDetails.length === 0) return false;
+        for (const vendor of vendorDetails) {
+            if (!vendor.products || vendor.products.length === 0) return false;
+            for (const prod of vendor.products) {
+                if (!prod.finalization || !prod.finalization.vendor_id) {
+                    return false;
+                }
+            }
+        }
+        return true;
     };
 
 
@@ -131,7 +142,12 @@ const RFQDetails = () => {
                                     <h2 className="fs-5 ">Rfq No. #{` ${rfqDetails?.rfq_no}`}</h2>
                                     <div>
 
-                                   <button type="button" className="btn btn-secondary mr-3" onClick={handleOpenVendorModal}>
+                                   <button
+                                     type="button"
+                                     className="btn btn-secondary mr-3"
+                                     onClick={handleOpenVendorModal}
+                                     disabled={rfqDetails?.status !== 1 || isAllProductsFinalized(vendorDetails)}
+                                   >
                                      <FontAwesomeIcon icon={faPaperPlane} className="me-2" />
                                      Send Reminder
                                    </button>
