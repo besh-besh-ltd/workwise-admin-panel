@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import axiosInstance from '@/utils/axios';
 import axiosxdata from '@/utils/axios/xxx-form-data';
 
-const SpocManagement = () => {
+const SpocManagement = ({ userType }) => {
   const [spocs, setSpocs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -108,7 +108,7 @@ const SpocManagement = () => {
                       <td>{spoc.created_by_name || 'N/A'}</td>
                       <td>{getStatusBadge(spoc.status)}</td>
                       <td>
-                        {spoc.status !== 1 && (
+                        {(userType === 1 || userType === 5) && spoc.status !== 1 && (
                           <Button
                             variant="success"
                             size="sm"
@@ -118,7 +118,7 @@ const SpocManagement = () => {
                             Approve
                           </Button>
                         )}
-                        {spoc.status !== 0 && (
+                        {(userType === 1 || userType === 5) && spoc.status !== 0 && (
                           <Button
                             variant="danger"
                             size="sm"
