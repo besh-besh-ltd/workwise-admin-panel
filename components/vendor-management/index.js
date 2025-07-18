@@ -316,20 +316,22 @@ const VendorManagement = () => {
       <div className="content-header d-flex justify-content-between align-items-center">
         <h1 className="m-0 text-dark">Vendor</h1>
         <div className="d-flex gap-2">
+          {(userType === 1 || userType === 5) && (
+            <button
+              type="button"
+              className="btn btn-info"
+              onClick={() => router.push(`/vendor-management/spoc-management`)}
+            >
+              <i className="fa fa-id-badge"></i> SPOC Management
+            </button>
+          )}
           <button
             type="button"
-            className="btn btn-info"
-            onClick={() => router.push(`/vendor-management/spoc-management`)}
+            className="btn btn-primary"
+            onClick={() => router.push(`/vendor-management/add-vendor`)}
           >
-            <i className="fa fa-id-badge"></i> SPOC Management
+            <i className="fa fa-plus"></i> Add Vendor
           </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => router.push(`/vendor-management/add-vendor`)}
-        >
-          <i className="fa fa-plus"></i> Add Vendor
-        </button>
         </div>
       </div>
 
