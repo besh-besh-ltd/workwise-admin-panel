@@ -19,6 +19,7 @@ import img1 from "../../public/assets/images/products.png";
 import SpocAddModal from "../modal/spoc-add-modal";
 import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
 import Select from "react-select";
+import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
 
 const UpdateVendor = () => {
   const [dtaCount, setdtaCount] = useState(0);
@@ -41,6 +42,7 @@ const UpdateVendor = () => {
   const [openAddSpoc,setOpenAddSpoc] = useState(false);
   const [countryList,setCountryList] = useState([]);
   const [countryCode , setCountryCode] = useState([]);
+  const [subscriptionList, setSubscriptionList] = useState([]);
  
   const [spocCountryCode, setSpocCountryCode] = useState("+91");
 
@@ -153,6 +155,30 @@ const UpdateVendor = () => {
       });
   };
 
+  let getSubscriptionDuration = {
+    "-1": "Lifetime",
+    1: "Monthly",
+    3: "Quarterly",
+    12: "Yearly",
+  };
+
+  const getSubscriptionList = () => {
+    handleGetSubscriptionList("3")
+      .then((res) => {
+        const formattedData = res.data.map((obj) => ({
+          label: `${obj.plan_name} (${
+            getSubscriptionDuration[parseInt(obj.duration)] ||
+            obj.duration + " Months"
+          })`,
+          value: obj.id.toString(),
+        }));
+        setSubscriptionList(formattedData);
+      })
+      .catch((error) => {
+        toast.error("Internal server error");
+      });
+  };
+
  useEffect(() => {
     if (selectedCountryOption) {
       handleGetStates(selectedCountryOption)
@@ -174,6 +200,10 @@ useEffect(() => {
     })
     .catch((err) => console.error("Error fetching countries:", err));
 }, []);
+
+useEffect(() => {
+    getSubscriptionList();
+  }, [])
 
  const fetchCountryCodes = () => {
     getCountryCodes()
@@ -255,6 +285,7 @@ useEffect(() => {
     cin: editDetails?.companyDetails?.cin || "",
     turn_over: editDetails?.companyDetails?.turnover || "",
     total_employees: editDetails?.companyDetails?.no_of_employess || "",
+    subscription: editDetails?.vendorDetails?.subscription_plan_id || "-1",
   };
 
  
@@ -790,7 +821,22 @@ useEffect(() => {
                                 )
                             )}
                         </div>
-
+                        <div class="col-6">
+                          <label htmlFor="subscription">Select Subscription ( Empty for Free )</label>
+                          <Field
+                            as="select"
+                            className="form-control"
+                            name="subscription"
+                          >
+                            <option value="" disabled>Select</option>
+                            <option value="-1">No Subscription</option>
+                            {subscriptionList?.map((subscription) => (
+                              <option key={subscription.value} value={subscription.value}>
+                                {subscription.label}
+                              </option>
+                            ))}
+                          </Field>
+                        </div>
                         </div>
                       </div>
                     )}

@@ -13,6 +13,7 @@ const EditOffer = () => {
     const router = useRouter();
     const [editOfferData, setEditOfferData] = useState(null);
     const [subscriptionList, setSubscriptionList] = useState([]);
+    const [selectedUserType, setSelectedUserType] = useState('2');
 
     const offerCheckingCondition = editOfferData && Object.keys(editOfferData)?.length > 0;
     const formatDateForInput = (dateString) => {
@@ -37,7 +38,8 @@ const EditOffer = () => {
         price: offerCheckingCondition ? (parseInt(editOfferData?.price)).toFixed(0) : "",
         start_date: offerCheckingCondition ? formatDateForInput(editOfferData?.start_date) : "",
         end_date: offerCheckingCondition ? formatDateForInput(editOfferData?.end_date) : "",
-        status: offerCheckingCondition ? (editOfferData?.status)?.toString() : ""
+        status: offerCheckingCondition ? (editOfferData?.status)?.toString() : "",
+        user_type: offerCheckingCondition ? (editOfferData?.user_type)?.toString() : ""
     }
 
     const validationSchema = yup.object().shape({
@@ -48,7 +50,14 @@ const EditOffer = () => {
         start_date: yup.string().required("Start Date is required"),
         end_date: yup.string().required("End Date is required"),
         status: yup.string().required("Status is required"),
+        user_type: yup.string().required("User Type is required"),
     });
+
+    let getSubscriptionDuration = {
+        1: "Monthly",
+        3: "Quarterly",
+        12: "Yearly",
+	};
 
     const getOfferUpdate = () => {
         getOfferDetails(router?.query?.id)
@@ -59,19 +68,22 @@ const EditOffer = () => {
                 toast("Internal server error");
             });
     }
+
     const getSubscriptionList = () => {
-        handleGetSubscriptionList()
+        handleGetSubscriptionList(editOfferData.user_type)
             .then((res) => {
                 const formattedData = res.data.map(obj => ({
-                    label: obj.plan_name,
+                    label: `${obj.plan_name} (${getSubscriptionDuration[parseInt(obj.duration)] || obj.duration + ' Months'})`,
                     value: (obj.id).toString(),
                 }));
                 setSubscriptionList(formattedData);
             })
             .catch((error) => {
+                console.log("ERROR => ", error)
                 toast("Internal server error");
             });
     }
+
     const submitHandler = (values, resetForm) => {
         const payload = {
             ...values,
@@ -99,9 +111,11 @@ const EditOffer = () => {
             getOfferUpdate();
         }
     }, [router])
+
     useEffect(() => {
-        getSubscriptionList();
-    }, [])
+        if(editOfferData)
+            getSubscriptionList();
+    }, [editOfferData])
     return (
         <>
             <ToastContainer />
@@ -234,23 +248,47 @@ const EditOffer = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="col-sm-5">
-                                                    <div className="form-group">
+                                                <div className='row'>
+                                                    <div className="col-sm-5">
+                                                        <div className="form-group">
+                                                            <FormikField
+                                                                label="Status"
+                                                                type="select"
+                                                                isRequired={true}
+                                                                selectOptions={
+                                                                    [
+                                                                        { label: "Select Status", value: '', disabled: true },
+                                                                        { label: "active", value: '1' },
+                                                                        { label: "inactive", value: '0' },
+                                                                    ]
+                                                                }
+                                                                name="status"
+                                                                touched={touched}
+                                                                errors={errors}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-sm-5">
+                                                        <div className="form-group">
                                                         <FormikField
-                                                            label="Status"
+                                                            label="User Type"
                                                             type="select"
+                                                            disabled
                                                             isRequired={true}
-                                                            selectOptions={
-                                                                [
-                                                                    { label: "Select Status", value: '', disabled: true },
-                                                                    { label: "active", value: '1' },
-                                                                    { label: "inactive", value: '0' },
-                                                                ]
-                                                            }
-                                                            name="status"
+                                                            selectOptions={[
+                                                            {
+                                                                label: "Select User Type",
+                                                                value: null,
+                                                                disabled: true,
+                                                            },
+                                                            { label: "Buyer", value: "2" },
+                                                            { label: "Vendor", value: "3" },
+                                                            ]}
+                                                            name="user_type"
                                                             touched={touched}
                                                             errors={errors}
                                                         />
+                                                        </div>
                                                     </div>
                                                 </div>
 

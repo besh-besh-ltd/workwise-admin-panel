@@ -10,6 +10,7 @@ import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
 import Select from "react-select";
+import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
 
 const AddVendor = () => {
   const [states, setStates] = useState([]);
@@ -20,6 +21,7 @@ const AddVendor = () => {
   const [isStateDisabled, setIsStateDisabled] = useState(true);
   const [isCityDisabled, setIsCityDisabled] = useState(true);
   const [countryList,setCountryList] = useState([]);
+  const [subscriptionList, setSubscriptionList] = useState([]);
   const[countryCode , setCountryCode] = useState([]);
   
   const router = useRouter();
@@ -49,6 +51,30 @@ const AddVendor = () => {
       { value: 'Wholesaler', label: 'Wholesaler' } 
 ];
 
+let getSubscriptionDuration = {
+  "-1": "Lifetime",
+  1: "Monthly",
+  3: "Quarterly",
+  12: "Yearly",
+};
+
+  const getSubscriptionList = () => {
+    handleGetSubscriptionList("3")
+      .then((res) => {
+        const formattedData = res.data.map((obj) => ({
+          label: `${obj.plan_name} (${
+            getSubscriptionDuration[parseInt(obj.duration)] ||
+            obj.duration + " Months"
+          })`,
+          value: obj.id.toString(),
+        }));
+        setSubscriptionList(formattedData);
+      })
+      .catch((error) => {
+        toast.error("Internal server error");
+      });
+  };
+
   const submitHandler = (values, resetForm) => {
     const orgName = values.organization_name;
     const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
@@ -68,16 +94,11 @@ const AddVendor = () => {
      delete spoc.country_code;
    });
 
-   
-    
-
     const { countryCode, ...updatedValues } = { 
       ...values, 
       mobile: fullMobile,
       name:orgName
-    };
-
-   
+    };   
    
     handleAddVendor(updatedValues )
       .then((res) => {
@@ -112,6 +133,10 @@ const AddVendor = () => {
       setStates([]); // Clear states if no country is selected
     }
   }, [selectedCountryOption]);
+
+  useEffect(() => {
+    getSubscriptionList();
+  }, [])
   
 
 useEffect(() => {
@@ -620,7 +645,22 @@ const handleCountryChange = (event) => {
                             )}
                           />
                         </div>
-
+                        <div class="col-6">
+                          <label htmlFor="subscription">Select Subscription ( Empty for Free )</label>
+                          <Field
+                            as="select"
+                            className="form-control"
+                            name="subscription"
+                          >
+                            <option value="" disabled>Select</option>
+                            <option value="-1" selected>No Subscription</option>
+                            {subscriptionList?.map((subscription) => (
+                              <option key={subscription.value} value={subscription.value}>
+                                {subscription.label}
+                              </option>
+                            ))}
+                          </Field>
+                        </div>
 
                         {/* SPOC Section */}
                         <div className="mt-4">

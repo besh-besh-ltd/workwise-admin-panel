@@ -18,6 +18,14 @@ const CouponManagement = () => {
     const [showModal, setShowModal] = useState(false);
     const [id, setId] = useState();
     const [searchString, setSearchString] = useState('');
+    const [selectedUserType, setSelectedUserType] = useState('2');
+
+    let subscriptionUserTypes = {
+      2: 'Buyer',
+      3: 'Vendor',
+    }
+
+    const handleUserTypeChange = (user_type) => setSelectedUserType(user_type);
 
     const handleClose = () => setShowModal(false);
 
@@ -48,7 +56,7 @@ const CouponManagement = () => {
 
     const getCoupon = () => {
         setLoading(true);
-        getCouponList(page, limit, searchString)
+        getCouponList(page, limit, searchString, selectedUserType)
             .then((res) => {
                 setLoading(false);
                 settotalPages(res.total_count);
@@ -65,7 +73,9 @@ const CouponManagement = () => {
 
     useEffect(() => {
         getCoupon()
-    }, [page, searchString])
+    }, [page, searchString, selectedUserType]);
+
+
     return (
         <>
             <ToastContainer />
@@ -79,7 +89,24 @@ const CouponManagement = () => {
 
             <section className="content">
                 <div className="container-fluid">
-                    <div className="d-flex justify-content-end">
+                    <div className="d-flex justify-content-between">
+                        <div className="d-flex gap-2">
+                            {Object.entries(subscriptionUserTypes).map(
+                                ([user_type, label]) => (
+                                <button
+                                    onClick={() => handleUserTypeChange(user_type)}
+                                    className={`btn btn-outline-secondary btn-sm px-4 ${
+                                    selectedUserType == user_type ? "active" : null
+                                    }`}
+                                    style={{
+                                    padding: 8,
+                                    }}
+                                >
+                                    {label}
+                                </button>
+                                )
+                            )}
+                        </div>
                         <button
                             type="button"
                             onClick={() =>

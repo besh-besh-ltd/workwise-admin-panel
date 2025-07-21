@@ -14,11 +14,12 @@ export const addOffer = (payload) => {
     });
 }
 
-export const getOfferList = () => {
+export const getOfferList = (user_type) => {
     return new Promise(async (resolve, reject) => {
         try {
             let response = await axiosInstance.get(
-                `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/coupon/offer-list`
+                `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/coupon/offer-list`,
+                {params: {user_type}}
             );
             resolve(response);
         } catch (error) {

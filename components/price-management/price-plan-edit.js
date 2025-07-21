@@ -19,13 +19,15 @@ const PlanEdit = () => {
 		duration: "",
 		status: "1",
 		feature: [],
+		user_type: null,
 	});
 	const router = useRouter();
 	const id = router.query.id;
 	const getSubscriptionFeatureLists = () => {
-		handleGetSubscriptionFeatureList()
+		handleGetSubscriptionFeatureList(subscriptionDetails.user_type)
 			.then((res) => {
 				setFeatureLists(res.data);
+				updateAWithFeatures(res.data);
 			})
 			.catch((err) => console.log("err", err));
 	};
@@ -39,6 +41,7 @@ const PlanEdit = () => {
 						type: res.data[0].plan_type,
 						price: res.data[0].price,
 						duration: res.data[0].duration,
+						user_type: res.data[0].user_type,
 						status: "1",
 						// feature: res.data[0].feature.map((item) => item.feature_id),
 						feature: res.data[0].feature.map((item) => {
@@ -80,27 +83,25 @@ const PlanEdit = () => {
 			.catch((err) => console.log("err", err));
 	};
 
-	useEffect(() => {
-		// Function to update featureLists with allocated_feature values
-		const updateAWithFeatures = () => {
-			const featureMap = {};
-			subscriptionDetails?.feature.forEach(item => {
-				featureMap[item.feature_id] = item.allocated_feature;
-			});
+	const updateAWithFeatures = (features) => {
+    const featureMap = {};
+    subscriptionDetails?.feature.forEach((item) => {
+      featureMap[item.feature_id] = item.allocated_feature;
+    });
 
-			const updatedA = featureLists.map(item => ({
-				...item,
-				allocated_feature: featureMap[item.id] || 0
-			}));
+    const updatedA = features.map((item) => ({
+      ...item,
+      allocated_feature: featureMap[item.id] || 0,
+    }));
 
-			setFeatureLists(updatedA);
-		}
-
-		updateAWithFeatures();
-	},[subscriptionDetails])
+    setFeatureLists(updatedA);
+  };
 
 	useEffect(() => {
-		getSubscriptionFeatureLists();
+		if(subscriptionDetails && subscriptionDetails.user_type) getSubscriptionFeatureLists()
+	}, [subscriptionDetails])
+
+	useEffect(() => {
 		if (id) {
 			getSubscriptionDetails();
 		}
