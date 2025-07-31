@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Modal, Button } from 'react-bootstrap';
 
 const VendorSelectionModal = ({
@@ -16,6 +16,42 @@ const VendorSelectionModal = ({
       setSelectedVendors([]);
     }
   }, [isOpen]);
+
+  // Calculate total products and handle duplicate names
+  const { totalGlobalProducts, processedVendors } = useMemo(() => {
+    let totalGlobal = 0;
+    const processed = vendors.map(vendor => {
+      const remainingProducts = vendor.remainingProducts || [];
+      totalGlobal += remainingProducts.length;
+      
+      // Handle duplicate product names
+      const productNameCounts = {};
+      const processedProducts = remainingProducts.map(product => {
+        const productKey = product.name;
+        if (!productNameCounts[productKey]) {
+          productNameCounts[productKey] = 0;
+        }
+        productNameCounts[productKey]++;
+        
+        const displayName = productNameCounts[productKey] === 1 
+          ? product.name 
+          : `${product.name} - ${productNameCounts[productKey] - 1}`;
+        
+        return {
+          ...product,
+          displayName
+        };
+      });
+      
+      return {
+        ...vendor,
+        remainingProducts: processedProducts,
+        totalVendorProducts: remainingProducts.length
+      };
+    });
+    
+    return { totalGlobalProducts: totalGlobal, processedVendors: processed };
+  }, [vendors]);
 
   const handleVendorToggle = (vendorId) => {
     setSelectedVendors(prev => {
@@ -68,6 +104,18 @@ const VendorSelectionModal = ({
           </div>
         ) : (
           <>
+            {/* Global Summary */}
+            <div className="alert alert-info mb-4">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>Total Products Pending:</strong> {totalGlobalProducts}
+                </div>
+                <div>
+                  <strong>Total Vendors:</strong> {vendors.length}
+                </div>
+              </div>
+            </div>
+
             <div className="mb-3">
               <div className="form-check">
                 <input
@@ -85,9 +133,9 @@ const VendorSelectionModal = ({
             
             <div className="border-top pt-3">
               <div className="row">
-                {vendors.map((vendor) => (
+                {processedVendors.map((vendor) => (
                   <div key={vendor.user_id} className="col-12 mb-3">
-                    <div className="card">
+                    <div className="card border-0 shadow-sm">
                       <div className="card-body">
                         <div className="form-check">
                           <input
@@ -97,25 +145,29 @@ const VendorSelectionModal = ({
                             checked={selectedVendors.includes(vendor.user_id)}
                             onChange={() => handleVendorToggle(vendor.user_id)}
                           />
-                          <label className="form-check-label" htmlFor={`vendor-${vendor.user_id}`}>
+                          <label className="form-check-label w-100" htmlFor={`vendor-${vendor.user_id}`}>
                             <div className="d-flex justify-content-between align-items-start">
-                              <div>
-                                <h6 className="mb-1">{vendor.vendor_name}</h6>
-                                <p className="mb-1 text-muted small">{vendor.email}</p>
+                              <div className="flex-grow-1">
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                  <h6 className="mb-0 fw-bold text-primary">{vendor.vendor_name}</h6>
+                                  <span className="badge bg-warning text-dark">
+                                    {vendor.totalVendorProducts} pending
+                                  </span>
+                                </div>
                                 {vendor.remainingProducts?.length > 0 && (
-                                  <div className="mt-2">
-                                    <small className="text-info">
-                                      Pending products: {vendor.remainingProducts.length}
+                                  <div className="mt-3">
+                                    <small className="text-info fw-semibold d-block mb-2">
+                                      Pending Products ({vendor.totalVendorProducts}):
                                     </small>
-                                    <div className="mt-1">
-                                      {vendor.remainingProducts.slice(0, 3).map((product, idx) => (
-                                        <span key={idx} className="badge badge-secondary me-1 mb-1">
-                                          {product.name} {product.variant && `(${product.variant})`}
+                                    <div className="d-flex flex-wrap gap-1">
+                                      {vendor.remainingProducts.slice(0, 4).map((product, idx) => (
+                                        <span key={idx} className="badge bg-light text-dark border me-1 mb-1">
+                                          {product.displayName}
                                         </span>
                                       ))}
-                                      {vendor.remainingProducts.length > 3 && (
-                                        <span className="badge badge-info">
-                                          +{vendor.remainingProducts.length - 3} more
+                                      {vendor.remainingProducts.length > 4 && (
+                                        <span className="badge bg-info text-white">
+                                          +{vendor.remainingProducts.length - 4} more
                                         </span>
                                       )}
                                     </div>
