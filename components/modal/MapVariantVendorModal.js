@@ -5,6 +5,8 @@ import { toast } from 'react-toastify';
 import { vendorList } from '@/utils/services/rfq';
 import { vendorApproveList } from '@/utils/services/rfq';
 import Select, { components } from 'react-select';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircle } from '@fortawesome/free-solid-svg-icons';
 
 // Changes by Agnij May 3, 2025 [Updated modal to match product mapping]
 const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
@@ -628,7 +630,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
                     </thead>
                     <tbody>
                       {mappings.map(mapping => (
-                        <tr key={mapping.id}>
+                        <tr key={mapping.id} className='mb-1'>
                           <td>
                             <strong>{mapping.variant?.name || 'Unknown Variant'}</strong>
                             <br />
@@ -648,15 +650,6 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
                             {mapping.approved_by && mapping.approved_by.length > 0 
                               ? mapping.approved_by.map(item => item.label).join(', ')
                               : 'None'}
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              className="btn btn-danger btn-sm"
-                              onClick={() => handleRemoveMapping(mapping.id)}
-                            >
-                              <i className="fas fa-trash-alt mr-1"></i> Remove
-                            </button>
                           </td>
 
                           <td>
@@ -692,7 +685,7 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
                                    setMappings(updatedMappings);
                                  }}
                                >
-                                 <i className="fas fa-times"></i>
+                                X
                                </button>
                              </div>
                            ))}
@@ -712,6 +705,16 @@ const MapVariantVendorModal = ({ isVisible, onCancel, variant, onSuccess }) => {
                              Add Make
                            </button>
                          </td>
+
+                         <td>
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-sm"
+                              onClick={() => handleRemoveMapping(mapping.id)}
+                            >
+                              <i className="fas fa-trash-alt mr-1"></i> Remove
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
