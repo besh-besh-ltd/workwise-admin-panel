@@ -17,6 +17,8 @@ import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
 import SpocAddModal from "../modal/spoc-add-modal";
+import VendorVariantMappingModal from "../modal/VendorVariantMappingModal";
+import { getApprovedProductsByVendor } from "@/utils/services/product-management";
 import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
 import Select from "react-select";
 import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
@@ -43,6 +45,9 @@ const UpdateVendor = () => {
   const [countryList,setCountryList] = useState([]);
   const [countryCode , setCountryCode] = useState([]);
   const [subscriptionList, setSubscriptionList] = useState([]);
+  const [openVariantMap, setOpenVariantMap] = useState(false);
+  const [selectedVendorOption, setSelectedVendorOption] = useState(null);
+  const [vendorProducts, setVendorProducts] = useState([]);
  
   const [spocCountryCode, setSpocCountryCode] = useState("+91");
 
@@ -307,6 +312,18 @@ useEffect(() => {
       })
       .catch((err) => console.log("err", err));
   }
+
+  useEffect(() => {
+    if (!router?.query?.id) return;
+    // Load vendor products/variants list for display
+    getApprovedProductsByVendor(router.query.id, 1, 50)
+      .then((res) => {
+        const list = res?.data?.data || res?.data || [];
+        console.log('Vendor products data:', list);
+        setVendorProducts(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setVendorProducts([]));
+  }, [router?.query?.id, openVariantMap]);
 
 
 
@@ -1054,10 +1071,71 @@ useEffect(() => {
               </Formik>
             </div>
           </div>
+
+          {/* Products - Variants mapped section */}
+          <div class="card col-12 mt-3">
+            <div className="d-flex justify-content-between align-items-center px-3 pt-3">
+              <h6 className="mb-0">Products - Variants</h6>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setSelectedVendorOption({
+                    label: editDetails?.companyDetails?.company_name || editDetails?.vendorDetails?.name || 'Vendor',
+                    value: router.query.id,
+                    email: editDetails?.vendorDetails?.email,
+                    phone: editDetails?.vendorDetails?.mobile
+                  });
+                  setOpenVariantMap(true);
+                }}
+              >
+                Map Variants
+              </button>
+            </div>
+            <div class="card-body">
+              {vendorProducts && vendorProducts.length > 0 ? (
+                <div className="table-responsive">
+                  <table className="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>Variant</th>
+                        <th>Product</th>
+                        <th>Approved By</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vendorProducts.map((mapping) => {
+                        console.log('Individual mapping:', mapping);
+                        return (
+                          <tr key={mapping.mapping_id || mapping.id}>
+                            <td>{mapping.variant_name || '-'}</td>
+                            <td>{mapping.product_name || '-'}</td>
+                            <td>{mapping.approved_by || '-'}</td>
+                            <td>{mapping.is_approve === true || mapping.is_approve === 1 ? 'Approved' : 'Pending'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-muted">No Specs Found</div>
+              )}
+            </div>
+          </div>
         </div>
 
         <ToastContainer />
       </section>
+      {openVariantMap && (
+        <VendorVariantMappingModal
+          isVisible={openVariantMap}
+          onCancel={() => setOpenVariantMap(false)}
+          onSuccess={() => getVendorDetails(id)}
+          vendor={selectedVendorOption}
+        />
+      )}
       {openAddSpoc && (
         <SpocAddModal
           openModal={openAddSpoc}
