@@ -1101,7 +1101,9 @@ useEffect(() => {
                         <th>Variant</th>
                         <th>Product</th>
                         <th>Approved By</th>
+                        <th>Make</th>
                         <th>Status</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1112,7 +1114,21 @@ useEffect(() => {
                             <td>{mapping.variant_name || '-'}</td>
                             <td>{mapping.product_name || '-'}</td>
                             <td>{mapping.approved_by || '-'}</td>
+                            <td>{Array.isArray(mapping.make_list) ? mapping.make_list.join(', ') : (mapping.make_list || '-')}</td>
                             <td>{mapping.is_approve === true || mapping.is_approve === 1 ? 'Approved' : 'Pending'}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => {
+                                  if (mapping.mapping_id) {
+                                    window.location.href = `/product-management/mapping/${mapping.mapping_id}`;
+                                  }
+                                }}
+                              >
+                                Edit
+                              </button>
+                            </td>
                           </tr>
                         );
                       })}
