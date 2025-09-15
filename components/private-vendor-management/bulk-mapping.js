@@ -224,6 +224,8 @@ const BulkBuyerVendorMapping = () => {
                                                 <thead>
                                                     <tr>
                                                         <th>Row</th>
+                                                        <th>Buyer Name</th>
+                                                        <th>Vendor Name</th>
                                                         <th>Buyer Email</th>
                                                         <th>Vendor Email</th>
                                                         <th>Status</th>
@@ -233,8 +235,10 @@ const BulkBuyerVendorMapping = () => {
                                                     {results.mappedEntries.map((entry, index) => (
                                                         <tr key={index}>
                                                             <td>{entry.row}</td>
-                                                            <td>{entry.buyerEmail}</td>
-                                                            <td>{entry.vendorEmail}</td>
+                                                            <td>{entry.buyer_name || 'Unknown'}</td>
+                                                            <td>{entry.vendor_name || 'Unknown'}</td>
+                                                            <td>{entry.buyer_email_display || entry.buyerEmail || '---'}</td>
+                                                            <td>{entry.vendor_email_display || entry.vendorEmail || '---'}</td>
                                                             <td>
                                                                 <span className="badge badge-success">{entry.status}</span>
                                                             </td>
@@ -258,6 +262,8 @@ const BulkBuyerVendorMapping = () => {
                                                 <thead>
                                                     <tr>
                                                         <th>Row</th>
+                                                        <th>Buyer Name</th>
+                                                        <th>Vendor Name</th>
                                                         <th>Buyer Email</th>
                                                         <th>Vendor Email</th>
                                                         <th>Reason</th>
@@ -267,10 +273,12 @@ const BulkBuyerVendorMapping = () => {
                                                     {results.unmappedEntries.map((entry, index) => (
                                                         <tr key={index}>
                                                             <td>{entry.row}</td>
-                                                            <td>{entry.buyerEmail}</td>
-                                                            <td>{entry.vendorEmail}</td>
+                                                            <td>{entry.buyer_name || 'Unknown'}</td>
+                                                            <td>{entry.vendor_name || 'Unknown'}</td>
+                                                            <td>{entry.buyer_email_display || entry.buyerEmail || '---'}</td>
+                                                            <td>{entry.vendor_email_display || entry.vendorEmail || '---'}</td>
                                                             <td>
-                                                                <span className="badge badge-danger">{entry.reason}</span>
+                                                                <span className="badge badge-danger">{entry.status || entry.reason}</span>
                                                             </td>
                                                         </tr>
                                                     ))}
