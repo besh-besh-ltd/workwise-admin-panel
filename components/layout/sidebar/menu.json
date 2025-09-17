@@ -61,22 +61,6 @@
     ]
   },
   {
-    "title": "Package",
-    "link": "",
-    "class": "",
-    "icon": "",
-    "active": false,
-    "children": [
-      {
-        "title": "Package Management",
-        "link": "/package-management",
-        "class": "",
-        "icon": "",
-        "active": false
-      }
-    ]
-  },
-  {
     "title": "Service Module",
     "link": "",
     "class": "",
