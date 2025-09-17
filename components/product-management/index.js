@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants, getVariantMappings, acceptVariant, getParentCategories } from "@/utils/services/product-management";
+import MapPackageVendorModal from "../modal/MapPackageVendorModal";
 import axiosFormData from "@/utils/axios/form-data";
 import FullLoading from "../loading/FullLoading";
 import { ToastContainer, toast } from "react-toastify";
@@ -64,6 +65,7 @@ const ProductManagement = () => {
   const [mappingsTotalPages, setMappingsTotalPages] = useState(null);
   const [mappings, setMappings] = useState([]);
   const [mappingsPaginationMeta, setMappingsPaginationMeta] = useState(null);
+  const [showPackageMapModal, setShowPackageMapModal] = useState(false);
   const [loadingMappings, setLoadingMappings] = useState(false);
   
   // Filter states for current active filters
@@ -1631,7 +1633,7 @@ const ProductManagement = () => {
           {/* Changes by Agnij April 30, 2025 [Added tab navigation] */}
           <div className="card card-primary card-outline card-tabs">
             <div className="card-header p-0 pt-1 border-bottom-0">
-              <ul className="nav nav-tabs" role="tablist" id="productTabs">
+                <ul className="nav nav-tabs" role="tablist" id="productTabs">
                 <li className="nav-item">
                   <a 
                     className={`nav-link ${activeTab === 'products' ? 'active' : ''}`} 
@@ -1680,7 +1682,23 @@ const ProductManagement = () => {
                     data-bs-toggle="tab"
                     data-bs-target="#mappings-tab"
                   >
-                    Mappings
+                    Variant Mappings
+                  </a>
+                </li>
+                <li className="nav-item">
+                  <a 
+                    className={`nav-link ${activeTab === 'package-mappings' ? 'active' : ''}`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleTabChange('package-mappings');
+                    }}
+                    role="tab" 
+                    aria-selected={activeTab === 'package-mappings'}
+                    href="#package-mappings"
+                    data-bs-toggle="tab"
+                    data-bs-target="#package-mappings"
+                  >
+                    Package Mappings
                   </a>
                 </li>
               </ul>
@@ -2790,6 +2808,20 @@ const ProductManagement = () => {
                 </div>
                 {/*END: Mappings Tab */}
 
+                {/*START: Package Mappings Tab */}
+                <div className={`tab-pane fade ${activeTab === 'package-mappings' ? 'active show' : ''}`} id="package-mappings" role="tabpanel" aria-labelledby="package-mappings-tab">
+                  <div className="row mb-3">
+                    <div className="col-md-12 d-flex justify-content-between align-items-center">
+                      <h5 className="mb-0">Package Mappings</h5>
+                      <button className="btn btn-warning" onClick={() => setShowPackageMapModal(true)}>
+                        Map Package with Vendor
+                      </button>
+                    </div>
+                  </div>
+                  {/* For now, we only expose mapping action via modal. Listing can be added if needed. */}
+                </div>
+                {/*END: Package Mappings Tab */}
+
               </div>
             </div>
           </div>
@@ -2933,6 +2965,16 @@ const ProductManagement = () => {
           }
         </div>
       </section>
+
+      {/* Package mapping modal */}
+      <MapPackageVendorModal
+        isVisible={showPackageMapModal}
+        onCancel={() => setShowPackageMapModal(false)}
+        onSuccess={() => {
+          setShowPackageMapModal(false);
+          toast.success('Package mapped successfully');
+        }}
+      />
 
       <DisapproveModal
         show={showRejectModal}

@@ -24,6 +24,14 @@ export const getParentCategories = () => {
     }
   });
 };
+
+// Package vendor mapping services
+export const mapPackageWithVendor = (productId, vendor_id) => {
+  return axiosInstance.post(
+    `${process.env.NEXT_PUBLIC_API_WEB_URL}/products/package-product/${productId}/vendors`,
+    { vendor_id }
+  );
+};
 export const getCategoriesDetails = (id) => {
   return new Promise(async (resolve, reject) => {
     try {
