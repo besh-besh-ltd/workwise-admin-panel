@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import Select, { components } from 'react-select';
 import { toast } from 'react-toastify';
-import { vendorList, vendorApproveList } from '@/utils/services/rfq';
+import { vendorList } from '@/utils/services/rfq';
 import { getAllProducts, mapPackageWithVendor } from '@/utils/services/product-management';
 
 const MapPackageVendorModal = ({ isVisible, onCancel, onSuccess }) => {
@@ -16,13 +16,11 @@ const MapPackageVendorModal = ({ isVisible, onCancel, onSuccess }) => {
 
   const [vendorSearchTerm, setVendorSearchTerm] = useState('');
   const [vendorOptions, setVendorOptions] = useState([]);
-  const [approvedByOptions, setApprovedByOptions] = useState([]);
 
   const [mappings, setMappings] = useState([]);
   const [formData, setFormData] = useState({
     product_id: '',
     vendor: null,
-    approved_by: []
   });
 
   useEffect(() => {
@@ -43,28 +41,16 @@ const MapPackageVendorModal = ({ isVisible, onCancel, onSuccess }) => {
   useEffect(() => {
     if (isVisible) {
       setError(null);
-      fetchApprovedBy();
       resetForm();
     }
   }, [isVisible]);
 
   const resetForm = () => {
-    setFormData({ product_id: '', vendor: null, approved_by: [] });
+    setFormData({ product_id: '', vendor: null });
     setMappings([]);
     setSelectedPackage(null);
     setSearchResults([]);
     setSearchTerm('');
-  };
-
-  const fetchApprovedBy = async () => {
-    try {
-      const response = await vendorApproveList();
-      if (response?.data) {
-        setApprovedByOptions(response.data.map(i => ({ label: i.vendor_approve, value: i.id })));
-      }
-    } catch (e) {
-      toast.error('Failed to load approval options');
-    }
   };
 
   const fetchVendors = useCallback(async (term) => {
@@ -90,12 +76,11 @@ const MapPackageVendorModal = ({ isVisible, onCancel, onSuccess }) => {
   }, [vendorSearchTerm, fetchVendors]);
 
   const searchPackages = useCallback(async (term) => {
-    // Reuse admin product list endpoint, then filter by product_type === 'package'
+    // Reuse admin product list endpoint with server-side productType filter for reliability
     try {
-      const res = await getAllProducts(10, 1, term);
+      const res = await getAllProducts(10, 1, term, null, null, null, null, null, null, null, null, false, 'package');
       const list = res?.data?.data?.data || res?.data?.data || res?.data || [];
-      const packagesOnly = list.filter(p => (p.product_type || '').toLowerCase() === 'package');
-      const formatted = packagesOnly.map(p => ({
+      const formatted = list.map(p => ({
         id: p.id,
         name: p.name,
         category_info: Array.isArray(p.product_categories)
@@ -131,10 +116,9 @@ const MapPackageVendorModal = ({ isVisible, onCancel, onSuccess }) => {
     setMappings(prev => ([...prev, {
       id: Date.now(),
       product: selectedPackage,
-      vendor: formData.vendor,
-      approved_by: formData.approved_by
+      vendor: formData.vendor
     }]));
-    setFormData(prev => ({ ...prev, vendor: null, approved_by: [] }));
+    setFormData(prev => ({ ...prev, vendor: null }));
   };
 
   const handleRemove = (id) => setMappings(prev => prev.filter(m => m.id !== id));
@@ -142,7 +126,7 @@ const MapPackageVendorModal = ({ isVisible, onCancel, onSuccess }) => {
   const handleSubmit = async () => {
     const queue = [...mappings];
     if (formData.vendor && selectedPackage) {
-      queue.push({ id: Date.now(), product: selectedPackage, vendor: formData.vendor, approved_by: formData.approved_by });
+      queue.push({ id: Date.now(), product: selectedPackage, vendor: formData.vendor });
     }
     if (queue.length === 0) return toast.error('Add at least one vendor');
     setLoading(true); setError(null);
@@ -235,16 +219,6 @@ const MapPackageVendorModal = ({ isVisible, onCancel, onSuccess }) => {
                   noOptionsMessage={() => "Type 3+ letters to search"}
                 />
               </div>
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Approved By</label>
-                <Select
-                  name="approved_by"
-                  isMulti
-                  options={approvedByOptions}
-                  value={formData.approved_by}
-                  onChange={(s) => handleInputChange(s, { name: 'approved_by' })}
-                />
-              </div>
             </div>
 
             <div className="d-flex justify-content-end mb-3">
@@ -254,13 +228,12 @@ const MapPackageVendorModal = ({ isVisible, onCancel, onSuccess }) => {
             {mappings.length > 0 && (
               <div className="table-responsive">
                 <table className="table table-bordered table-hover">
-                  <thead className="thead-light"><tr><th>Package</th><th>Vendor</th><th>Approved By</th><th>Action</th></tr></thead>
+                  <thead className="thead-light"><tr><th>Package</th><th>Vendor</th><th>Action</th></tr></thead>
                   <tbody>
                     {mappings.map(m => (
                       <tr key={m.id}>
                         <td><strong>{m.product.name}</strong><br /><small className="text-muted">ID: {m.product.id}</small></td>
                         <td><strong>{m.vendor.label}</strong><br /><small className="text-muted">{m.vendor.email}</small></td>
-                        <td>{m.approved_by?.length ? m.approved_by.map(a => a.label).join(', ') : 'None'}</td>
                         <td><button className="btn btn-sm btn-danger" onClick={() => handleRemove(m.id)}>Remove</button></td>
                       </tr>
                     ))}
