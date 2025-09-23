@@ -85,7 +85,7 @@ const VendorProfile = () => {
             <table className="table table-bordered table-striped align-middle">
               <thead className="table-light">
                 <tr>
-                  <th>ID</th>
+                  <th>S No.</th>
                   <th>Vendor Name</th>
                   <th>Vendor Email</th>
                   <th>File Type</th>
@@ -98,9 +98,9 @@ const VendorProfile = () => {
               </thead>
               <tbody>
                 {documents.length > 0 ? (
-                  documents.map((doc) => (
+                  documents.map((doc, id) => (
                     <tr key={doc.id}>
-                      <td>{doc.id}</td>
+                      <td>{id+1}</td>
                       <td>{doc.vendor_name}</td>
                       <td>{doc.vendor_email}</td>
                       <td>{doc.file_type}</td>
