@@ -7,7 +7,7 @@ const nextConfig = {
         hostname: "localhost",
         port: "8002",
       },
-      {
+       {
         protocol: "https",
         hostname: "api.letsworkwise.com",
       },
