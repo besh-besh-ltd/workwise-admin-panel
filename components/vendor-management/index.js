@@ -332,6 +332,14 @@ const VendorManagement = () => {
           >
             <i className="fa fa-plus"></i> Add Vendor
           </button>
+
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => router.push(`/vendor-management/vendor-profile-documents`)}
+          >
+            <i className="fa fa-plus"></i> Vendor Profile
+          </button>
         </div>
       </div>
 
