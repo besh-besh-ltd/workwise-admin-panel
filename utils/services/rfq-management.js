@@ -11,6 +11,18 @@ export const getRFQDetails = (rfq_id) => {
     });
 };
 
+export const getClientRfqList = (page = 1, limit = 10, search = '') => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let response = await axiosInstance.post(
+                `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/rfq/client-rfq-list?page=${page}&limit=${limit}&search=${search}`
+            );
+            resolve(response);
+        } catch (error) {
+            reject({ message: error });
+        }   
+    });
+}
 export const getRFQList = (payload) => {
     return new Promise(async (resolve, reject) => {
         try {
