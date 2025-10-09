@@ -1,23 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getClientRfqList } from '@/utils/services/rfq-management';
-
-// Helper to calculate which page numbers to show (with ellipsis)
-const getPageNumbers = (currentPage, totalPages) => {
-  let pages = [];
-  if (totalPages <= 5) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-  } else {
-    // Show first, last, current -1, current, current+1, with ellipsis
-    if (currentPage <= 3) {
-      pages = [1, 2, 3, 4, '...', totalPages];
-    } else if (currentPage >= totalPages - 2) {
-      pages = [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-    } else {
-      pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
-    }
-  }
-  return pages;
-};
+import Select from 'react-select';
+import { getClientCompanylist, getClientRfqList } from '@/utils/services/rfq-management';
 
 const ClientSuccessDashboard = () => {
   const [rfqData, setRfqData] = useState([]);
@@ -26,15 +9,77 @@ const ClientSuccessDashboard = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCompanies, setSelectedCompanies] = useState([]);
+  const [companyList, setCompanyList] = useState([]);
 
-  // Fetch RFQ data with debounce for search/filter change
+
+  const [dateFilter, setDateFilter] = useState('all');
+const [customStartDate, setCustomStartDate] = useState('');
+const [customEndDate, setCustomEndDate] = useState('');
+
+const handleDateFilterChange = (value) => {
+  setDateFilter(value);
+
+  if (value === '3days') {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 3);
+    setCustomStartDate(start.toISOString().slice(0, 10));
+    setCustomEndDate(end.toISOString().slice(0, 10));
+  } else if (value === '7days') {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 7);
+    setCustomStartDate(start.toISOString().slice(0, 10));
+    setCustomEndDate(end.toISOString().slice(0, 10));
+  } else if (value === 'all') {
+    setCustomStartDate('');
+    setCustomEndDate('');
+  }
+};
+
+
+  // Helper to calculate which page numbers to show (with ellipsis)
+  const getPageNumbers = (currentPage, totalPages) => {
+    let pages = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 3) {
+        pages = [1, 2, 3, 4, '...', totalPages];
+      } else if (currentPage >= totalPages - 2) {
+        pages = [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+      } else {
+        pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+      }
+    }
+    return pages;
+  };
+
+  // Fetch company list for the dropdown
+  const fetchCompanyList = async () => {
+    try {
+      const response = await getClientCompanylist();
+      if (response.status === 1) {
+        setCompanyList(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching company list:', error);
+      setCompanyList([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompanyList();
+  }, []);
+
+  // Fetch the RFQ data according to filters/pagination
   const fetchRfqData = useCallback(async () => {
     try {
       setLoading(true);
+      // Pass comma-separated company names to API if selected
+      const searchTerm = selectedCompanies.map(c => c.value).join(',');
       const response = await getClientRfqList(currentPage, itemsPerPage, searchTerm);
-
-      console.log('RFQ List Response:', response);
       if (response.status === 1) {
         setRfqData(response.data);
         setTotalPages(response.pagination.total_pages);
@@ -48,33 +93,46 @@ const ClientSuccessDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchTerm]);
+  }, [currentPage, itemsPerPage, selectedCompanies]);
 
-  // Load data whenever page/limit/search changes
   useEffect(() => {
     fetchRfqData();
   }, [fetchRfqData]);
 
-  // Event Handlers
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setCurrentPage(1); // Always reset to page 1 on search
-    fetchRfqData();
-  };
-
+  // Handler for per-page select
   const handleItemsPerPageChange = (e) => {
-    const newLimit = parseInt(e.target.value);
-    setItemsPerPage(newLimit);
+    setItemsPerPage(parseInt(e.target.value, 10));
     setCurrentPage(1);
   };
 
+  // Handler for pagination button click
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages && page !== currentPage) {
       setCurrentPage(page);
     }
   };
 
-  // Render
+  // Handler for search submit
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setCurrentPage(1); // Reset to first page on new search/filter
+    fetchRfqData();
+  };
+
+  // Handler for clearing selection
+  const clearAllSelected = () => {
+    setSelectedCompanies([]);
+    setCurrentPage(1);
+    fetchRfqData();
+  };
+
+  // Prepare react-select options format
+  const companyOptions = companyList.map(c => ({
+    value: c.company_name,
+    label: c.company_name,
+    id: c.id
+  }));
+
   return (
     <div className="container-fluid">
       <div className="row">
@@ -89,37 +147,82 @@ const ClientSuccessDashboard = () => {
       <div className="row mb-3">
         <div className="col-md-6">
           <form onSubmit={handleSearch}>
-            <div className="input-group">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Search by company name or RFQ number..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <button className="btn btn-primary" type="submit">
-                <i className="fa fa-search"></i> Search
-              </button>
-            </div>
+            <Select
+              isMulti
+              name="companies"
+              options={companyOptions}
+              value={selectedCompanies}
+              onChange={(selected) => setSelectedCompanies(selected || [])}
+              placeholder="Search or select companies..."
+              className="react-select-container"
+              classNamePrefix="react-select"
+            />
+            {selectedCompanies.length > 0 && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-link text-danger"
+                  onClick={clearAllSelected}
+                >
+                  Clear All
+                </button>
+              </div>
+            )}
+            <button className="btn btn-primary mt-2" type="submit">
+              <i className="fa fa-search"></i> Search
+            </button>
           </form>
         </div>
+
         <div className="col-md-3">
-          <select
-            className="form-select"
-            value={itemsPerPage}
-            onChange={handleItemsPerPageChange}
-          >
-            <option value="5">5 per page</option>
-            <option value="10">10 per page</option>
-            <option value="20">20 per page</option>
-            <option value="50">50 per page</option>
-          </select>
-        </div>
-        <div className="col-md-3 text-end">
-          <div className="badge bg-primary p-2">
-            Total RFQs: {totalItems}
-          </div>
-        </div>
+  <select
+    className="form-select"
+    value={itemsPerPage}
+    onChange={handleItemsPerPageChange}
+  >
+    <option value="5">5 per page</option>
+    <option value="10">10 per page</option>
+    <option value="20">20 per page</option>
+    <option value="50">50 per page</option>
+  </select>
+</div>
+
+<div className="col-md-3">
+  <div className="input-group">
+    <select
+      className="form-select"
+      value={dateFilter}
+      onChange={(e) => handleDateFilterChange(e.target.value)}
+    >
+      <option value="all">All Dates</option>
+      <option value="3days">Last 3 Days</option>
+      <option value="7days">Last 7 Days</option>
+      <option value="custom">Custom Range</option>
+    </select>
+  </div>
+
+  {dateFilter === "custom" && (
+    <div className="d-flex gap-1 mt-2">
+      <input
+        type="date"
+        className="form-control"
+        value={customStartDate}
+        onChange={(e) => setCustomStartDate(e.target.value)}
+      />
+      <input
+        type="date"
+        className="form-control"
+        value={customEndDate}
+        onChange={(e) => setCustomEndDate(e.target.value)}
+      />
+    </div>
+  )}
+</div>
+
+<div className="col-md-3 text-end">
+  <div className="badge bg-primary p-2">Total RFQs: {totalItems}</div>
+</div>
+
       </div>
 
       {/* RFQ Table */}
@@ -148,6 +251,8 @@ const ClientSuccessDashboard = () => {
                           <th>Vendors Not Responded</th>
                           <th>Products Added</th>
                           <th>Finalizations</th>
+                          <th>Rfq Type</th>
+                          <th>Rfq Status</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -162,28 +267,54 @@ const ClientSuccessDashboard = () => {
                                 <code>{rfq.rfq_no}</code>
                               </td>
                               <td>
-                                <span className="badge bg-info">{rfq.total_vendors || 0}</span>
+                                <span className="badge bg-info">
+                                  {rfq.total_vendors || 0}
+                                </span>
                               </td>
                               <td>
-                                <span className="badge bg-success">{rfq.quotes_received || 0}</span>
+                                <span className="badge bg-success">
+                                  {rfq.quotes_received || 0}
+                                </span>
                               </td>
                               <td>
-                                <span className="badge bg-warning">{rfq.quote_regrets || 0}</span>
+                                <span className="badge bg-warning">
+                                  {rfq.quote_regrets || 0}
+                                </span>
                               </td>
                               <td>
-                                <span className="badge bg-danger">{rfq.vendors_not_responded || 0}</span>
+                                <span className="badge bg-danger">
+                                  {rfq.vendors_not_responded || 0}
+                                </span>
                               </td>
                               <td>
-                                <span className="badge bg-primary">{rfq.products_added || 0}</span>
+                                <span className="badge bg-primary">
+                                  {rfq.products_added || 0}
+                                </span>
                               </td>
                               <td>
-                                <span className="badge bg-dark">{rfq.finalization_count || 0}</span>
+                                <span className="badge bg-dark">
+                                  {rfq.finalization_count || 0}
+                                </span>
                               </td>
+                              <th>
+                                <span className="badge bg-warning">
+                                  {rfq.rfq_type || 'N/A'}
+                                </span>
+                              </th>
+                              <th>
+                                <span
+                                  className={`badge ${
+                                    rfq.rfq_status == 1 ? 'bg-success' : 'bg-danger'
+                                  }`}
+                                >
+                                  {rfq.rfq_status == 1 ? 'Open' : 'Closed'}
+                                </span>
+                              </th>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan="9" className="text-center py-4">
+                            <td colSpan="11" className="text-center py-4">
                               <div className="text-muted">
                                 <i className="fa fa-inbox fa-2x mb-2"></i>
                                 <p>No RFQ data found</p>
@@ -195,12 +326,12 @@ const ClientSuccessDashboard = () => {
                     </table>
                   </div>
 
-                  {/* Pagination Bottom */}
+                  {/* Pagination */}
                   {totalPages > 1 && (
                     <div className="row mt-3">
                       <div className="col-md-6">
                         <p className="text-muted">
-                          Showing {((currentPage - 1) * itemsPerPage) + 1} to{' '}
+                          Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
                           {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
                         </p>
                       </div>
@@ -211,7 +342,6 @@ const ClientSuccessDashboard = () => {
                               <button
                                 className="page-link"
                                 onClick={() => handlePageChange(currentPage - 1)}
-                                disabled={currentPage === 1}
                               >
                                 Previous
                               </button>
@@ -226,20 +356,18 @@ const ClientSuccessDashboard = () => {
                                   key={page}
                                   className={`page-item ${currentPage === page ? 'active' : ''}`}
                                 >
-                                  <button
-                                    className="page-link"
-                                    onClick={() => handlePageChange(page)}
-                                  >
+                                  <button className="page-link" onClick={() => handlePageChange(page)}>
                                     {page}
                                   </button>
                                 </li>
                               )
                             )}
-                            <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                            <li
+                              className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}
+                            >
                               <button
                                 className="page-link"
                                 onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
                               >
                                 Next
                               </button>
