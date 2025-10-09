@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Select from 'react-select';
 import { getClientCompanylist, getClientRfqList } from '@/utils/services/rfq-management';
+import Link from 'next/link';
 
 const ClientSuccessDashboard = () => {
   const [rfqData, setRfqData] = useState([]);
@@ -36,7 +37,11 @@ const handleDateFilterChange = (value) => {
     setCustomStartDate('');
     setCustomEndDate('');
   }
+  // trigger fetch when date filter changes
+  setCurrentPage(1);
 };
+
+
 
 
   // Helper to calculate which page numbers to show (with ellipsis)
@@ -77,9 +82,12 @@ const handleDateFilterChange = (value) => {
   const fetchRfqData = useCallback(async () => {
     try {
       setLoading(true);
-      // Pass comma-separated company names to API if selected
-      const searchTerm = selectedCompanies.map(c => c.value).join(',');
-      const response = await getClientRfqList(currentPage, itemsPerPage, searchTerm);
+      // Build companyIds array from selectedCompanies (use id if available)
+      const companyIds = selectedCompanies.map((c) => c.id || c.value).filter(Boolean);
+      // Build payload: dateFilter, startDate, endDate, companyIds
+      const startDate = customStartDate || '';
+      const endDate = customEndDate || '';
+      const response = await getClientRfqList(currentPage, itemsPerPage, '', dateFilter, startDate, endDate, companyIds);
       if (response.status === 1) {
         setRfqData(response.data);
         setTotalPages(response.pagination.total_pages);
@@ -93,7 +101,7 @@ const handleDateFilterChange = (value) => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, selectedCompanies]);
+  }, [currentPage, itemsPerPage, selectedCompanies, dateFilter, customStartDate, customEndDate]);
 
   useEffect(() => {
     fetchRfqData();
@@ -126,6 +134,54 @@ const handleDateFilterChange = (value) => {
     fetchRfqData();
   };
 
+  // Download current page data as CSV (Excel can open CSV)
+  const downloadCsv = () => {
+    if (!rfqData || rfqData.length === 0) return;
+
+    // Define header columns and map rows
+    const headers = [
+      'id',
+      'company_name',
+      'rfq_no',
+      'timestamp',
+      'rfq_status',
+      'rfq_type',
+      'total_vendors',
+      'quotes_received',
+      'quote_regrets',
+      'vendors_not_responded',
+      'products_added',
+      'finalization_count'
+    ];
+
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+
+    rfqData.forEach((row) => {
+      const values = headers.map((h) => {
+        let val = row[h];
+        if (val === null || typeof val === 'undefined') return '';
+        // Escape double quotes
+        const str = String(val).replace(/"/g, '""');
+        // Wrap fields that contain commas or quotes
+        return `"${str}"`;
+      });
+      csvRows.push(values.join(','));
+    });
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const fileName = `client_rfqs_page_${currentPage}.csv`;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Prepare react-select options format
   const companyOptions = companyList.map(c => ({
     value: c.company_name,
@@ -152,7 +208,10 @@ const handleDateFilterChange = (value) => {
               name="companies"
               options={companyOptions}
               value={selectedCompanies}
-              onChange={(selected) => setSelectedCompanies(selected || [])}
+              onChange={(selected) => {
+                setSelectedCompanies(selected || []);
+                setCurrentPage(1);
+              }}
               placeholder="Search or select companies..."
               className="react-select-container"
               classNamePrefix="react-select"
@@ -175,54 +234,68 @@ const handleDateFilterChange = (value) => {
         </div>
 
         <div className="col-md-3">
-  <select
-    className="form-select"
-    value={itemsPerPage}
-    onChange={handleItemsPerPageChange}
-  >
-    <option value="5">5 per page</option>
-    <option value="10">10 per page</option>
-    <option value="20">20 per page</option>
-    <option value="50">50 per page</option>
-  </select>
-</div>
+          <select
+            className="form-select"
+            value={itemsPerPage}
+            onChange={handleItemsPerPageChange}
+          >
+            <option value="5">5 per page</option>
+            <option value="10">10 per page</option>
+            <option value="20">20 per page</option>
+            <option value="50">50 per page</option>
+          </select>
+        </div>
 
-<div className="col-md-3">
-  <div className="input-group">
-    <select
-      className="form-select"
-      value={dateFilter}
-      onChange={(e) => handleDateFilterChange(e.target.value)}
-    >
-      <option value="all">All Dates</option>
-      <option value="3days">Last 3 Days</option>
-      <option value="7days">Last 7 Days</option>
-      <option value="custom">Custom Range</option>
-    </select>
-  </div>
+        <div className="col-md-3">
+          <div className="input-group">
+            <select
+              className="form-select"
+              value={dateFilter}
+              onChange={(e) => handleDateFilterChange(e.target.value)}
+            >
+              <option value="all">All Dates</option>
+              <option value="3days">Last 3 Days</option>
+              <option value="7days">Last 7 Days</option>
+              <option value="custom">Custom Range</option>
+            </select>
+          </div>
 
-  {dateFilter === "custom" && (
-    <div className="d-flex gap-1 mt-2">
-      <input
-        type="date"
-        className="form-control"
-        value={customStartDate}
-        onChange={(e) => setCustomStartDate(e.target.value)}
-      />
-      <input
-        type="date"
-        className="form-control"
-        value={customEndDate}
-        onChange={(e) => setCustomEndDate(e.target.value)}
-      />
-    </div>
-  )}
-</div>
+          {dateFilter === "custom" && (
+            <div className="d-flex gap-1 mt-2">
+              <input
+                type="date"
+                className="form-control"
+                value={customStartDate}
+                onChange={(e) => {
+                  setCustomStartDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+              <input
+                type="date"
+                className="form-control"
+                value={customEndDate}
+                onChange={(e) => {
+                  setCustomEndDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          )}
+        </div>
 
-<div className="col-md-3 text-end">
-  <div className="badge bg-primary p-2">Total RFQs: {totalItems}</div>
-</div>
-
+        <div className="col-md-3 text-end">
+          <div className="d-flex justify-content-end align-items-center gap-2">
+            <div className="badge bg-primary p-2">Total RFQs: {totalItems}</div>
+            <button
+              className="btn btn-sm btn-outline-secondary"
+              onClick={downloadCsv}
+              title="Download current page as CSV"
+            >
+              <i className="fa fa-download me-1" /> Download Excel
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* RFQ Table */}
@@ -253,15 +326,20 @@ const handleDateFilterChange = (value) => {
                           <th>Finalizations</th>
                           <th>Rfq Type</th>
                           <th>Rfq Status</th>
+                          <th>Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {rfqData.length > 0 ? (
                           rfqData.map((rfq, index) => (
                             <tr key={rfq.id || index}>
-                              <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                               <td>
-                                <span className="fw-semibold">{rfq.company_name}</span>
+                                {(currentPage - 1) * itemsPerPage + index + 1}
+                              </td>
+                              <td>
+                                <span className="fw-semibold">
+                                  {rfq.company_name}
+                                </span>
                               </td>
                               <td>
                                 <code>{rfq.rfq_no}</code>
@@ -298,17 +376,27 @@ const handleDateFilterChange = (value) => {
                               </td>
                               <th>
                                 <span className="badge bg-warning">
-                                  {rfq.rfq_type || 'N/A'}
+                                  {rfq.rfq_type || "N/A"}
                                 </span>
                               </th>
                               <th>
                                 <span
                                   className={`badge ${
-                                    rfq.rfq_status == 1 ? 'bg-success' : 'bg-danger'
+                                    rfq.rfq_status == 1
+                                      ? "bg-success"
+                                      : "bg-danger"
                                   }`}
                                 >
-                                  {rfq.rfq_status == 1 ? 'Open' : 'Closed'}
+                                  {rfq.rfq_status == 1 ? "Open" : "Closed"}
                                 </span>
+                              </th>
+                              <th>
+                                <Link
+                                  href={`./rfq-management/${rfq.rfq_id}`}
+                                  className="page-link "
+                                >
+                                  View
+                                </Link>
                               </th>
                             </tr>
                           ))
@@ -331,43 +419,63 @@ const handleDateFilterChange = (value) => {
                     <div className="row mt-3">
                       <div className="col-md-6">
                         <p className="text-muted">
-                          Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
-                          {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
+                          Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                          {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
+                          {totalItems} entries
                         </p>
                       </div>
                       <div className="col-md-6 d-flex justify-content-end">
                         <nav aria-label="Page navigation">
                           <ul className="pagination mb-0">
-                            <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                            <li
+                              className={`page-item ${
+                                currentPage === 1 ? "disabled" : ""
+                              }`}
+                            >
                               <button
                                 className="page-link"
-                                onClick={() => handlePageChange(currentPage - 1)}
+                                onClick={() =>
+                                  handlePageChange(currentPage - 1)
+                                }
                               >
                                 Previous
                               </button>
                             </li>
-                            {getPageNumbers(currentPage, totalPages).map((page, idx) =>
-                              page === '...' ? (
-                                <li key={`ellipsis-${idx}`} className="page-item disabled">
-                                  <span className="page-link">…</span>
-                                </li>
-                              ) : (
-                                <li
-                                  key={page}
-                                  className={`page-item ${currentPage === page ? 'active' : ''}`}
-                                >
-                                  <button className="page-link" onClick={() => handlePageChange(page)}>
-                                    {page}
-                                  </button>
-                                </li>
-                              )
+                            {getPageNumbers(currentPage, totalPages).map(
+                              (page, idx) =>
+                                page === "..." ? (
+                                  <li
+                                    key={`ellipsis-${idx}`}
+                                    className="page-item disabled"
+                                  >
+                                    <span className="page-link">…</span>
+                                  </li>
+                                ) : (
+                                  <li
+                                    key={page}
+                                    className={`page-item ${
+                                      currentPage === page ? "active" : ""
+                                    }`}
+                                  >
+                                    <button
+                                      className="page-link"
+                                      onClick={() => handlePageChange(page)}
+                                    >
+                                      {page}
+                                    </button>
+                                  </li>
+                                )
                             )}
                             <li
-                              className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}
+                              className={`page-item ${
+                                currentPage === totalPages ? "disabled" : ""
+                              }`}
                             >
                               <button
                                 className="page-link"
-                                onClick={() => handlePageChange(currentPage + 1)}
+                                onClick={() =>
+                                  handlePageChange(currentPage + 1)
+                                }
                               >
                                 Next
                               </button>
