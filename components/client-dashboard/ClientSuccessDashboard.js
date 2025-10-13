@@ -13,36 +13,39 @@ const ClientSuccessDashboard = () => {
   const [selectedCompanies, setSelectedCompanies] = useState([]);
   const [companyList, setCompanyList] = useState([]);
 
-
   const [dateFilter, setDateFilter] = useState('all');
-const [customStartDate, setCustomStartDate] = useState('');
-const [customEndDate, setCustomEndDate] = useState('');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
-const handleDateFilterChange = (value) => {
-  setDateFilter(value);
+  // Get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().slice(0, 10);
+  };
 
-  if (value === '3days') {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 3);
-    setCustomStartDate(start.toISOString().slice(0, 10));
-    setCustomEndDate(end.toISOString().slice(0, 10));
-  } else if (value === '7days') {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 7);
-    setCustomStartDate(start.toISOString().slice(0, 10));
-    setCustomEndDate(end.toISOString().slice(0, 10));
-  } else if (value === 'all') {
-    setCustomStartDate('');
-    setCustomEndDate('');
-  }
-  // trigger fetch when date filter changes
-  setCurrentPage(1);
-};
+  const handleDateFilterChange = (value) => {
+    setDateFilter(value);
 
-
-
+    if (value === '3days') {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - 3);
+      setCustomStartDate(start.toISOString().slice(0, 10));
+      setCustomEndDate(end.toISOString().slice(0, 10));
+    } else if (value === '7days') {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - 7);
+      setCustomStartDate(start.toISOString().slice(0, 10));
+      setCustomEndDate(end.toISOString().slice(0, 10));
+    } else if (value === 'all') {
+      setCustomStartDate('');
+      setCustomEndDate('');
+    } else if (value === 'custom') {
+      setCustomStartDate('');
+      setCustomEndDate('');
+    }
+  };
 
   // Helper to calculate which page numbers to show (with ellipsis)
   const getPageNumbers = (currentPage, totalPages) => {
@@ -82,9 +85,7 @@ const handleDateFilterChange = (value) => {
   const fetchRfqData = useCallback(async () => {
     try {
       setLoading(true);
-      // Build companyIds array from selectedCompanies (use id if available)
       const companyIds = selectedCompanies.map((c) => c.id || c.value).filter(Boolean);
-      // Build payload: dateFilter, startDate, endDate, companyIds
       const startDate = customStartDate || '';
       const endDate = customEndDate || '';
       const response = await getClientRfqList(currentPage, itemsPerPage, '', dateFilter, startDate, endDate, companyIds);
@@ -103,9 +104,17 @@ const handleDateFilterChange = (value) => {
     }
   }, [currentPage, itemsPerPage, selectedCompanies, dateFilter, customStartDate, customEndDate]);
 
+  // Initial load only
   useEffect(() => {
     fetchRfqData();
-  }, [fetchRfqData]);
+  }, []);
+
+  // Only refetch when page or items per page changes (for pagination)
+  useEffect(() => {
+    if (currentPage > 1) {
+      fetchRfqData();
+    }
+  }, [currentPage, itemsPerPage]);
 
   // Handler for per-page select
   const handleItemsPerPageChange = (e) => {
@@ -120,25 +129,21 @@ const handleDateFilterChange = (value) => {
     }
   };
 
-  // Handler for search submit
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setCurrentPage(1); // Reset to first page on new search/filter
+  // Handler for search button click
+  const handleSearchClick = () => {
+    setCurrentPage(1);
     fetchRfqData();
   };
 
   // Handler for clearing selection
   const clearAllSelected = () => {
     setSelectedCompanies([]);
-    setCurrentPage(1);
-    fetchRfqData();
   };
 
   // Download current page data as CSV (Excel can open CSV)
   const downloadCsv = () => {
     if (!rfqData || rfqData.length === 0) return;
 
-    // Define header columns and map rows
     const headers = [
       'id',
       'company_name',
@@ -161,9 +166,7 @@ const handleDateFilterChange = (value) => {
       const values = headers.map((h) => {
         let val = row[h];
         if (val === null || typeof val === 'undefined') return '';
-        // Escape double quotes
         const str = String(val).replace(/"/g, '""');
-        // Wrap fields that contain commas or quotes
         return `"${str}"`;
       });
       csvRows.push(values.join(','));
@@ -200,114 +203,121 @@ const handleDateFilterChange = (value) => {
       </div>
 
       {/* Search and Filters */}
-    <div className="card card-body mb-3">
-  <div className="row g-3 align-items-end">
-    
-    {/* Company Search */}
-    <div className="col-lg-4 col-md-6">
-      <label className="form-label small mb-1">Company</label>
-      <Select
-        isMulti
-        name="companies"
-        options={companyOptions}
-        value={selectedCompanies}
-        onChange={(selected) => {
-          setSelectedCompanies(selected || []);
-          setCurrentPage(1);
-        }}
-        placeholder="Search or select companies..."
-        className="react-select-container"
-        classNamePrefix="react-select"
-      />
-      {selectedCompanies.length > 0 && (
-        <button
-          type="button"
-          className="btn btn-sm btn-link text-danger mt-1 p-0"
-          onClick={clearAllSelected}
-        >
-          Clear All
-        </button>
-      )}
-    </div>
-
-    {/* Items Per Page */}
-    <div className="col-lg-2 col-md-3 col-sm-6">
-      <label className="form-label small mb-1">Items per page</label>
-      <select
-        className="form-select form-select-sm"
-        value={itemsPerPage}
-        onChange={handleItemsPerPageChange}
-      >
-        <option value="5">5</option>
-        <option value="10">10</option>
-        <option value="20">20</option>
-        <option value="50">50</option>
-      </select>
-    </div>
-
-    {/* Date Filter */}
-    <div className="col-lg-3 col-md-6 col-sm-6">
-      <label className="form-label small mb-1">Date Filter</label>
-      <select
-        className="form-select form-select-sm"
-        value={dateFilter}
-        onChange={(e) => handleDateFilterChange(e.target.value)}
-      >
-        <option value="all">All Dates</option>
-        <option value="3days">Last 3 Days</option>
-        <option value="7days">Last 7 Days</option>
-        <option value="custom">Custom Range</option>
-      </select>
-
-      {dateFilter === "custom" && (
-        <div className="row mt-2 gx-1">
-          <div className="col">
-            <input
-              type="date"
-              className="form-control form-control-sm"
-              value={customStartDate}
-              onChange={(e) => {
-                setCustomStartDate(e.target.value);
-                setCurrentPage(1);
-              }}
+      <div className="card card-body mb-3">
+        <div className="row g-3 align-items-end">
+          
+          {/* Company Search */}
+          <div className="col-lg-3 col-md-6">
+            <label className="form-label small mb-1">Company</label>
+            <Select
+              isMulti
+              name="companies"
+              options={companyOptions}
+              value={selectedCompanies}
+              onChange={(selected) => setSelectedCompanies(selected || [])}
+              placeholder="Search or select companies..."
+              className="react-select-container"
+              classNamePrefix="react-select"
             />
+            {selectedCompanies.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-sm btn-link text-danger mt-1 p-0"
+                onClick={clearAllSelected}
+              >
+                Clear All
+              </button>
+            )}
           </div>
-          <div className="col">
-            <input
-              type="date"
-              className="form-control form-control-sm"
-              value={customEndDate}
-              onChange={(e) => {
-                setCustomEndDate(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
+
+          {/* Items Per Page */}
+          <div className="col-lg-2 col-md-3 col-sm-6">
+            <label className="form-label small mb-1">Items per page</label>
+            <select
+              className="form-select form-select-sm"
+              value={itemsPerPage}
+              onChange={handleItemsPerPageChange}
+            >
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
           </div>
+
+          {/* Date Filter */}
+          <div className="col-lg-3 col-md-6 col-sm-6">
+            <label className="form-label small mb-1">Date Filter</label>
+            <select
+              className="form-select form-select-sm"
+              value={dateFilter}
+              onChange={(e) => handleDateFilterChange(e.target.value)}
+            >
+              <option value="all">All Dates</option>
+              <option value="3days">Last 3 Days</option>
+              <option value="7days">Last 7 Days</option>
+              <option value="custom">Custom Range</option>
+            </select>
+
+            {dateFilter === "custom" && (
+              <div className="row mt-2 gx-1">
+                <div className="col">
+                  <input
+                    type="date"
+                    className="form-control form-control-sm"
+                    value={customStartDate}
+                    max={getTodayDate()}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    placeholder="Start Date"
+                  />
+                </div>
+                <div className="col">
+                  <input
+                    type="date"
+                    className="form-control form-control-sm"
+                    value={customEndDate}
+                    min={customStartDate}
+                    max={getTodayDate()}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    placeholder="End Date"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Search Button */}
+          <div className="col-lg-2 col-md-3 col-sm-6">
+            <label className="form-label small mb-1 d-block">&nbsp;</label>
+            <button
+              className="btn btn-primary btn-sm w-100"
+              onClick={handleSearchClick}
+            >
+              <i className="fa fa-search me-1" /> Search
+            </button>
+          </div>
+
+          {/* Total & Download */}
+          <div className="col-lg-2 col-md-6">
+            <label className="form-label small mb-1 d-block">Summary</label>
+            <div className="d-flex align-items-center gap-2" style={{ maxWidth: "160px" }}>
+              <span className="badge bg-primary flex-shrink-0 text-nowrap d-flex align-items-center justify-content-center" style={{minHeight: "30px"}}>
+  Total: {totalItems}
+</span>
+              <button
+                className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-1 flex-shrink-0"
+                onClick={downloadCsv}
+                title="Download current page as CSV"
+                disabled={rfqData.length === 0}
+                style={{ width: "84px", height: "32px" }}
+              >
+                <i className="fa fa-download">Download</i>
+              </button>
+            </div>
+          </div>
+
         </div>
-      )}
-    </div>
-
-    {/* Total & Download */}
-    <div className="col-lg-3 col-md-6">
-      <label className="form-label small mb-1 d-block">Summary</label>
-      <div className="d-flex justify-content-between align-items-center gap-2">
-        <span className="badge bg-primary flex-shrink-0">
-          Total RFQs: {totalItems}
-        </span>
-        <button
-          className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-          onClick={downloadCsv}
-          title="Download current page as CSV"
-          disabled={rfqData.length === 0}
-        >
-          <i className="fa fa-download" /> Download
-        </button>
       </div>
-    </div>
-
-  </div>
-</div>
-
 
       {/* RFQ Table */}
       <div className="row">
@@ -413,7 +423,7 @@ const handleDateFilterChange = (value) => {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan="11" className="text-center py-4">
+                            <td colSpan="12" className="text-center py-4">
                               <div className="text-muted">
                                 <i className="fa fa-inbox fa-2x mb-2"></i>
                                 <p>No RFQ data found</p>
