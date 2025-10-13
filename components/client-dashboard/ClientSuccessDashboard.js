@@ -200,103 +200,114 @@ const handleDateFilterChange = (value) => {
       </div>
 
       {/* Search and Filters */}
-      <div className="row mb-3">
-        <div className="col-md-6">
-          <form onSubmit={handleSearch}>
-            <Select
-              isMulti
-              name="companies"
-              options={companyOptions}
-              value={selectedCompanies}
-              onChange={(selected) => {
-                setSelectedCompanies(selected || []);
+    <div className="card card-body mb-3">
+  <div className="row g-3 align-items-end">
+    
+    {/* Company Search */}
+    <div className="col-lg-4 col-md-6">
+      <label className="form-label small mb-1">Company</label>
+      <Select
+        isMulti
+        name="companies"
+        options={companyOptions}
+        value={selectedCompanies}
+        onChange={(selected) => {
+          setSelectedCompanies(selected || []);
+          setCurrentPage(1);
+        }}
+        placeholder="Search or select companies..."
+        className="react-select-container"
+        classNamePrefix="react-select"
+      />
+      {selectedCompanies.length > 0 && (
+        <button
+          type="button"
+          className="btn btn-sm btn-link text-danger mt-1 p-0"
+          onClick={clearAllSelected}
+        >
+          Clear All
+        </button>
+      )}
+    </div>
+
+    {/* Items Per Page */}
+    <div className="col-lg-2 col-md-3 col-sm-6">
+      <label className="form-label small mb-1">Items per page</label>
+      <select
+        className="form-select form-select-sm"
+        value={itemsPerPage}
+        onChange={handleItemsPerPageChange}
+      >
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+
+    {/* Date Filter */}
+    <div className="col-lg-3 col-md-6 col-sm-6">
+      <label className="form-label small mb-1">Date Filter</label>
+      <select
+        className="form-select form-select-sm"
+        value={dateFilter}
+        onChange={(e) => handleDateFilterChange(e.target.value)}
+      >
+        <option value="all">All Dates</option>
+        <option value="3days">Last 3 Days</option>
+        <option value="7days">Last 7 Days</option>
+        <option value="custom">Custom Range</option>
+      </select>
+
+      {dateFilter === "custom" && (
+        <div className="row mt-2 gx-1">
+          <div className="col">
+            <input
+              type="date"
+              className="form-control form-control-sm"
+              value={customStartDate}
+              onChange={(e) => {
+                setCustomStartDate(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Search or select companies..."
-              className="react-select-container"
-              classNamePrefix="react-select"
             />
-            {selectedCompanies.length > 0 && (
-              <div className="mt-2">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-link text-danger"
-                  onClick={clearAllSelected}
-                >
-                  Clear All
-                </button>
-              </div>
-            )}
-            <button className="btn btn-primary mt-2" type="submit">
-              <i className="fa fa-search"></i> Search
-            </button>
-          </form>
-        </div>
-
-        <div className="col-md-3">
-          <select
-            className="form-select"
-            value={itemsPerPage}
-            onChange={handleItemsPerPageChange}
-          >
-            <option value="5">5 per page</option>
-            <option value="10">10 per page</option>
-            <option value="20">20 per page</option>
-            <option value="50">50 per page</option>
-          </select>
-        </div>
-
-        <div className="col-md-3">
-          <div className="input-group">
-            <select
-              className="form-select"
-              value={dateFilter}
-              onChange={(e) => handleDateFilterChange(e.target.value)}
-            >
-              <option value="all">All Dates</option>
-              <option value="3days">Last 3 Days</option>
-              <option value="7days">Last 7 Days</option>
-              <option value="custom">Custom Range</option>
-            </select>
           </div>
-
-          {dateFilter === "custom" && (
-            <div className="d-flex gap-1 mt-2">
-              <input
-                type="date"
-                className="form-control"
-                value={customStartDate}
-                onChange={(e) => {
-                  setCustomStartDate(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-              <input
-                type="date"
-                className="form-control"
-                value={customEndDate}
-                onChange={(e) => {
-                  setCustomEndDate(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="col-md-3 text-end">
-          <div className="d-flex justify-content-end align-items-center gap-2">
-            <div className="badge bg-primary p-2">Total RFQs: {totalItems}</div>
-            <button
-              className="btn btn-sm btn-outline-secondary"
-              onClick={downloadCsv}
-              title="Download current page as CSV"
-            >
-              <i className="fa fa-download me-1" /> Download Excel
-            </button>
+          <div className="col">
+            <input
+              type="date"
+              className="form-control form-control-sm"
+              value={customEndDate}
+              onChange={(e) => {
+                setCustomEndDate(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
           </div>
         </div>
+      )}
+    </div>
+
+    {/* Total & Download */}
+    <div className="col-lg-3 col-md-6">
+      <label className="form-label small mb-1 d-block">Summary</label>
+      <div className="d-flex justify-content-between align-items-center gap-2">
+        <span className="badge bg-primary flex-shrink-0">
+          Total RFQs: {totalItems}
+        </span>
+        <button
+          className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+          onClick={downloadCsv}
+          title="Download current page as CSV"
+          disabled={rfqData.length === 0}
+        >
+          <i className="fa fa-download" /> Download
+        </button>
       </div>
+    </div>
+
+  </div>
+</div>
+
 
       {/* RFQ Table */}
       <div className="row">
