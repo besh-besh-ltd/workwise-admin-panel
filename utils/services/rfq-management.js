@@ -11,6 +11,31 @@ export const getRFQDetails = (rfq_id) => {
     });
 };
 
+export const getClientRfqList = (page = 1, limit = 10, search = '', dateFilter = 'all', startDate = '', endDate = '', companyIds = []) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/rfq/client-rfq-list?page=${page}&limit=${limit}&search=${search}`,
+        { dateFilter, startDate, endDate, companyIds }
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
+
+export const getClientCompanylist = () =>{
+    return new Promise(async (resolve, reject) => {
+        try {
+            let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/rfq/companies-list`);
+            resolve(response);
+        } catch (error) {
+            reject({ message: error });
+        }
+    }
+    );
+}
 export const getRFQList = (payload) => {
     return new Promise(async (resolve, reject) => {
         try {
