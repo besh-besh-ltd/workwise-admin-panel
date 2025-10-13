@@ -73,6 +73,13 @@
         "class": "",
         "icon": "",
         "active": false
+      },
+       {
+        "title": "Client Dashboard",
+        "link": "/service-module/client-dashboard",
+        "class": "",
+        "icon": "",
+        "active": false
       }
     ]
   },
