@@ -113,6 +113,29 @@ status: 0
     }
   });
 }
+
+
+export const fetchVendorDocuments = async (page = 1, limit = 10) => {
+  const res = await axiosInstance.get(
+    `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/get-vendor-profile-documents?page=${page}&limit=${limit}`
+  );
+  return res;
+};
+
+// Approve a vendor document
+// In @/utils/services/vendor-management.js
+export const approveVendorDocument = async (data) => {
+  try {
+    const response = await axiosxdata.put(
+      `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/approve-vendor-profile-documents`,
+      data
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 function handleUpdateVendor(values, editDataId) {
   if (values.image == "") {
     delete values.image;
