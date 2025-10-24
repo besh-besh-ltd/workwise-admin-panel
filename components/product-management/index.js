@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants, getVariantMappings, acceptVariant, getParentCategories } from "@/utils/services/product-management";
+import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants, getVariantMappings, acceptVariant, getParentCategories, getPackageVendorMappings, updatePackageVendorMapping } from "@/utils/services/product-management";
+import MapPackageVendorModal from "../modal/MapPackageVendorModal";
 import axiosFormData from "@/utils/axios/form-data";
 import FullLoading from "../loading/FullLoading";
 import { ToastContainer, toast } from "react-toastify";
@@ -64,6 +65,17 @@ const ProductManagement = () => {
   const [mappingsTotalPages, setMappingsTotalPages] = useState(null);
   const [mappings, setMappings] = useState([]);
   const [mappingsPaginationMeta, setMappingsPaginationMeta] = useState(null);
+  const [showPackageMapModal, setShowPackageMapModal] = useState(false);
+  // Package mappings tab state
+  const [packages, setPackages] = useState([]);
+  const [packagesLoading, setPackagesLoading] = useState(false);
+  const [packagesPage, setPackagesPage] = useState(1);
+  const [packagesLimit, setPackagesLimit] = useState(10);
+  const [packagesTotalPages, setPackagesTotalPages] = useState(1);
+  const [packagesSearch, setPackagesSearch] = useState("");
+  const [selectedPackageForMappings, setSelectedPackageForMappings] = useState(null);
+  const [packageMappings, setPackageMappings] = useState([]);
+  const [packageMappingsLoading, setPackageMappingsLoading] = useState(false);
   const [loadingMappings, setLoadingMappings] = useState(false);
   
   // Filter states for current active filters
@@ -1620,6 +1632,78 @@ const ProductManagement = () => {
     getVendorApproveList();
   }, []);
 
+  // Load package list when tab activates or pagination/search changes
+  useEffect(() => {
+    if (activeTab === 'package-mappings') {
+      fetchPackages();
+    }
+  }, [activeTab, packagesPage]);
+
+  const fetchPackages = async () => {
+    try {
+      setPackagesLoading(true);
+      const response = await getAllProducts(
+        packagesLimit,
+        packagesPage,
+        packagesSearch,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        'package'
+      );
+
+      const data = response?.data?.data || response?.data || [];
+      const dataArray = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+      const pagination = data?.pagination || {
+        total: data?.filtered_count || data?.total || dataArray.length,
+        page: data?.page || packagesPage,
+        limit: data?.limit || packagesLimit,
+        pages: data?.pages || Math.max(1, Math.ceil((data?.filtered_count || dataArray.length) / packagesLimit))
+      };
+
+      setPackages(dataArray);
+      setPackagesTotalPages(pagination.pages || 1);
+    } catch (e) {
+      setPackages([]);
+      setPackagesTotalPages(1);
+    } finally {
+      setPackagesLoading(false);
+    }
+  };
+
+  const fetchPackageMappings = async (productId) => {
+    if (!productId) return;
+    try {
+      setPackageMappingsLoading(true);
+      const res = await getPackageVendorMappings(productId);
+      const data = res?.data?.data || res?.data || [];
+      setPackageMappings(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setPackageMappings([]);
+    } finally {
+      setPackageMappingsLoading(false);
+    }
+  };
+
+  const handlePackageMappingApproval = async (mappingId, isApproved) => {
+    try {
+      await updatePackageVendorMapping(mappingId, isApproved);
+      toast.success(`Package mapping ${isApproved ? 'approved' : 'disapproved'} successfully`);
+      // Refresh the mappings for the selected package
+      if (selectedPackageForMappings) {
+        fetchPackageMappings(selectedPackageForMappings.id);
+      }
+    } catch (error) {
+      toast.error(`Failed to ${isApproved ? 'approve' : 'disapprove'} package mapping`);
+    }
+  };
+
   return (
     <>
       <ToastContainer />
@@ -1631,7 +1715,7 @@ const ProductManagement = () => {
           {/* Changes by Agnij April 30, 2025 [Added tab navigation] */}
           <div className="card card-primary card-outline card-tabs">
             <div className="card-header p-0 pt-1 border-bottom-0">
-              <ul className="nav nav-tabs" role="tablist" id="productTabs">
+                <ul className="nav nav-tabs" role="tablist" id="productTabs">
                 <li className="nav-item">
                   <a 
                     className={`nav-link ${activeTab === 'products' ? 'active' : ''}`} 
@@ -1680,7 +1764,23 @@ const ProductManagement = () => {
                     data-bs-toggle="tab"
                     data-bs-target="#mappings-tab"
                   >
-                    Mappings
+                    Variant Mappings
+                  </a>
+                </li>
+                <li className="nav-item">
+                  <a 
+                    className={`nav-link ${activeTab === 'package-mappings' ? 'active' : ''}`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleTabChange('package-mappings');
+                    }}
+                    role="tab" 
+                    aria-selected={activeTab === 'package-mappings'}
+                    href="#package-mappings"
+                    data-bs-toggle="tab"
+                    data-bs-target="#package-mappings"
+                  >
+                    Package Mappings
                   </a>
                 </li>
               </ul>
@@ -2790,6 +2890,139 @@ const ProductManagement = () => {
                 </div>
                 {/*END: Mappings Tab */}
 
+                {/*START: Package Mappings Tab */}
+                <div className={`tab-pane fade ${activeTab === 'package-mappings' ? 'active show' : ''}`} id="package-mappings" role="tabpanel" aria-labelledby="package-mappings-tab">
+                  <div className="card card-body">
+                    <div className="d-flex justify-content-between mb-3">
+                      <h5>Package Products</h5>
+                      <button className="btn btn-warning" onClick={() => setShowPackageMapModal(true)}>
+                        Map Package with Vendor
+                      </button>
+                    </div>
+                    
+                    <div className="table-responsive">
+                      <table className="table table-striped">
+                        <thead>
+                          <tr>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Variants</th>
+                            <th>Created At</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {packagesLoading ? (
+                            <tr><td colSpan={5}>Loading...</td></tr>
+                          ) : packages.length === 0 ? (
+                            <tr><td colSpan={5}>No packages found</td></tr>
+                          ) : (
+                            packages.map(p => (
+                              <tr key={p.id}>
+                                <td>{p.name}</td>
+                                <td>{Array.isArray(p.product_categories) && p.product_categories.length > 0 ? (p.product_categories[0].category_name || '-') : '-'}</td>
+                                <td>{p.variant_count ?? '-'}</td>
+                                <td>{p.created_at ?? '-'}</td>
+                                <td>
+                                  <button className="btn btn-sm btn-outline-primary" onClick={() => { setSelectedPackageForMappings(p); fetchPackageMappings(p.id); }}>
+                                    View Mappings
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Package Mappings Table */}
+                    {selectedPackageForMappings && (
+                      <div className="mt-4">
+                        <h6 className="mb-2">Vendor Mappings for: {selectedPackageForMappings.name}</h6>
+                        <div className="table-responsive">
+                          <table className="table table-bordered">
+                            <thead>
+                              <tr>
+                                <th>Mapping ID</th>
+                                <th>Vendor ID</th>
+                                <th>Vendor Name</th>
+                                <th>Status</th>
+                                <th>Approved</th>
+                                <th>Approved By</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {packageMappingsLoading ? (
+                                <tr><td colSpan={8}>Loading mappings...</td></tr>
+                              ) : packageMappings.length === 0 ? (
+                                <tr><td colSpan={8}>No mappings found for this package</td></tr>
+                              ) : (
+                                packageMappings.map(m => (
+                                  <tr key={m.id}>
+                                    <td>{m.id}</td>
+                                    <td>{m.vendor_id}</td>
+                                    <td>{m.vendor_name || m.vendor?.name || '-'}</td>
+                                    <td>
+                                      <span className={`badge ${m.status ? 'bg-success' : 'bg-secondary'}`}>
+                                        {m.status ? 'Active' : 'Inactive'}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      <span className={`badge ${m.is_approved ? 'bg-success' : 'bg-warning'}`}>
+                                        {m.is_approved ? 'Approved' : 'Pending'}
+                                      </span>
+                                    </td>
+                                    <td>{m.approved_by_name || '-'}</td>
+                                    <td>{m.created_at ? new Date(m.created_at).toLocaleDateString() : '-'}</td>
+                                    <td>
+                                      {!m.is_approved ? (
+                                        <button 
+                                          className="btn btn-sm btn-success me-2"
+                                          onClick={() => handlePackageMappingApproval(m.id, true)}
+                                        >
+                                          Approve
+                                        </button>
+                                      ) : (
+                                        <button 
+                                          className="btn btn-sm btn-warning me-2"
+                                          onClick={() => handlePackageMappingApproval(m.id, false)}
+                                        >
+                                          Disapprove
+                                        </button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pagination for packages */}
+                    {packagesTotalPages > 1 && (
+                      <div className="mt-3">
+                        <ReactPaginate
+                          breakLabel="..."
+                          nextLabel={<i className="fa fa-angle-right"></i>}
+                          onPageChange={(e) => {
+                            setPackagesPage(e.selected + 1);
+                          }}
+                          pageRangeDisplayed={2}
+                          pageCount={packagesTotalPages}
+                          previousLabel={<i className="fa fa-angle-left"></i>}
+                          renderOnZeroPageCount={null}
+                          className="pagination"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/*END: Package Mappings Tab */}
+
               </div>
             </div>
           </div>
@@ -2933,6 +3166,16 @@ const ProductManagement = () => {
           }
         </div>
       </section>
+
+      {/* Package mapping modal */}
+      <MapPackageVendorModal
+        isVisible={showPackageMapModal}
+        onCancel={() => setShowPackageMapModal(false)}
+        onSuccess={() => {
+          setShowPackageMapModal(false);
+          toast.success('Package mapped successfully');
+        }}
+      />
 
       <DisapproveModal
         show={showRejectModal}

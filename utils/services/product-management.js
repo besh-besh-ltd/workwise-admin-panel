@@ -24,6 +24,27 @@ export const getParentCategories = () => {
     }
   });
 };
+
+// Package vendor mapping services
+export const mapPackageWithVendor = (productId, vendor_id) => {
+  return axiosInstance.post(
+    `${process.env.NEXT_PUBLIC_API_WEB_URL}/products/package-product/${productId}/vendors`,
+    { vendor_id }
+  );
+};
+
+export const getPackageVendorMappings = (productId) => {
+  return axiosInstance.get(
+    `${process.env.NEXT_PUBLIC_API_WEB_URL}/products/package-product/${productId}/vendors`
+  );
+};
+
+export const updatePackageVendorMapping = (mappingId, is_approved) => {
+  return axiosInstance.put(
+    `${process.env.NEXT_PUBLIC_API_WEB_URL}/products/package-vendor-mapping/${mappingId}`,
+    { is_approved }
+  );
+};
 export const getCategoriesDetails = (id) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -108,7 +129,8 @@ export const getAllProducts = (
   dateFrom = null,
   dateTo = null,
   approvalStatus = null,
-  onlyAddedByAdmin = false
+  onlyAddedByAdmin = false,
+  productType = null
 ) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -155,6 +177,9 @@ export const getAllProducts = (
       // Handle approval status filtering
       if(approvalStatus !== null && approvalStatus !== ""){
         url += `&is_approve=${encodeURIComponent(approvalStatus)}`;
+      }
+      if(productType){
+        url += `&productType=${encodeURIComponent(productType)}`;
       }
       
       // Add a cache-busting parameter to prevent 304 responses

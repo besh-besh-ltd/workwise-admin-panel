@@ -37,6 +37,8 @@ const AddProduct = () => {
 		variations: [{ attribute: "", attributeValue: "" }],
 		vendor: "",
 		is_featured: "",
+		product_type: "single",
+		package_items: [{ name: "" }],
 	};
 
 	const customSelectStyles = {
@@ -195,7 +197,7 @@ const AddProduct = () => {
 																			<div className="text-danger">{errors.categories}</div>
 																		)}
 																	</div>
-																	{categories.map((options, index) => (
+										{categories.map((options, index) => (
 																		<div className="col-md-3" key={`cat_level_${index}`}>
 																			<div className="form-group">
 																				<Select
@@ -222,24 +224,95 @@ const AddProduct = () => {
 																			</div>
 																		</div>
 																	))}
-																</>
-															}
 
-															<div className="col-md-12">
-																<div className="form-group">
-																	<FormikField
-																		label="Product Description"
-																		type="textarea"
-																		isRequired={false}
-																		name="description"
-																		touched={touched}
-																		errors={errors}
-																		className="text-editor-area"
-																		cols="30"
-																		rows="10"
-																	/>
-																</div>
-															</div>
+										{/* Product Type (beside categories) */}
+										<div className="col-md-2">
+											<div className="form-group">
+												<label>Product Type</label>
+												<select
+													name="product_type"
+													className="form-control"
+													value={values.product_type}
+													onChange={(e) => {
+														handleChange(e);
+														if (e.target.value === "single") {
+															setFieldValue("package_items", [{ name: "" }]);
+														}
+													}}
+												>
+													<option value="single">Single</option>
+													<option value="package">Package</option>
+												</select>
+											</div>
+										</div>
+																</>
+									}
+
+									{/* Product Type moved beside categories above */}
+
+									{/* Package Items (visible when type is package) */}
+									{values.product_type === "package" && (
+										<div className="col-md-12 mt-3">
+											<label>Package Items</label>
+											{values.package_items.map((item, idx) => (
+												<div className="row mb-2" key={`pkg_item_${idx}`}>
+													<div className="col-md-10">
+														<input
+															type="text"
+															name={`package_items[${idx}].name`}
+															value={item.name}
+															onChange={handleChange}
+															className="form-control"
+															placeholder="Enter item name"
+														/>
+													</div>
+													<div className="col-md-2">
+														<button
+															type="button"
+															className="btn btn-danger"
+															onClick={() => {
+															const updated = [...values.package_items];
+															updated.splice(idx, 1);
+															setFieldValue("package_items", updated);
+														}}
+														disabled={values.package_items.length === 1}
+													>
+														Remove
+														</button>
+													</div>
+											</div>
+											))}
+
+											<div className="text-right">
+												<button
+													type="button"
+													className="btn btn-success"
+													onClick={() => {
+														const updated = [...values.package_items, { name: "" }];
+														setFieldValue("package_items", updated);
+													}}
+												>
+													Add Item
+												</button>
+											</div>
+										</div>
+									)}
+
+									<div className="col-md-12">
+										<div className="form-group">
+											<FormikField
+												label="Product Description"
+												type="textarea"
+												isRequired={false}
+												name="description"
+												touched={touched}
+												errors={errors}
+												className="text-editor-area"
+												cols="30"
+												rows="10"
+											/>
+										</div>
+									</div>
 
 															{/* <div className="col-md-8">
 																<div className="form-group">
