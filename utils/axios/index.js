@@ -25,11 +25,8 @@ axiosInstance.interceptors.response.use(
     return response.data;
   },
   function (error) {
-    if (error.response.status === 401) {
-      localStorage.removeItem("token");
-    } else if (error.response.data.status === 401) {
-      localStorage.removeItem("token");
-    }
+    // Do not auto-clear token on 401; let calling pages decide.
+    // This avoids unintended logouts when a single protected endpoint returns 401.
     return Promise.reject(error);
   }
 );
