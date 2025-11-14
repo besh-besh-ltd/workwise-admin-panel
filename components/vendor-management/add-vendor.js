@@ -22,6 +22,7 @@ const AddVendor = () => {
   const [isCityDisabled, setIsCityDisabled] = useState(true);
   const [countryList,setCountryList] = useState([]);
   const [subscriptionList, setSubscriptionList] = useState([]);
+  const [selectedSubscriptionOption, setSelectedSubscriptionOption] = useState("");
   const[countryCode , setCountryCode] = useState([]);
   
   const router = useRouter();
@@ -190,6 +191,12 @@ const handleCountryChange = (event) => {
   }
 };
 
+// Handle Subscription Change
+const handleSubscriptionChange = (event) => {
+  const selectedSubscription = event.target.value;
+  setSelectedSubscriptionOption(selectedSubscription);
+}
+
   const handleStateChange = (event) => {
     let id = event.target.value;
     setSelectedStateOption(id);
@@ -244,8 +251,8 @@ const handleCountryChange = (event) => {
               <h5 className="heading-container">Add Vendor</h5>
             </ol>
           </div>
-          <div class="card col-12">
-            <div class="card-body mt-3">
+          <div className="card col-12">
+            <div className="card-body mt-3">
               <Formik
                 initialValues={initialValues}
                 validationSchema={yup.object().shape({
@@ -273,22 +280,23 @@ const handleCountryChange = (event) => {
                   values.country = selectedCountryOption;
                   values.state = selectedStateOption;
                   values.city = selectedCityOption;
+                  values.subscription_plan = selectedSubscriptionOption;
                   submitHandler(values, resetForm);
                 }}
               >
                 {({ errors, touched, values, handleChange, setFieldValue }) => {
                   return (
                     <Form>
-                      <div class="row form-common-row mb-4">
+                      <div className="row form-common-row mb-4">
    
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="organization_Name">
                             Organization Name
                           </label>
                           <Field
                             type="text"
                             name="organization_name"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Organization Name"
                           />
                           <ErrorMessage
@@ -298,12 +306,12 @@ const handleCountryChange = (event) => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="email">Email</label>
                           <Field
                             type="email"
                             name="email"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Email"
                           />
                           <ErrorMessage
@@ -396,7 +404,7 @@ const handleCountryChange = (event) => {
                           />
                         </div>
 
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="about-vendro">About Vendor</label>
                           <Field
                             name="about_vendor_company"
@@ -410,12 +418,12 @@ const handleCountryChange = (event) => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="about-vendro">Postal Code</label>
                           <Field
                             type="string"
                             name="postal_code"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Postal code"
                           />
                           <ErrorMessage
@@ -425,7 +433,7 @@ const handleCountryChange = (event) => {
                             )}
                           />
                         </div>
-                        <div class="col-4">
+                        <div className="col-4">
                           <label htmlFor="city">Country</label>
                           <Field
                             onChange={handleCountryChange}
@@ -442,7 +450,7 @@ const handleCountryChange = (event) => {
                             ))}
                           </Field>
                         </div>
-                        <div class="col-4">
+                        <div className="col-4">
                           <label htmlFor="state">State</label>
                           <Field
                             value={selectedStateOption}
@@ -460,7 +468,7 @@ const handleCountryChange = (event) => {
                             ))}
                           </Field>
                         </div>
-                        <div class="col-4">
+                        <div className="col-4">
                           <label htmlFor="city">City</label>
                           <Field
                             value={selectedCityOption}
@@ -478,12 +486,12 @@ const handleCountryChange = (event) => {
                             ))}
                           </Field>
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="website">Website</label>
                           <Field
                             type="text"
                             name="website"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Website"
                           />
                           <ErrorMessage
@@ -531,12 +539,12 @@ const handleCountryChange = (event) => {
                             className="form-error"
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="about-vendro">Estd year</label>
                           <Field
                             type="number"
                             name="estd_year"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Estd year"
                           />
                           <ErrorMessage
@@ -547,12 +555,12 @@ const handleCountryChange = (event) => {
                           />
                         </div>
 
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="gstin">Gstin</label>
                           <Field
                             type="text"
                             name="gstin"
-                            class="form-control"
+                            className="form-control"
                             placeholder="gstin"
                           />
                           <ErrorMessage
@@ -562,14 +570,14 @@ const handleCountryChange = (event) => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="import_export_code">
                             Import Export Code
                           </label>
                           <Field
                             type="number"
                             name="import_export_code"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Import export code"
                           />
                           <ErrorMessage
@@ -579,12 +587,12 @@ const handleCountryChange = (event) => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="about-vendro">CIN</label>
                           <Field
                             type="text"
                             name="cin"
-                            class="form-control"
+                            className="form-control"
                             placeholder="cin"
                           />
                           <ErrorMessage
@@ -594,12 +602,12 @@ const handleCountryChange = (event) => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="turn_over">Turn Over</label>
                           <Field
                             type="text"
                             name="turn_over"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Ex. 50 cr"
                           />
                           <ErrorMessage
@@ -609,14 +617,14 @@ const handleCountryChange = (event) => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="total_employes">
                             Total Employees
                           </label>
                           <Field
                             type="number"
                             name="total_employees"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Total employes"
                           />
                           <ErrorMessage
@@ -626,7 +634,7 @@ const handleCountryChange = (event) => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="ptr">PTR</label>
                           <Field
                             name="ptr_track"
@@ -645,15 +653,17 @@ const handleCountryChange = (event) => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="subscription">Select Subscription ( Empty for Free )</label>
                           <Field
+                            onChange={handleSubscriptionChange}
+                            value={selectedSubscriptionOption}
                             as="select"
                             className="form-control"
                             name="subscription"
                           >
-                            <option value="" disabled>Select</option>
-                            <option value="-1" selected>No Subscription</option>
+                            <option defaultValue="-1">Select</option>
+                            <option value="0">No Subscription</option>
                             {subscriptionList?.map((subscription) => (
                               <option key={subscription.value} value={subscription.value}>
                                 {subscription.label}

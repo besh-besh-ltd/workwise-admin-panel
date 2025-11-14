@@ -38,6 +38,7 @@ const UpdateVendor = () => {
     spoc_role: '',
     
   });
+  const [selectedSubscriptionOption, setSelectedSubscriptionOption] = useState("");
   const [spocId, setSpocId] = useState(null);
   const [openAddSpoc,setOpenAddSpoc] = useState(false);
   const [countryList,setCountryList] = useState([]);
@@ -267,6 +268,12 @@ useEffect(() => {
     setSelectedCityOption(id)
   };
 
+  // Handle Subscription Change
+  const handleSubscriptionChange = (event) => {
+    const selectedSubscription = event.target.value;
+    setSelectedSubscriptionOption(selectedSubscription);
+  }
+
   const initialValues = {
     name: editDetails?.vendorDetails?.name || "",
     email: editDetails?.vendorDetails?.email || "",
@@ -286,6 +293,7 @@ useEffect(() => {
     turn_over: editDetails?.companyDetails?.turnover || "",
     total_employees: editDetails?.companyDetails?.no_of_employess || "",
     subscription: editDetails?.vendorDetails?.subscription_plan_id || "-1",
+    subscription_plan: editDetails?.companyDetails?.subscription_plan || "",
   };
 
  
@@ -300,6 +308,8 @@ useEffect(() => {
         } else {
           setIsCityDisabled(true)
         }
+        // Pre-select subscription plan
+        setSelectedSubscriptionOption(editDetails?.companyDetails?.subscription_plan);
         setIsStateDisabled(false)
         setSelectedCountryOption(editDetails?.vendorDetails?.country)
         setSelectedStateOption(editDetails?.vendorDetails?.state)
@@ -321,7 +331,8 @@ useEffect(() => {
         })
         .catch((err) => console.log("err", err));
     }
-  }, [id, editDetails?.vendorDetails?.country, editDetails?.vendorDetails?.state, editDetails?.vendorDetails?.city])
+    // Set city when state, country change also run when subscription plan changes.
+  }, [id, editDetails?.vendorDetails?.country, editDetails?.vendorDetails?.state, editDetails?.vendorDetails?.city,  editDetails?.companyDetails?.subscription_plan])
 
 
   const extractedCountryCode = editDetails?.vendorDetails?.mobile.match(/^\+?\d+/)?.[0] || "+91";
@@ -361,8 +372,8 @@ useEffect(() => {
               <h5 className="heading-container">Update Vendor</h5>
             </ol>
           </div>
-          <div class="card col-12">
-            <div class="card-body mt-3">
+          <div className="card col-12">
+            <div className="card-body mt-3">
               <Formik
                 enableReinitialize={true}
                 initialValues={initialValues}
@@ -395,6 +406,8 @@ useEffect(() => {
                     selectedStateOption || editDetails?.vendorDetails?.state;
                   values.city =
                     selectedCityOption || editDetails?.vendorDetails?.city;
+                  values.subscription_plan = 
+                    selectedSubscriptionOption || editDetails?.companyDetails?.subscription_plan;
                   submitHandler(values, resetForm);
                 }}
               >
@@ -471,14 +484,14 @@ useEffect(() => {
                             className="text-danger"
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="organization-name">
                             Organization
                           </label>
                           <Field
                             type="text"
                             name="organization_name"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Organization"
                           />
                           <ErrorMessage
@@ -489,7 +502,7 @@ useEffect(() => {
                           />
                         </div>
 
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="logo">Logo</label>
                           <Field
                             name="logo"
@@ -577,12 +590,12 @@ useEffect(() => {
                           </div>
                         </div>
 
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="about-vendro">Postal Code</label>
                           <Field
                             type="string"
                             name="postal_code"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Postal code"
                           />
                           <ErrorMessage
@@ -592,7 +605,7 @@ useEffect(() => {
                             )}
                           />
                         </div>
-                        <div class="col-4">
+                        <div className="col-4">
                           <label htmlFor="city">Country</label>
                           <Field
                             onChange={handleCountryChange}
@@ -609,7 +622,7 @@ useEffect(() => {
                             ))}
                           </Field>
                         </div>
-                        <div class="col-4">
+                        <div className="col-4">
                           <label htmlFor="state">State</label>
                           <Field
                             value={selectedStateOption}
@@ -627,7 +640,7 @@ useEffect(() => {
                             ))}
                           </Field>
                         </div>
-                        <div class="col-4">
+                        <div className="col-4">
                           <label htmlFor="city">City</label>
                           <Field
                             value={selectedCityOption}
@@ -645,12 +658,12 @@ useEffect(() => {
                             ))}
                           </Field>
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="website">Website</label>
                           <Field
                             type="text"
                             name="website"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Website"
                           />
                           <ErrorMessage
@@ -698,12 +711,12 @@ useEffect(() => {
                             className="form-error"
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="about-vendro">Estd year</label>
                           <Field
                             type="number"
                             name="estd_year"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Estd year"
                           />
                           <ErrorMessage
@@ -715,12 +728,12 @@ useEffect(() => {
                           {/* this is the spoc details column where we have to change */}
                         </div>
 
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="gstin">Gstin</label>
                           <Field
                             type="text"
                             name="gstin"
-                            class="form-control"
+                            className="form-control"
                             placeholder="gstin"
                           />
                           <ErrorMessage
@@ -730,14 +743,14 @@ useEffect(() => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="import_export_code">
                             Import Export Code
                           </label>
                           <Field
                             type="number"
                             name="import_export_code"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Import export code"
                           />
                           <ErrorMessage
@@ -747,12 +760,12 @@ useEffect(() => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="about-vendro">CIN</label>
                           <Field
                             type="text"
                             name="cin"
-                            class="form-control"
+                            className="form-control"
                             placeholder="cin"
                           />
                           <ErrorMessage
@@ -762,12 +775,12 @@ useEffect(() => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="turn_over">Turn Over</label>
                           <Field
                             type="text"
                             name="turn_over"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Ex. 50 cr"
                           />
                           <ErrorMessage
@@ -777,14 +790,14 @@ useEffect(() => {
                             )}
                           />
                         </div>
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="total_employes">
                             Total Employees
                           </label>
                           <Field
                             type="number"
                             name="total_employees"
-                            class="form-control"
+                            className="form-control"
                             placeholder="Total employes"
                           />
                           <ErrorMessage
@@ -795,7 +808,7 @@ useEffect(() => {
                           />
                         </div>
                         <div className= "row">
-                        <div class="col-6">
+                        <div className="col-6">
                           <label htmlFor="ptr">PTR</label>
                           <Field
                             name="ptr_track"
@@ -814,22 +827,24 @@ useEffect(() => {
                                 data.doc_type == "ptr" && (
                                   <span>
                                     <a href={data.file_path} target="_blank">
-                                      <i class="fa fa-file"></i>{" "}
+                                      <i className="fa fa-file"></i>{" "}
                                       {data.file_name}
                                     </a>
                                   </span>
                                 )
                             )}
                         </div>
-                        <div class="col-6">
-                          <label htmlFor="subscription">Select Subscription ( Empty for Free )</label>
+                        <div className="col-6">
+                          <label htmlFor="subscription_plan">Select Subscription ( Empty for Free )</label>
                           <Field
                             as="select"
                             className="form-control"
-                            name="subscription"
+                            name="subscription_plan"
+                            value={selectedSubscriptionOption}
+                            onChange={handleSubscriptionChange}
                           >
-                            <option value="" disabled>Select</option>
-                            <option value="-1">No Subscription</option>
+                            <option defaultValue="-1">Select</option>
+                            <option value="0">No Subscription</option>
                             {subscriptionList?.map((subscription) => (
                               <option key={subscription.value} value={subscription.value}>
                                 {subscription.label}
@@ -841,7 +856,7 @@ useEffect(() => {
                       </div>
                     )}
                     <div className="d-flex justify-content-end">
-                      <button type="submit" class="btn btn-secondary">
+                      <button type="submit" className="btn btn-secondary">
                         Save
                       </button>
                     </div>
@@ -852,17 +867,17 @@ useEffect(() => {
           </div>
 
           {/* adding div for spoc details */}
-          <div class="card col-12">
+          <div className="card col-12">
             <div className="d-flex justify-content-end">
               <button
                 type="submit"
-                class="btn btn-secondary"
+                className="btn btn-secondary"
                 onClick={() => setOpenAddSpoc(true)}
               >
                 Create New Spoc
               </button>
             </div>
-            <div class="card-body mt-3">
+            <div className="card-body mt-3">
               <Formik
                 initialValues={{
                   spoc_name: selectedSpocOption.spoc_name || "",
