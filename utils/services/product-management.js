@@ -724,6 +724,21 @@ export const mapVariantWithVendor = (values) => {
   });
 };
 
+// Bulk map multiple variant-vendor pairs in one request
+export const bulkMapVariantWithVendor = (list) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/bulk-map-variant-with-vendor`,
+        { mappings: list }
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
+
 // Changes by Agnij April 30, 2025 [Added direct variant search function]
 // Changes by Agnij May 01, 2025 [Enhanced variant search with more detailed information]
 // Changes by Agnij May 03, 2025 [Added pagination parameters]
@@ -1032,6 +1047,20 @@ export const updateVariantSpecifications = (variantId, specifications) => {
       resolve(response.data);
     } catch (error) {
       reject(error?.response?.data || { message: 'Network or server error' });
+    }
+  });
+};
+
+// Get variant-vendor mappings for a specific vendor (admin endpoint)
+export const getApprovedProductsByVendor = (vendorId, page = 1, limit = 10, searchString = "") => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-mappings?vendor_id=${vendorId}&limit=${limit}&page=${page}`;
+      if (searchString) url += `&search_term=${encodeURIComponent(searchString)}`;
+      const response = await axiosInstance.get(url);
+      resolve(response);
+    } catch (error) {
+      reject(error);
     }
   });
 };
