@@ -967,6 +967,23 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
   });
 };
 
+export const deleteVariantVendorMapping = (mappingId) => {
+  return new Promise(async (resolve, reject) => {
+    if (!mappingId) {
+      reject("Mapping ID is required");
+      return;
+    }
+    try {
+      let response = await axiosInstance.delete(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/product/variant-mappings/${mappingId}`
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
+
 export const getVariantMappingById = (id = null) => {
   return new Promise(async (resolve, reject) => {
     if(!id) reject("Id is required")
