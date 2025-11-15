@@ -1205,7 +1205,7 @@ useEffect(() => {
                           <tr key={mapping.mapping_id || mapping.id}>
                             <td>{mapping.variant_name || '-'}</td>
                             <td>{mapping.product_name || '-'}</td>
-                            <td>{mapping.approved_by || '-'}</td>
+                            <td>{mapping.vendor_approved_by_companies || mapping.approved_by_names?.join(', ') || '-'}</td>
                             <td>{Array.isArray(mapping.make_list) ? mapping.make_list.join(', ') : (mapping.make_list || '-')}</td>
                             <td>{mapping.is_approve === true || mapping.is_approve === 1 ? 'Approved' : 'Pending'}</td>
                             <td>
