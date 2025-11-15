@@ -659,8 +659,8 @@ const VendorManagement = () => {
                         }) : 'N/A'}
                         </td>
                       <td>{item.source || 'N/A'}</td>
-                      {/* If subscription id is 20 then show premium, if 21 show Enterprise, if 0 show Free, else N/A */}
-                      <td>{item.subscription_plan === '20' ? "Premium" : item.subscription_plan === '21' ? "Enterprise" : item.subscription_plan === '0' ? "Free" : 'N/A'}</td>
+                      {/* If subscription id is 20 then show premium, if 21 show Enterprise, else Free*/}
+                      <td>{item.subscription_plan_id === 20 ? "Premium" : item.subscription_plan_id === 21 ? "Enterprise" : "Free"}</td>
                       <td>{item.is_private === 1 ? "Yes" : "No"}</td>
                       <td>
                         <div className="d-flex">
