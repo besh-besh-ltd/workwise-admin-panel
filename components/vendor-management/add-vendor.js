@@ -303,15 +303,7 @@ const handleCountryChange = (event) => {
                   buyer_company_ids: yup
                     .array()
                     .of(yup.number())
-                    .when("vendor_access_type", {
-                      is: "private",
-                      then: (schema) =>
-                        schema.min(
-                          1,
-                          "Select at least one buyer company"
-                        ),
-                      otherwise: (schema) => schema.optional(),
-                    }),
+                    .optional(),
                 })}
                 onSubmit={(values, { resetForm }) => {
                   values.country = selectedCountryOption;
@@ -413,46 +405,39 @@ const handleCountryChange = (event) => {
                               <div className="form-error">{msg}</div>
                             )}
                           />
-                          {values.vendor_access_type === "private" && (
-                            <small className="text-muted">
-                              Select buyer companies below to map this vendor as private
-                            </small>
-                          )}
                         </div>
-                        {values.vendor_access_type === "private" && (
-                          <div className="col-6">
-                            <label htmlFor="buyer_company_ids">
-                              Buyer Companies * <small className="text-muted">(Select company admins)</small>
-                            </label>
-                            <Select
-                              isMulti
-                              name="buyer_company_ids"
-                              options={buyerCompanyOptions}
-                              value={buyerCompanyOptions.filter((option) =>
-                                values.buyer_company_ids?.includes(option.value)
-                              )}
-                              onChange={(selectedOptions) => {
-                                const ids = selectedOptions
-                                  ? selectedOptions.map((opt) => opt.value)
-                                  : [];
-                                setFieldValue("buyer_company_ids", ids);
-                              }}
-                              onBlur={() =>
-                                setFieldTouched("buyer_company_ids", true)
-                              }
-                              placeholder="Select Buyer Companies"
-                              isClearable
-                              isLoading={buyerCompanyOptions.length === 0}
-                              noOptionsMessage={() => "No buyer companies found"}
-                            />
-                            {errors.buyer_company_ids &&
-                              touched.buyer_company_ids && (
-                                <div className="form-error">
-                                  {errors.buyer_company_ids}
-                                </div>
-                              )}
-                          </div>
-                        )}
+                        <div className="col-6">
+                          <label htmlFor="buyer_company_ids">
+                            Buyer Companies <small className="text-muted">(Select company admins)</small>
+                          </label>
+                          <Select
+                            isMulti
+                            name="buyer_company_ids"
+                            options={buyerCompanyOptions}
+                            value={buyerCompanyOptions.filter((option) =>
+                              values.buyer_company_ids?.includes(option.value)
+                            )}
+                            onChange={(selectedOptions) => {
+                              const ids = selectedOptions
+                                ? selectedOptions.map((opt) => opt.value)
+                                : [];
+                              setFieldValue("buyer_company_ids", ids);
+                            }}
+                            onBlur={() =>
+                              setFieldTouched("buyer_company_ids", true)
+                            }
+                            placeholder="Select Buyer Companies"
+                            isClearable
+                            isLoading={buyerCompanyOptions.length === 0}
+                            noOptionsMessage={() => "No buyer companies found"}
+                          />
+                          {errors.buyer_company_ids &&
+                            touched.buyer_company_ids && (
+                              <div className="form-error">
+                                {errors.buyer_company_ids}
+                              </div>
+                            )}
+                        </div>
 
                         <div className="col-6">
                           <label htmlFor="logo" className="form-label">
