@@ -5,6 +5,7 @@ import {
   handleAddVendor,
   handleGetStates,
   handleGetCities,
+  handleGetBuyerCompanyDropdown,
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
@@ -24,6 +25,7 @@ const AddVendor = () => {
   const [subscriptionList, setSubscriptionList] = useState([]);
   const [selectedSubscriptionOption, setSelectedSubscriptionOption] = useState("");
   const[countryCode , setCountryCode] = useState([]);
+  const [buyerCompanyOptions, setBuyerCompanyOptions] = useState([]);
   
   const router = useRouter();
 
@@ -100,6 +102,10 @@ let getSubscriptionDuration = {
       mobile: fullMobile,
       name:orgName
     };   
+    updatedValues.vendor_access_type = values.vendor_access_type;
+    updatedValues.buyer_company_ids = JSON.stringify(
+      values.buyer_company_ids || []
+    );
    
     handleAddVendor(updatedValues )
       .then((res) => {
@@ -139,6 +145,26 @@ let getSubscriptionDuration = {
     getSubscriptionList();
   }, [])
   
+useEffect(() => {
+  handleGetBuyerCompanyDropdown("", 500)
+    .then((res) => {
+      const formatted = Array.isArray(res?.data)
+        ? res.data.map((item) => ({
+            value: Number(item.company_id),
+            label: item.company_name
+              ? item.buyer_name
+                ? `${item.company_name} (${item.buyer_name})`
+                : item.company_name
+              : item.buyer_email || `Company #${item.company_id}`,
+          }))
+        : [];
+      setBuyerCompanyOptions(formatted);
+    })
+    .catch(() => {
+      toast.error("Failed to load buyer companies");
+    });
+}, []);
+
 
 useEffect(() => {
   fetchCountryCodes()
@@ -240,6 +266,8 @@ const handleSubscriptionChange = (event) => {
     turn_over: "",
     total_employees: "",
     spocs: [],
+    vendor_access_type: "public",
+    buyer_company_ids: [],
   };
 
   return (
@@ -275,6 +303,14 @@ const handleSubscriptionChange = (event) => {
                       "Please enter a valid mobile number (6-15 digits)"
                     )
                     .required("mobile is required"),
+                  vendor_access_type: yup
+                    .string()
+                    .oneOf(["public", "private"])
+                    .required("Vendor visibility is required"),
+                  buyer_company_ids: yup
+                    .array()
+                    .of(yup.number())
+                    .optional(),
                 })}
                 onSubmit={(values, { resetForm }) => {
                   values.country = selectedCountryOption;
@@ -284,7 +320,7 @@ const handleSubscriptionChange = (event) => {
                   submitHandler(values, resetForm);
                 }}
               >
-                {({ errors, touched, values, handleChange, setFieldValue }) => {
+                {({ errors, touched, values, handleChange, setFieldValue, setFieldTouched }) => {
                   return (
                     <Form>
                       <div className="row form-common-row mb-4">
@@ -358,6 +394,57 @@ const handleSubscriptionChange = (event) => {
                             component="div"
                             className="text-danger"
                           />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="vendor_access_type">
+                            Vendor Visibility *
+                          </label>
+                          <Field
+                            as="select"
+                            name="vendor_access_type"
+                            class="form-control"
+                          >
+                            <option value="public">Public</option>
+                            <option value="private">Private</option>
+                          </Field>
+                          <ErrorMessage
+                            name="vendor_access_type"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div className="col-6">
+                          <label htmlFor="buyer_company_ids">
+                            Buyer Companies <small className="text-muted">(Select company admins)</small>
+                          </label>
+                          <Select
+                            isMulti
+                            name="buyer_company_ids"
+                            options={buyerCompanyOptions}
+                            value={buyerCompanyOptions.filter((option) =>
+                              values.buyer_company_ids?.includes(option.value)
+                            )}
+                            onChange={(selectedOptions) => {
+                              const ids = selectedOptions
+                                ? selectedOptions.map((opt) => opt.value)
+                                : [];
+                              setFieldValue("buyer_company_ids", ids);
+                            }}
+                            onBlur={() =>
+                              setFieldTouched("buyer_company_ids", true)
+                            }
+                            placeholder="Select Buyer Companies"
+                            isClearable
+                            isLoading={buyerCompanyOptions.length === 0}
+                            noOptionsMessage={() => "No buyer companies found"}
+                          />
+                          {errors.buyer_company_ids &&
+                            touched.buyer_company_ids && (
+                              <div className="form-error">
+                                {errors.buyer_company_ids}
+                              </div>
+                            )}
                         </div>
 
                         <div className="col-6">

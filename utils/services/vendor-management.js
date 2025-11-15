@@ -264,6 +264,21 @@ function getAdminsList() {
   });
 }
 
+function handleGetBuyerCompanyDropdown(search = "", limit = 100) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/buyer-company-dropdown?limit=${limit}`;
+      if (search) {
+        url += `&search=${encodeURIComponent(search)}`;
+      }
+      const response = await axiosInstance.get(url);
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  });
+}
+
 function handleGetSpocList(limit = 10, page = 1) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -299,5 +314,6 @@ export {
   getSubscriptionList,
   handleDeleteSpoc,
   getAdminsList,
-  handleGetSpocList
+  handleGetSpocList,
+  handleGetBuyerCompanyDropdown
 };

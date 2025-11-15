@@ -11,12 +11,15 @@ import {
   handleGetVendorEditDetails,
   handleUpdateVendorSpoc,
   addNewSpoc,
-  handleDeleteSpoc
+  handleDeleteSpoc,
+  handleGetBuyerCompanyDropdown
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
 import SpocAddModal from "../modal/spoc-add-modal";
+import VendorVariantMappingModal from "../modal/VendorVariantMappingModal";
+import { getApprovedProductsByVendor } from "@/utils/services/product-management";
 import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
 import Select from "react-select";
 import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
@@ -44,8 +47,12 @@ const UpdateVendor = () => {
   const [countryList,setCountryList] = useState([]);
   const [countryCode , setCountryCode] = useState([]);
   const [subscriptionList, setSubscriptionList] = useState([]);
+  const [openVariantMap, setOpenVariantMap] = useState(false);
+  const [selectedVendorOption, setSelectedVendorOption] = useState(null);
+  const [vendorProducts, setVendorProducts] = useState([]);
  
   const [spocCountryCode, setSpocCountryCode] = useState("+91");
+  const [buyerCompanyOptions, setBuyerCompanyOptions] = useState([]);
 
 
   const router = useRouter();
@@ -139,6 +146,11 @@ const UpdateVendor = () => {
       mobile: fullMobile,
        };
 
+    updatedValues.vendor_access_type = values.vendor_access_type;
+    updatedValues.buyer_company_ids = JSON.stringify(
+      values.buyer_company_ids || []
+    );
+
        console.log("checking update",updatedValues)
     handleUpdateVendor(updatedValues, id)
       .then((res) => {
@@ -205,6 +217,26 @@ useEffect(() => {
 useEffect(() => {
     getSubscriptionList();
   }, [])
+
+useEffect(() => {
+  handleGetBuyerCompanyDropdown("", 500)
+    .then((res) => {
+      const formatted = Array.isArray(res?.data)
+        ? res.data.map((item) => ({
+            value: Number(item.company_id),
+            label: item.company_name
+              ? item.buyer_name
+                ? `${item.company_name} (${item.buyer_name})`
+                : item.company_name
+              : item.buyer_email || `Company #${item.company_id}`,
+          }))
+        : [];
+      setBuyerCompanyOptions(formatted);
+    })
+    .catch(() => {
+      toast.error("Failed to load buyer companies");
+    });
+}, []);
 
  const fetchCountryCodes = () => {
     getCountryCodes()
@@ -294,6 +326,12 @@ useEffect(() => {
     total_employees: editDetails?.companyDetails?.no_of_employess || "",
     subscription: editDetails?.vendorDetails?.subscription_plan_id || "-1",
     subscription_plan: editDetails?.companyDetails?.subscription_plan || "",
+    vendor_access_type: editDetails?.vendorAccessType || "public",
+    buyer_company_ids: Array.isArray(editDetails?.mappedCompanies)
+      ? editDetails.mappedCompanies
+          .map((company) => parseInt(company.company_id, 10))
+          .filter((item) => !Number.isNaN(item))
+      : [],
   };
 
  
@@ -317,6 +355,18 @@ useEffect(() => {
       })
       .catch((err) => console.log("err", err));
   }
+
+  useEffect(() => {
+    if (!router?.query?.id) return;
+    // Load vendor products/variants list for display
+    getApprovedProductsByVendor(router.query.id, 1, 50)
+      .then((res) => {
+        const list = res?.data?.data || res?.data || [];
+        console.log('Vendor products data:', list);
+        setVendorProducts(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setVendorProducts([]));
+  }, [router?.query?.id, openVariantMap]);
 
 
 
@@ -396,7 +446,15 @@ useEffect(() => {
                       /^[\+]?[0-9]{6,15}$/,
                       "Please enter a valid mobile number (6-15 digits)"
                     )
-                    .required("mobile is required")
+                    .required("mobile is required"),
+                  vendor_access_type: yup
+                    .string()
+                    .oneOf(["public", "private"])
+                    .required("Vendor visibility is required"),
+                  buyer_company_ids: yup
+                    .array()
+                    .of(yup.number())
+                    .optional(),
                 })}
                 onSubmit={(values, { resetForm }) => {
                   values.country =
@@ -411,7 +469,7 @@ useEffect(() => {
                   submitHandler(values, resetForm);
                 }}
               >
-                {({ errors, touched, values, handleChange, setFieldValue }) => (
+                {({ errors, touched, values, handleChange, setFieldValue, setFieldTouched }) => (
                   <Form>
                     {editDetails && (
                       <div className="row form-common-row mb-4">
@@ -484,7 +542,58 @@ useEffect(() => {
                             className="text-danger"
                           />
                         </div>
+                        <div class="col-6">
+                          <label htmlFor="vendor_access_type">
+                            Vendor Visibility *
+                          </label>
+                          <Field
+                            as="select"
+                            name="vendor_access_type"
+                            class="form-control"
+                          >
+                            <option value="public">Public</option>
+                            <option value="private">Private</option>
+                          </Field>
+                          <ErrorMessage
+                            name="vendor_access_type"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
                         <div className="col-6">
+                          <label htmlFor="buyer_company_ids">
+                            Buyer Companies <small className="text-muted">(Select company admins)</small>
+                          </label>
+                          <Select
+                            isMulti
+                            name="buyer_company_ids"
+                            options={buyerCompanyOptions}
+                            value={buyerCompanyOptions.filter((option) =>
+                              values.buyer_company_ids?.includes(option.value)
+                            )}
+                            onChange={(selectedOptions) => {
+                              const ids = selectedOptions
+                                ? selectedOptions.map((opt) => opt.value)
+                                : [];
+                              setFieldValue("buyer_company_ids", ids);
+                            }}
+                            onBlur={() =>
+                              setFieldTouched("buyer_company_ids", true)
+                            }
+                            placeholder="Select Buyer Companies"
+                            isClearable
+                            isLoading={buyerCompanyOptions.length === 0}
+                            noOptionsMessage={() => "No buyer companies found"}
+                          />
+                          {errors.buyer_company_ids &&
+                            touched.buyer_company_ids && (
+                              <div className="form-error">
+                                {errors.buyer_company_ids}
+                              </div>
+                            )}
+                        </div>
+                        <div class="col-6">
                           <label htmlFor="organization-name">
                             Organization
                           </label>
@@ -1069,10 +1178,87 @@ useEffect(() => {
               </Formik>
             </div>
           </div>
+
+          {/* Products - Variants mapped section */}
+          <div class="card col-12 mt-3">
+            <div className="d-flex justify-content-between align-items-center px-3 pt-3">
+              <h6 className="mb-0">Products - Variants</h6>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setSelectedVendorOption({
+                    label: editDetails?.companyDetails?.company_name || editDetails?.vendorDetails?.name || 'Vendor',
+                    value: router.query.id,
+                    email: editDetails?.vendorDetails?.email,
+                    phone: editDetails?.vendorDetails?.mobile
+                  });
+                  setOpenVariantMap(true);
+                }}
+              >
+                Map Variants
+              </button>
+            </div>
+            <div class="card-body">
+              {vendorProducts && vendorProducts.length > 0 ? (
+                <div className="table-responsive">
+                  <table className="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>Variant</th>
+                        <th>Product</th>
+                        <th>Approved By</th>
+                        <th>Make</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vendorProducts.map((mapping) => {
+                        console.log('Individual mapping:', mapping);
+                        return (
+                          <tr key={mapping.mapping_id || mapping.id}>
+                            <td>{mapping.variant_name || '-'}</td>
+                            <td>{mapping.product_name || '-'}</td>
+                            <td>{mapping.approved_by || '-'}</td>
+                            <td>{Array.isArray(mapping.make_list) ? mapping.make_list.join(', ') : (mapping.make_list || '-')}</td>
+                            <td>{mapping.is_approve === true || mapping.is_approve === 1 ? 'Approved' : 'Pending'}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => {
+                                  if (mapping.mapping_id) {
+                                    window.location.href = `/product-management/mapping/${mapping.mapping_id}`;
+                                  }
+                                }}
+                              >
+                                Edit
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-muted">No Specs Found</div>
+              )}
+            </div>
+          </div>
         </div>
 
         <ToastContainer />
       </section>
+      {openVariantMap && (
+        <VendorVariantMappingModal
+          isVisible={openVariantMap}
+          onCancel={() => setOpenVariantMap(false)}
+          onSuccess={() => getVendorDetails(id)}
+          vendor={selectedVendorOption}
+        />
+      )}
       {openAddSpoc && (
         <SpocAddModal
           openModal={openAddSpoc}
