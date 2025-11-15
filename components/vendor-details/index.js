@@ -160,25 +160,47 @@ const VendorDetails = () => {
               <div className="card-header">Company Information</div>
               <ul className="list-group list-group-flush">
                 <li className="list-group-item">
-                  Company Name- {vendorDeails?.organization_name}
+                  Company Name- {vendorDeails?.company_name || vendorDeails?.organization_name || "N/A"}
                 </li>
                 <li className="list-group-item">
-                  Nature of business- {vendorDeails?.nature_of_business}
+                  Nature of business- {vendorDeails?.nature_of_business || "N/A"}
                 </li>
                 <li className="list-group-item">
-                  Number of employee- {vendorDeails?.no_of_employess}
+                  Type of business- {vendorDeails?.type_of_business || "N/A"}
+                </li>
+                <li className="list-group-item">
+                  Number of employee- {vendorDeails?.no_of_employess || "N/A"}
                 </li>
                 {vendorDeails?.gstin != null && (
                   <li className="list-group-item">
                     GSTIN- {vendorDeails?.gstin}
                   </li>
                 )}
-
+                {vendorDeails?.cin != null && (
+                  <li className="list-group-item">
+                    CIN- {vendorDeails?.cin}
+                  </li>
+                )}
+                {vendorDeails?.website != null && (
+                  <li className="list-group-item">
+                    Website- {vendorDeails?.website}
+                  </li>
+                )}
+                {vendorDeails?.turnover != null && (
+                  <li className="list-group-item">
+                    Turnover- {vendorDeails?.turnover}
+                  </li>
+                )}
+                {vendorDeails?.established_year != null && (
+                  <li className="list-group-item">
+                    Established Year- {vendorDeails?.established_year}
+                  </li>
+                )}
                 <li className="list-group-item">
-                  Import Export Code- {vendorDeails?.import_export_code}
+                  Import Export Code- {vendorDeails?.import_export_code || "N/A"}
                 </li>
                 <li className="list-group-item">
-                  Certification- {vendorDeails?.certifications}
+                  Certification- {vendorDeails?.certifications || "N/A"}
                 </li>
               </ul>
             </div>

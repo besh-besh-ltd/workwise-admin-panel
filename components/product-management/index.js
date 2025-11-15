@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants, getVariantMappings, acceptVariant, getParentCategories } from "@/utils/services/product-management";
+import { getAllProducts, deleteProduct, rejectListProduct, acceptProduct, mapVendorWithProduct, mapVariantWithVendor, getCategories, getAdminUsersList, searchProductsV2, searchAllVariants, getVariantMappings, acceptVariant, getParentCategories, deleteVariantVendorMapping } from "@/utils/services/product-management";
 import axiosFormData from "@/utils/axios/form-data";
 import FullLoading from "../loading/FullLoading";
 import { ToastContainer, toast } from "react-toastify";
@@ -238,6 +238,33 @@ const ProductManagement = () => {
     
     setShowRejectModal(true);
     setselectedProductsId(processedId);
+  }
+
+  const handleUnmapMapping = (mappingId) => {
+    if (!mappingId) {
+      toast.error("Mapping ID is required");
+      return;
+    }
+    
+    if (!window.confirm("Are you sure you want to unmap this variant from the vendor? This action cannot be undone.")) {
+      return;
+    }
+
+    deleteVariantVendorMapping(mappingId)
+      .then((res) => {
+        toast.success(res.message || "Mapping deleted successfully");
+        getAllMappings();
+      })
+      .catch((error) => {
+        console.error("Error unmapping:", error);
+        let txt = "Failed to unmap variant from vendor";
+        if (error.error?.response?.data?.message) {
+          txt = error.error.response.data.message;
+        } else if (error.message) {
+          txt = error.message;
+        }
+        toast.error(txt);
+      });
   }
 
   const handlePageClick = (e) => {
@@ -2709,12 +2736,19 @@ const ProductManagement = () => {
                                   {/* Removed Mapped On, Updated At, Approved At TDs */}
                                   <td>
                                     <button
-                                      className="btn btn-sm btn-info"
+                                      className="btn btn-sm btn-info mr-2"
                                       onClick={() => {
                                         router.push(`/product-management/mapping/${mapping.mapping_id}`);
                                       }}
                                     >
                                       <i className="fas fa-edit"></i> View
+                                    </button>
+                                    <button
+                                      className="btn btn-sm btn-danger"
+                                      onClick={() => handleUnmapMapping(mapping.mapping_id)}
+                                      title="Unmap variant from vendor"
+                                    >
+                                      <i className="fas fa-unlink"></i> Unmap
                                     </button>
                                   </td>
                                 </tr>

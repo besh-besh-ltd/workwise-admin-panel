@@ -19,7 +19,7 @@ import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
 import SpocAddModal from "../modal/spoc-add-modal";
 import VendorVariantMappingModal from "../modal/VendorVariantMappingModal";
-import { getApprovedProductsByVendor } from "@/utils/services/product-management";
+import { getApprovedProductsByVendor, deleteVariantVendorMapping } from "@/utils/services/product-management";
 import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
 import Select from "react-select";
 import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
@@ -1211,7 +1211,7 @@ useEffect(() => {
                             <td>
                               <button
                                 type="button"
-                                className="btn btn-sm btn-outline-primary"
+                                className="btn btn-sm btn-outline-primary mr-2"
                                 onClick={() => {
                                   if (mapping.mapping_id) {
                                     window.location.href = `/product-management/mapping/${mapping.mapping_id}`;
@@ -1219,6 +1219,43 @@ useEffect(() => {
                                 }}
                               >
                                 Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger"
+                                onClick={() => {
+                                  if (!mapping.mapping_id) {
+                                    toast.error("Mapping ID is required");
+                                    return;
+                                  }
+                                  if (window.confirm("Are you sure you want to unmap this variant from the vendor? This action cannot be undone.")) {
+                                    deleteVariantVendorMapping(mapping.mapping_id)
+                                      .then((res) => {
+                                        toast.success(res.message || "Mapping deleted successfully");
+                                        getVendorDetails(id);
+                                        // Refresh vendor products list
+                                        getApprovedProductsByVendor(router.query.id, 1, 50)
+                                          .then((res) => {
+                                            const list = res?.data?.data || res?.data || [];
+                                            setVendorProducts(Array.isArray(list) ? list : []);
+                                          })
+                                          .catch(() => setVendorProducts([]));
+                                      })
+                                      .catch((error) => {
+                                        console.error("Error unmapping:", error);
+                                        let txt = "Failed to unmap variant from vendor";
+                                        if (error.error?.response?.data?.message) {
+                                          txt = error.error.response.data.message;
+                                        } else if (error.message) {
+                                          txt = error.message;
+                                        }
+                                        toast.error(txt);
+                                      });
+                                  }
+                                }}
+                                title="Unmap variant from vendor"
+                              >
+                                <i className="fas fa-unlink"></i> Unmap
                               </button>
                             </td>
                           </tr>
