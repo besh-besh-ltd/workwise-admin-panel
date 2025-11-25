@@ -11,14 +11,15 @@ import {
   handleGetVendorEditDetails,
   handleUpdateVendorSpoc,
   addNewSpoc,
-  handleDeleteSpoc
+  handleDeleteSpoc,
+  handleGetBuyerCompanyDropdown
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
 import img1 from "../../public/assets/images/products.png";
 import SpocAddModal from "../modal/spoc-add-modal";
 import VendorVariantMappingModal from "../modal/VendorVariantMappingModal";
-import { getApprovedProductsByVendor } from "@/utils/services/product-management";
+import { getApprovedProductsByVendor, deleteVariantVendorMapping } from "@/utils/services/product-management";
 import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
 import Select from "react-select";
 import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
@@ -50,6 +51,7 @@ const UpdateVendor = () => {
   const [vendorProducts, setVendorProducts] = useState([]);
  
   const [spocCountryCode, setSpocCountryCode] = useState("+91");
+  const [buyerCompanyOptions, setBuyerCompanyOptions] = useState([]);
 
 
   const router = useRouter();
@@ -143,6 +145,11 @@ const UpdateVendor = () => {
       mobile: fullMobile,
        };
 
+    updatedValues.vendor_access_type = values.vendor_access_type;
+    updatedValues.buyer_company_ids = JSON.stringify(
+      values.buyer_company_ids || []
+    );
+
        console.log("checking update",updatedValues)
     handleUpdateVendor(updatedValues, id)
       .then((res) => {
@@ -209,6 +216,26 @@ useEffect(() => {
 useEffect(() => {
     getSubscriptionList();
   }, [])
+
+useEffect(() => {
+  handleGetBuyerCompanyDropdown("", 500)
+    .then((res) => {
+      const formatted = Array.isArray(res?.data)
+        ? res.data.map((item) => ({
+            value: Number(item.company_id),
+            label: item.company_name
+              ? item.buyer_name
+                ? `${item.company_name} (${item.buyer_name})`
+                : item.company_name
+              : item.buyer_email || `Company #${item.company_id}`,
+          }))
+        : [];
+      setBuyerCompanyOptions(formatted);
+    })
+    .catch(() => {
+      toast.error("Failed to load buyer companies");
+    });
+}, []);
 
  const fetchCountryCodes = () => {
     getCountryCodes()
@@ -291,6 +318,12 @@ useEffect(() => {
     turn_over: editDetails?.companyDetails?.turnover || "",
     total_employees: editDetails?.companyDetails?.no_of_employess || "",
     subscription: editDetails?.vendorDetails?.subscription_plan_id || "-1",
+    vendor_access_type: editDetails?.vendorAccessType || "public",
+    buyer_company_ids: Array.isArray(editDetails?.mappedCompanies)
+      ? editDetails.mappedCompanies
+          .map((company) => parseInt(company.company_id, 10))
+          .filter((item) => !Number.isNaN(item))
+      : [],
   };
 
  
@@ -402,7 +435,15 @@ useEffect(() => {
                       /^[\+]?[0-9]{6,15}$/,
                       "Please enter a valid mobile number (6-15 digits)"
                     )
-                    .required("mobile is required")
+                    .required("mobile is required"),
+                  vendor_access_type: yup
+                    .string()
+                    .oneOf(["public", "private"])
+                    .required("Vendor visibility is required"),
+                  buyer_company_ids: yup
+                    .array()
+                    .of(yup.number())
+                    .optional(),
                 })}
                 onSubmit={(values, { resetForm }) => {
                   values.country =
@@ -415,7 +456,7 @@ useEffect(() => {
                   submitHandler(values, resetForm);
                 }}
               >
-                {({ errors, touched, values, handleChange, setFieldValue }) => (
+                {({ errors, touched, values, handleChange, setFieldValue, setFieldTouched }) => (
                   <Form>
                     {editDetails && (
                       <div className="row form-common-row mb-4">
@@ -487,6 +528,57 @@ useEffect(() => {
                             component="div"
                             className="text-danger"
                           />
+                        </div>
+                        <div class="col-6">
+                          <label htmlFor="vendor_access_type">
+                            Vendor Visibility *
+                          </label>
+                          <Field
+                            as="select"
+                            name="vendor_access_type"
+                            class="form-control"
+                          >
+                            <option value="public">Public</option>
+                            <option value="private">Private</option>
+                          </Field>
+                          <ErrorMessage
+                            name="vendor_access_type"
+                            render={(msg) => (
+                              <div className="form-error">{msg}</div>
+                            )}
+                          />
+                        </div>
+                        <div className="col-6">
+                          <label htmlFor="buyer_company_ids">
+                            Buyer Companies <small className="text-muted">(Select company admins)</small>
+                          </label>
+                          <Select
+                            isMulti
+                            name="buyer_company_ids"
+                            options={buyerCompanyOptions}
+                            value={buyerCompanyOptions.filter((option) =>
+                              values.buyer_company_ids?.includes(option.value)
+                            )}
+                            onChange={(selectedOptions) => {
+                              const ids = selectedOptions
+                                ? selectedOptions.map((opt) => opt.value)
+                                : [];
+                              setFieldValue("buyer_company_ids", ids);
+                            }}
+                            onBlur={() =>
+                              setFieldTouched("buyer_company_ids", true)
+                            }
+                            placeholder="Select Buyer Companies"
+                            isClearable
+                            isLoading={buyerCompanyOptions.length === 0}
+                            noOptionsMessage={() => "No buyer companies found"}
+                          />
+                          {errors.buyer_company_ids &&
+                            touched.buyer_company_ids && (
+                              <div className="form-error">
+                                {errors.buyer_company_ids}
+                              </div>
+                            )}
                         </div>
                         <div class="col-6">
                           <label htmlFor="organization-name">
@@ -1119,7 +1211,7 @@ useEffect(() => {
                             <td>
                               <button
                                 type="button"
-                                className="btn btn-sm btn-outline-primary"
+                                className="btn btn-sm btn-outline-primary mr-2"
                                 onClick={() => {
                                   if (mapping.mapping_id) {
                                     window.location.href = `/product-management/mapping/${mapping.mapping_id}`;
@@ -1127,6 +1219,43 @@ useEffect(() => {
                                 }}
                               >
                                 Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger"
+                                onClick={() => {
+                                  if (!mapping.mapping_id) {
+                                    toast.error("Mapping ID is required");
+                                    return;
+                                  }
+                                  if (window.confirm("Are you sure you want to unmap this variant from the vendor? This action cannot be undone.")) {
+                                    deleteVariantVendorMapping(mapping.mapping_id)
+                                      .then((res) => {
+                                        toast.success(res.message || "Mapping deleted successfully");
+                                        getVendorDetails(id);
+                                        // Refresh vendor products list
+                                        getApprovedProductsByVendor(router.query.id, 1, 50)
+                                          .then((res) => {
+                                            const list = res?.data?.data || res?.data || [];
+                                            setVendorProducts(Array.isArray(list) ? list : []);
+                                          })
+                                          .catch(() => setVendorProducts([]));
+                                      })
+                                      .catch((error) => {
+                                        console.error("Error unmapping:", error);
+                                        let txt = "Failed to unmap variant from vendor";
+                                        if (error.error?.response?.data?.message) {
+                                          txt = error.error.response.data.message;
+                                        } else if (error.message) {
+                                          txt = error.message;
+                                        }
+                                        toast.error(txt);
+                                      });
+                                  }
+                                }}
+                                title="Unmap variant from vendor"
+                              >
+                                <i className="fas fa-unlink"></i> Unmap
                               </button>
                             </td>
                           </tr>
