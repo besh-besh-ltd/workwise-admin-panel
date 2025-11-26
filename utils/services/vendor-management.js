@@ -3,7 +3,7 @@ import axiosFormData from "../axios/form-data";
 import axiosxdata from "../axios/xxx-form-data";
 import axios from "axios";
 
-function handleGetVendorList(limit = 10, page = 1, verified, organization, name, email, dateFrom, dateTo, status, created_by) {
+function handleGetVendorList(limit = 10, page = 1, verified, organization, name, email, dateFrom, dateTo, status, created_by, source, subscription_plan, is_private) {
   return new Promise(async (resolve, reject) => {
     try {
       let url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/vendor-list?limit=${limit}&page=${page}`;
@@ -16,6 +16,9 @@ function handleGetVendorList(limit = 10, page = 1, verified, organization, name,
       if (dateTo) url += `&date_to=${dateTo}`;
       if (status) url += `&status=${status}`;
       if (created_by) url += `&created_by=${created_by}`;
+      if (source) url += `&source=${source}`;
+      if (subscription_plan) url += `&subscription_plan=${subscription_plan}`;
+      if (is_private) url += `&is_private=${is_private}`;
 
       let response = await axiosInstance.get(url);
       resolve(response);
@@ -153,6 +156,21 @@ function handleUpdateVendor(values, editDataId) {
   });
 }
 
+// Fetch subscription plans for vendors
+function getSubscriptionList(values) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosxdata.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/subscription/subscription-list?user_type=3`,
+        values
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  })
+}
+
 function handleUpdateVendorSpoc(values, vendorId,spocId) {
 
   return new Promise(async (resolve, reject) => {
@@ -167,6 +185,7 @@ function handleUpdateVendorSpoc(values, vendorId,spocId) {
     }
   })
 }
+
 function handleDeleteSpoc (vendorId,spocId) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -292,6 +311,7 @@ export {
   rejectList,
   handleUpdateVendorSpoc,
   addNewSpoc,
+  getSubscriptionList,
   handleDeleteSpoc,
   getAdminsList,
   handleGetSpocList,

@@ -106,7 +106,8 @@ const Sidebar = () => {
     <>
       <div className={"main-sidebar sidebar-dark-primary elevation-4 show"}>
         <Link href="#" className="brand-link d-flex justify-content-center">
-          <Image src={logo} alt="Logo-1" />
+        {/* Fixing the LCP */}
+          <Image src={logo} alt="Logo-1" priority/>
         </Link>
         <div className="sidebar">
           <nav className="mt-2">

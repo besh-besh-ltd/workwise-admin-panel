@@ -4,7 +4,8 @@ import {
   handleDeleteVendorProfile,
   handleApproveVendor,
   rejectList,
-  getAdminsList
+  getAdminsList,
+  getSubscriptionList
 } from "@/utils/services/vendor-management";
 import ReactPaginate from "react-paginate";
 import { useRouter } from "next/router";
@@ -39,6 +40,7 @@ const VendorManagement = () => {
   const [selectVal, setSelectValue] = useState("");
   const [userType, setUserType] = useState(null);
   const [adminUsers, setAdminUsers] = useState([]);
+  const [subscriptionList, setSubscriptionList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [vendorData, setVendorData] = useState([]);
   const [filter, setFilter] = useState({
@@ -49,7 +51,10 @@ const VendorManagement = () => {
     dateFrom: router.query.dateFrom || "",
     dateTo: router.query.dateTo || "",
     status: router.query.status || "",
-    created_by: router.query.created_by || ""
+    created_by: router.query.created_by || "",
+    source : router.query.source || "",
+    subscription_plan : router.query.subscription_plan || "",
+    is_private : router.query.is_private || ""
   });
 
   const getBuyerList = () => {
@@ -64,7 +69,10 @@ const VendorManagement = () => {
       filter.dateFrom,
       filter.dateTo,
       filter.status,
-      filter.created_by
+      filter.created_by,
+      filter.source,
+      filter.subscription_plan,
+      filter.is_private
     )
       .then((res) => {
         settotalPages(res.total_count);
@@ -154,8 +162,12 @@ const VendorManagement = () => {
 
   const updateUrlParams = (newParams) => {
     const query = { ...router.query, ...newParams };
-    // Remove empty params
-    Object.keys(query).forEach(key => !query[key] && delete query[key]);
+    // Remove empty params with proper check
+    Object.keys(query).forEach(key => {
+      if (query[key] === undefined || query[key] === null || query[key] === "") {
+        delete query[key];
+      }
+    });
     router.push({
       pathname: router.pathname,
       query
@@ -196,7 +208,10 @@ const VendorManagement = () => {
       values.dateFrom,
       values.dateTo,
       values.status,
-      values.created_by
+      values.created_by,
+      values.source,
+      values.subscription_plan,
+      values.is_private
     )
       .then((res) => {
         setVendorData(res.data);
@@ -217,13 +232,35 @@ const VendorManagement = () => {
   useEffect(() => {
     if (!router.isReady) return;
 
-    const { page: urlPage, organization, name, verified } = router.query;
-    const newPage = urlPage ? parseInt(urlPage) : 1;
-    const newFilter = {
-      verified: verified || "",
-      organization: organization || "",
-      name: name || ""
-    };
+// Extract all possible filter query params and default to empty string
+    const {
+     page: urlPage,
+     organization,
+     name,
+     verified,
+     email,
+     dateFrom,
+     dateTo,
+     status,
+     created_by,
+     source,
+     subscription_plan,
+     is_private
+   } = router.query;
+   const newPage = urlPage ? parseInt(urlPage) : 1;
+   const newFilter = {
+     verified: verified ?? "",
+     organization: organization ?? "",
+     name: name ?? "",
+     email: email ?? "",
+     dateFrom: dateFrom ?? "",
+     dateTo: dateTo ?? "",
+     status: status ?? "",
+     created_by: created_by ?? "",
+     source: source ?? "",
+     subscription_plan: subscription_plan ?? "",
+     is_private: is_private ?? ""
+   };
 
     setPage(newPage);
     setFilter(newFilter);
@@ -262,6 +299,15 @@ const VendorManagement = () => {
       .catch((err) => {
         console.log("Error loading admin users:", err);
       });
+
+      // Getting and setting the subscription list for filtering.
+      getSubscriptionList()
+      .then((res) => {
+        setSubscriptionList(res.data);
+      })
+      .catch((err) => {
+        console.log("Error loading subscription List:", err);
+      });
   }, []);
 
   const resetFilters = () => {
@@ -273,7 +319,10 @@ const VendorManagement = () => {
       dateFrom: "",
       dateTo: "",
       status: "",
-      created_by: ""
+      created_by: "",
+      source : "",
+      subscription_plan : "",
+      is_private : ""
     };
     setFilter(emptyFilter);
     setPage(1);
@@ -355,7 +404,10 @@ const VendorManagement = () => {
                 dateFrom: filter.dateFrom,
                 dateTo: filter.dateTo,
                 status: filter.status,
-                created_by: filter.created_by
+                created_by: filter.created_by,
+                source : filter.source,
+                subscription_plan : filter.subscription_plan,
+                is_private : filter.is_private
               }}
               validationSchema={yup.object().shape({
                 verified: yup.string(),
@@ -364,7 +416,10 @@ const VendorManagement = () => {
                 dateFrom: yup.string(),
                 dateTo: yup.string(),
                 status: yup.string(),
-                created_by: yup.string()
+                created_by: yup.string(),
+                source: yup.string(),
+                subscription_plan: yup.string(),
+                is_private: yup.string()
               })}
               onSubmit={(values, { resetForm }) => {
                 submitHandler(values);
@@ -397,6 +452,53 @@ const VendorManagement = () => {
                         placeholder="Search by email"
                         value={values.email}
                       />
+                    </div>
+                    {/* Dropdown filter for Source */}
+                    <div className="col-md-3 mb-2">
+                      <Field
+                        as="select"
+                        name="source"
+                        className="form-control"
+                        value={values.source}
+                      >
+                        <option value="">Filter by Source</option>
+                        <option value="self">Self</option>
+                        <option value="admin">Admin</option>
+                        <option value="whatsapp">Whatsapp</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="google">Google</option>
+                        <option value="null">Unknown</option>
+                      </Field>
+                    </div>
+                    {/* Dropdown filter for Subscription Plan */}
+                    <div className="col-md-3 mb-2">
+                      <Field
+                        as="select"
+                        name="subscription_plan"
+                        className="form-control"
+                        value={values.subscription_plan}
+                      >
+                        <option value="">Filter by Subscription</option>
+                        <option value='0'>Free</option>
+                        {subscriptionList.map(sub => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.plan_name}
+                          </option>
+                        ))}
+                      </Field>
+                    </div>
+                    <div className="col-md-3 mb-2">
+                      <Field
+                        as="select"
+                        name="is_private"
+                        className="form-control"
+                        value={values.is_private}
+                      >
+                        <option value="-1">Filter by Type</option>
+                        <option value="1">Private</option>
+                        <option value="0">Public</option>
+                      </Field>
                     </div>
                     <div className="col-md-3 mb-2">
                       <Field
@@ -489,10 +591,11 @@ const VendorManagement = () => {
                   <th scope="col">Mobile</th>
                   <th scope="col">Organization</th>
                   <th scope="col">Approval Status</th>
-                  <th scope="col">Created By</th>
-                  <th scope="col">Created At</th>
-                  <th scope="col">Updated By</th>
-                  <th scope="col">Updated At</th>
+                  <th scope="col">Created</th>
+                  <th scope="col">Updated</th>
+                  <th scope="col">Source</th>
+                  <th scope="col">Subscription</th>
+                  <th scope="col">is_private</th>
                   <th scope="col">Action</th>
                 </tr>
               </thead>
@@ -537,22 +640,28 @@ const VendorManagement = () => {
                           </div>
                         )}
                       </td>
-                      <td>{item.created_by_name || 'N/A'}</td>
-                      <td>
+                      <td style={{textAlign:'center'}}>
+                        {item.created_by_name || 'N/A'} 
+                        <br />
                        {new Date(item.created_at).toLocaleDateString("en-GB", {
                          day: "numeric",
                          month: "short",
                          year: "numeric",
                        })}
                       </td>
-                      <td>{item.updated_by_name || 'N/A'}</td>
-                      <td>
+                      <td style={{textAlign:'center'}}>
+                        {item.updated_by_name || 'N/A'}
+                        <br/>
                         {item.updated_at ? new Date(item.updated_at).toLocaleDateString("en-GB", {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
                         }) : 'N/A'}
-                      </td>
+                        </td>
+                      <td>{item.source || 'N/A'}</td>
+                      {/* If subscription id is 20 then show premium, if 21 show Enterprise, else Free*/}
+                      <td>{item.subscription_plan_id === 20 ? "Premium" : item.subscription_plan_id === 21 ? "Enterprise" : "Free"}</td>
+                      <td>{item.is_private === 1 ? "Yes" : "No"}</td>
                       <td>
                         <div className="d-flex">
                           <span
