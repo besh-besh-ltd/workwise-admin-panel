@@ -519,7 +519,7 @@ const VendorManagement = () => {
                         className="form-control"
                         value={values.created_by}
                       >
-                        <option value="">Filter by Created By</option>
+                        <option value="">Filter by Created</option>
                         {adminUsers.map(user => (
                           <option key={user.id} value={user.id}>
                             {user.name}
@@ -595,7 +595,7 @@ const VendorManagement = () => {
                   <th scope="col">Updated</th>
                   <th scope="col">Source</th>
                   <th scope="col">Subscription</th>
-                  <th scope="col">is_private</th>
+                  <th scope="col">Private</th>
                   <th scope="col">Action</th>
                 </tr>
               </thead>
