@@ -176,6 +176,12 @@ const RFQDetails = () => {
                                             <strong>Contact No : </strong>
                                             <span className="fw-medium text-muted px-2">{rfqDetails?.contact_number || "---"}</span>
                                         </div>
+
+                                        
+                                        <div className="mb-2">
+                                            <strong>Bid End Date : </strong>
+                                            <span className="fw-medium text-muted px-2">{rfqDetails?.bid_end_date || "---"}</span>
+                                        </div>
                                     </div>
 
                                     <div className="col-md-3">
@@ -198,6 +204,12 @@ const RFQDetails = () => {
                                             <strong>RFQ Type : </strong>
                                             <span className="fw-medium text-muted px-2">{textCapitalize(rfqDetails?.rfq_type || "---")}</span>
                                         </div>
+
+                                        
+                                        <div className="mb-2">
+                                            <strong>location: </strong>
+                                            <span className="fw-medium text-muted px-2">{rfqDetails?.location || "---"}</span>
+                                        </div>
                                     </div>
 
                                     <div className="col-md-4">
@@ -208,10 +220,17 @@ const RFQDetails = () => {
                                                 : <span className="fw-medium text-muted px-2">Disabled</span>
                                             }
                                         </div>
+
                                         <div className="mb-2">
-                                            <strong>Bid End Date : </strong>
-                                            <span className="fw-medium text-muted px-2">{rfqDetails?.bid_end_date || "---"}</span>
+                                            <strong>Reverse Auction End Date : </strong>
+                                            <span className="fw-medium text-muted px-2">{rfqDetails?.ra_start_date || "---"}</span>
                                         </div>
+
+                                       <div className="mb-2">
+                                            <strong>Reverse Auction End Date : </strong>
+                                            <span className="fw-medium text-muted px-2">{rfqDetails?.ra_end_date || "---"}</span>
+                                        </div>
+
                                         <div className="mb-2">
                                             <strong>Admin Status : </strong>
                                             {rfqDetails.admin_service_details ?

@@ -102,11 +102,19 @@ const Sidebar = () => {
     );
   };
 
+  function truncate(str, maxLength) {
+  if (!str) return "";
+  if (str.length <= maxLength) return str;
+  return str.slice(0, maxLength) + "...";
+}
+
+
   return (
     <>
       <div className={"main-sidebar sidebar-dark-primary elevation-4 show"}>
         <Link href="#" className="brand-link d-flex justify-content-center">
-          <Image src={logo} alt="Logo-1" />
+        {/* Fixing the LCP */}
+          <Image src={logo} alt="Logo-1" priority/>
         </Link>
         <div className="sidebar">
           <nav className="mt-2">
@@ -136,7 +144,7 @@ const Sidebar = () => {
                     >
                       <i className="nav-icon"></i>
                       <p>
-                        <i className="nav-icon"></i> {item.title}
+                        <i className="nav-icon"></i> {truncate(item.title, 20)}
                       </p>
                     </Link>
                   </li>
@@ -157,7 +165,7 @@ const Sidebar = () => {
                           }}
                         >
                           <i className="fa fa-check nav-icon"></i>
-                          <p>{childrenItem.title}</p>
+                          <p>{truncate(childrenItem.title, 20)}</p>
                         </Link>
                       </li>
                     ))}
