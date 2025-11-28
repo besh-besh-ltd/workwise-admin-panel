@@ -102,6 +102,13 @@ const Sidebar = () => {
     );
   };
 
+  function truncate(str, maxLength) {
+  if (!str) return "";
+  if (str.length <= maxLength) return str;
+  return str.slice(0, maxLength) + "...";
+}
+
+
   return (
     <>
       <div className={"main-sidebar sidebar-dark-primary elevation-4 show"}>
@@ -137,7 +144,7 @@ const Sidebar = () => {
                     >
                       <i className="nav-icon"></i>
                       <p>
-                        <i className="nav-icon"></i> {item.title}
+                        <i className="nav-icon"></i> {truncate(item.title, 20)}
                       </p>
                     </Link>
                   </li>
@@ -158,7 +165,7 @@ const Sidebar = () => {
                           }}
                         >
                           <i className="fa fa-check nav-icon"></i>
-                          <p>{childrenItem.title}</p>
+                          <p>{truncate(childrenItem.title, 20)}</p>
                         </Link>
                       </li>
                     ))}
