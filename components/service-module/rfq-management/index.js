@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react'
 import ReactPaginate from 'react-paginate';
-import Select from 'react-select'
+import { Field, Form, Formik  } from 'formik';
+import Select from 'react-select';
+import { getClientCompanylist } from '@/utils/services/rfq-management'
 
 const initialFilterData = {
     rfq_status: null,
@@ -17,11 +19,14 @@ const RFQManagement = () => {
     const [loading, setLoading] = useState(false);
     const [rfqList, setRfqList] = useState(null);
     const [filterData, setFilterData] = useState({
-        rfq_status: router.query.rfq_status || null,
-        admin_service_status: router.query.admin_service_status || null,
-        sort: router.query.sort || "DESC"
+        rfq_status: router.query.rfq_status || '',
+        admin_service_status: router.query.admin_service_status || '',
+        rfq_no: router.query.rfq_no || '',
+        sort: router.query.sort || "DESC",
+        company : router.query.company || []
     });
-
+    const [companyList, setCompanyList] = useState([]);
+    const [selectedCompanies, setSelectedCompanies] = useState([]);
     const [page, setPage] = useState(parseInt(router.query.page) || 1);
     const [limit, setLimit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
@@ -36,6 +41,46 @@ const RFQManagement = () => {
             marginRight: "15px",
         }),
     };
+
+    const rfqStatusOptions = [
+        { label: "Open", value: '1' },
+        { label: "Closed", value: '2' }
+    ];
+
+    const adminServiceOptions = [
+        { label: "Pending", value: 'Pending' },
+        { label: "Working", value: 'Working' },
+        { label: "Complete", value: 'Complete' }
+    ];
+
+    const sortOptions = [
+        { label: "Latest to Oldest", value: "DESC" },
+        { label: "Oldest to Latest", value: "ASC" }
+    ];
+
+    // Fetch company list for the dropdown
+      const fetchCompanyList = async () => {
+        try {
+          const response = await getClientCompanylist();
+          if (response.status === 1) {
+            setCompanyList(response.data);
+          }
+        } catch (error) {
+          console.error('Error fetching company list:', error);
+          setCompanyList([]);
+        }
+      };
+
+      useEffect(() => {
+          fetchCompanyList();
+        }, []);
+
+        // Prepare react-select options format
+  const companyOptions = companyList.map(c => ({
+    value: c.company_name,
+    label: c.company_name,
+    id: c.id
+  }));
 
     const textCapitalize = (str) => {
         if (!str) return str;
@@ -55,21 +100,42 @@ const RFQManagement = () => {
         }, undefined, { shallow: true });
     };
 
-    const handleFilterChange = (selectedOption, actionMeta) => {
-        const name = actionMeta.name;
-        const value = selectedOption ? selectedOption.value : null;
-
-        const newFilterData = {
-            ...filterData,
-            [name]: value
+      const resetFilters = () => {
+        const emptyFilter = {
+        rfq_status: '',
+        admin_service_status: '',
+        rfq_no: '',
+        sort: "DESC",
+        company : []
         };
 
-        setFilterData(newFilterData);
+        setFilterData(emptyFilter);
+        setSelectedCompanies([]);
         setPage(1);
-        updateUrlParams({ 
-            ...newFilterData, 
-            page: 1 
-        });
+        updateUrlParams({ page: 1 });
+
+        // Clear URL parameters by pushing empty query
+    router.push({
+      pathname: router.pathname
+    }, undefined, { shallow: true });
+      }
+
+    const submitHandler = (values) =>{
+        console.log("Filter Values:", values);
+
+        if(values.rfq_no === '' || values.rfq_no === 0) {
+            values.rfq_no = '';
+        }
+
+        
+        if(selectedCompanies.length > 0) {
+            const companyIds = selectedCompanies.map((c) => c.id || c.value).filter(Boolean);
+            values.company = companyIds;
+        }
+
+        setFilterData(values);
+        setPage(1);
+        updateUrlParams({ ...values, page: 1 });
     }
 
     const getAllRFQs = () => {
@@ -91,12 +157,13 @@ const RFQManagement = () => {
     useEffect(() => {
         if (!router.isReady) return;
 
-        const { page: urlPage, rfq_status, admin_service_status, sort } = router.query;
+        const { page: urlPage, rfq_status, admin_service_status, sort, rfq_no } = router.query;
         
         const newFilterData = {
-            rfq_status: rfq_status || null,
-            admin_service_status: admin_service_status || null,
-            sort: sort || "DESC"
+            rfq_status: rfq_status || '',
+            admin_service_status: admin_service_status || '',
+            sort: sort || "DESC",
+            rfq_no: rfq_no || ''
         };
 
         if (urlPage) setPage(parseInt(urlPage));
@@ -134,68 +201,115 @@ const RFQManagement = () => {
 
                     {/* Table Header Section */}
                     <div className="card card-body">
-                        <div className="row">
-                            <div className="col-sm-3">
-                                <label htmlFor="rfq_status">RFQ Status</label>
-                                <Select
-                                    id="rfq_status"
-                                    name="rfq_status"
-                                    options={[
-                                        {label: "Open", value: '1'},
-                                        {label: "Closed", value: '2'}
-                                    ]}
-                                    placeholder="Select"
-                                    styles={customSelectStyles}
-                                    isClearable={true}
-                                    onChange={handleFilterChange}
-                                    value={filterData.rfq_status ? {
-                                        label: filterData.rfq_status === '1' ? "Open" : "Closed",
-                                        value: filterData.rfq_status
-                                    } : null}
-                                />
-                            </div>
-                            <div className="col-sm-3">
-                                <label htmlFor="admin_service_status">Admin Service Status</label>
-                                <Select
-                                    id="admin_service_status"
-                                    name="admin_service_status"
-                                    options={[
-                                        {label: "Pending", value: 'Pending'},
-                                        {label: "Working", value: 'Working'},
-                                        {label: "Complete", value: 'Complete'}
-                                    ]}
-                                    placeholder="Select"
-                                    styles={customSelectStyles}
-                                    isClearable={true}
-                                    onChange={handleFilterChange}
-                                    value={filterData.admin_service_status ? {
-                                        label: filterData.admin_service_status,
-                                        value: filterData.admin_service_status
-                                    } : null}
-                                />
-                            </div>
-                            <div className="col-sm-3"></div>
-                            <div className="col-sm-3">
-                                <label htmlFor="sort">Sort Order</label>
-                                <Select
-                                    id="sort"
-                                    name="sort"
-                                    options={[
-                                        {label: "Latest to Oldest", value: "DESC"},
-                                        {label: "Oldest to Latest", value: "ASC"}
-                                    ]}
-                                    placeholder="Latest to Oldest"
-                                    styles={customSelectStyles}
-                                    isClearable={false}                                    
-                                    onChange={handleFilterChange}
-                                    value={{
-                                        label: filterData.sort === "DESC" ? "Latest to Oldest" : "Oldest to Latest",
-                                        value: filterData.sort
-                                    }}
-                                />
-                            </div>
-                        </div>
-
+                        <Formik
+                            enableReinitialize={true}
+                            initialValues={{
+                                rfq_status: filterData.rfq_status,
+                                admin_service_status: filterData.admin_service_status,
+                                sort: filterData.sort,
+                                rfq_no: filterData.rfq_no,
+                            }}
+                            // validationSchema={yup.object().shape({
+                            // rfq_status: yup.string().optional(),
+                            // admin_service_status: yup.string().optional(),
+                            // sort: yup.string().optional(),
+                            // rfq_no: yup.number().optional()
+                            // })}
+                            onSubmit={(values, { resetForm }) => {
+                                submitHandler(values);
+                            }}
+                        >
+                            {({ values, setFieldValue, resetForm }) => (
+                                <Form>
+                                    <div className="row align-items-end g-3">
+                                        <div className="col-sm-3">
+                                            <Field
+                                                as="select"
+                                                id="rfq_status"
+                                                name="rfq_status"
+                                                className="form-control"
+                                                value={values.rfq_status}
+                                            >
+                                                <option value=''>RFQ Status</option>
+                                                {rfqStatusOptions.map(option => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </Field>
+                                        </div>
+                                        <div className="col-sm-3">
+                                            <Field
+                                                as="select"
+                                                id="admin_service_status"
+                                                name="admin_service_status"
+                                                className="form-control"
+                                                value={values.admin_service_status}
+                                            >
+                                                <option value=''>Admin Service Status</option>
+                                                {adminServiceOptions.map(option => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </Field>
+                                        </div>
+                                        <div className="col-sm-3">
+                                            <Field
+                                                type="text"
+                                                name="rfq_no"
+                                                className="form-control"
+                                                placeholder="Search by RFQ No."
+                                                value={values.rfq_no}
+                                            />
+                                        </div>
+                                        <div className="col-sm-3">
+                                            <Field
+                                                as="select"
+                                                id="sort"
+                                                name="sort"
+                                                className="form-control"
+                                                value={values.sort}
+                                            >
+                                                <option value="">Sort Order</option>
+                                                {sortOptions.map(option => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </Field>
+                                        </div>
+                                        <div className="col-sm-3">
+                                            <Select
+                                                isMulti
+                                                name="companies"
+                                                options={companyOptions}
+                                                value={selectedCompanies}
+                                                onChange={(selected) => setSelectedCompanies(selected || [])}
+                                                placeholder="Search or select companies..."
+                                                className="react-select-container"
+                                                classNamePrefix="react-select"
+                                                />
+                                        </div>
+                                        <div className="col-md-3 mb-2 d-flex gap-2">
+                                            <button type="submit" className="btn btn-info flex-grow-1">
+                                                Search
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn btn-secondary flex-grow-1"
+                                                onClick={() => {
+                                                resetForm();
+                                                resetFilters();
+                                                }}
+                                            >
+                                                Reset
+                                            </button>
+                                        </div>
+                                    </div>
+                                </Form>
+                            )}
+                        </Formik>
                     </div>
 
                     {/* Table Section */}
