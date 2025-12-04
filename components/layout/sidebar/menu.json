@@ -236,6 +236,15 @@
     ]
   },
   {
+    "title" : "Public-User-Management",
+    "link"  : "/public-user-management",
+    "class" : "",
+    "icon"  : "",
+    "active": false,
+    "children": []
+
+  },
+  {
     "title": "Notification",
     "link": "",
     "class": "",
