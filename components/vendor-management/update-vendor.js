@@ -385,7 +385,7 @@ useEffect(() => {
           setIsCityDisabled(true)
         }
         // Pre-select subscription plan
-        setSelectedSubscriptionOption(editDetails?.companyDetails?.subscription_plan);
+        setSelectedSubscriptionOption(editDetails?.vendorDetails?.subscription_plan_id);
         setIsStateDisabled(false)
         setSelectedCountryOption(editDetails?.vendorDetails?.country)
         setSelectedStateOption(editDetails?.vendorDetails?.state)
