@@ -14,6 +14,7 @@ const Sidebar = () => {
     if (accessFromStorage) {
       setUserAccess(JSON.parse(accessFromStorage));
     }
+    console.log("user access", userAccess);
   }, []);
 
   useEffect(() => {
