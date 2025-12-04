@@ -222,7 +222,7 @@ const RFQDetails = () => {
                                         </div>
 
                                         <div className="mb-2">
-                                            <strong>Reverse Auction End Date : </strong>
+                                            <strong>Reverse Auction Start Date : </strong>
                                             <span className="fw-medium text-muted px-2">{rfqDetails?.ra_start_date || "---"}</span>
                                         </div>
 
