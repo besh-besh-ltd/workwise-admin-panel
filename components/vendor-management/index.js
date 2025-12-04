@@ -211,7 +211,8 @@ const VendorManagement = () => {
       values.created_by,
       values.source,
       values.subscription_plan,
-      values.is_private
+      values.is_private,
+      values.mobile
     )
       .then((res) => {
         setVendorData(res.data);
@@ -259,7 +260,8 @@ const VendorManagement = () => {
      created_by: created_by ?? "",
      source: source ?? "",
      subscription_plan: subscription_plan ?? "",
-     is_private: is_private ?? ""
+     is_private: is_private ?? "",
+     mobile: "" // Initialize mobile filter to empty string
    };
 
     setPage(newPage);
@@ -419,7 +421,8 @@ const VendorManagement = () => {
                 created_by: yup.string(),
                 source: yup.string(),
                 subscription_plan: yup.string(),
-                is_private: yup.string()
+                is_private: yup.string(),
+                mobile:yup.number()
               })}
               onSubmit={(values, { resetForm }) => {
                 submitHandler(values);
@@ -451,6 +454,15 @@ const VendorManagement = () => {
                         className="form-control"
                         placeholder="Search by email"
                         value={values.email}
+                      />
+                    </div>
+                    <div className="col-md-3 mb-2">
+                      <Field
+                        type="number"
+                        name="mobile"
+                        className="form-control"
+                        placeholder="Search by mobile"
+                        value={values.mobile}
                       />
                     </div>
                     {/* Dropdown filter for Source */}

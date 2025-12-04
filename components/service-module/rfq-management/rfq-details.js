@@ -108,7 +108,7 @@ const RFQDetails = () => {
         return true;
     };
 
-    // Get product-wise data
+    // Get product-wise data with variants as separate products
     const getProductWiseData = () => {
         if (!vendorDetails || vendorDetails.length === 0) return [];
         
@@ -116,11 +116,13 @@ const RFQDetails = () => {
         
         vendorDetails.forEach(vendor => {
             vendor.products?.forEach(product => {
-                const key = product.product_id;
+                // Create unique key with product_id and variant
+                const key = `${product.product_id}-${product.variant}`;
                 
                 if (!productMap.has(key)) {
                     productMap.set(key, {
                         product_id: product.product_id,
+                        variant: product.variant,
                         product_name: product.product_name,
                         product_description: product.product_description,
                         specs: product.product_specs || [],
@@ -128,7 +130,15 @@ const RFQDetails = () => {
                     });
                 }
                 
-                const hasResponded = product.quotation_details !== null;
+                // Check if vendor has responded (has quotation_details AND is_regret is 0)
+                let hasResponded = false;
+                let isRegretted = false;
+                
+                if (product.quotation_details !== null && product.quotation_details.length > 0) {
+                    const quotation = product.quotation_details[0];
+                    hasResponded = quotation.is_regret === 0;
+                    isRegretted = quotation.is_regret === 1;
+                }
                 
                 productMap.get(key).vendors.push({
                     vendor_id: vendor.vendor_id,
@@ -137,6 +147,7 @@ const RFQDetails = () => {
                     vendor_mobile: vendor.vendor_mobile,
                     vendor_organization: vendor.vendor_organization,
                     has_responded: hasResponded,
+                    is_regretted: isRegretted,
                     quotation_details: product.quotation_details,
                     finalization: product.finalization
                 });
@@ -144,7 +155,54 @@ const RFQDetails = () => {
         });
         
         return Array.from(productMap.values());
+    };
+
+    // Calculate statistics for a product
+    const calculateProductStats = (vendors) => {
+        const totalVendors = vendors.length;
+        const respondedVendors = vendors.filter(v => v.has_responded).length;
+        const regrettedVendors = vendors.filter(v => v.is_regretted).length;
+        const pendingVendors = vendors.filter(v => !v.has_responded && !v.is_regretted).length;
         
+        return {
+            totalVendors,
+            respondedVendors,
+            regrettedVendors,
+            pendingVendors
+        };
+    };
+
+    // Calculate overall statistics
+    const calculateOverallStats = () => {
+        if (!vendorDetails || vendorDetails.length === 0) return null;
+        
+        let totalVendors = 0;
+        let totalResponded = 0;
+        let totalRegretted = 0;
+        let totalPending = 0;
+        
+        vendorDetails.forEach(vendor => {
+            vendor.products?.forEach(product => {
+                totalVendors++;
+                if (product.quotation_details !== null && product.quotation_details.length > 0) {
+                    const quotation = product.quotation_details[0];
+                    if (quotation.is_regret === 0) {
+                        totalResponded++;
+                    } else if (quotation.is_regret === 1) {
+                        totalRegretted++;
+                    }
+                } else {
+                    totalPending++;
+                }
+            });
+        });
+        
+        return {
+            totalVendors,
+            totalResponded,
+            totalRegretted,
+            totalPending
+        };
     };
 
     const handleViewVendor = (vendorId) => {
@@ -158,6 +216,7 @@ const RFQDetails = () => {
     }, [router, rfq_id])
 
     const productWiseData = getProductWiseData();
+    const overallStats = calculateOverallStats();
 
     return (
         <>
@@ -288,7 +347,9 @@ const RFQDetails = () => {
                         {/* Tabs Section */}
                         {vendorDetails &&
                             <>
-                                <div className="mt-4">
+                              
+                                   
+
                                     <ul className="nav nav-tabs" role="tablist">
                                         <li className="nav-item">
                                             <a 
@@ -331,15 +392,20 @@ const RFQDetails = () => {
                                             <div className="overflow-y-auto" style={{ maxHeight: "100vh" }}>
                                                 {productWiseData && productWiseData.length > 0 ? (
                                                     productWiseData.map((product, index) => {
-                                                        const totalVendors = product.vendors.length;
-                                                        const respondedVendors = product.vendors.filter(v => v.has_responded).length;
+                                                        const stats = calculateProductStats(product.vendors);
+                                                        const variantText = product.variant > 0 ? ` - Variant ${product.variant}` : '';
                                                         
                                                         return (
-                                                            <div key={product.product_id} className="mb-4">
+                                                            <div key={`${product.product_id}-${product.variant}`} className="mb-4">
                                                                 {/* Product Header */}
                                                                 <div className="border rounded-2 p-3 mb-2 bg-light">
-                                                                    <h5 className="mb-3">{product.product_name}</h5>
-                                                                    <div className="row">
+                                                                    <h5 className="mb-3">
+                                                                        {product.product_name}{variantText}
+                                                                    </h5>
+
+                                                                    <div className="row align-items-center">
+
+                                                                        {/* PRODUCT SPECS */}
                                                                         <div className="col-md-8">
                                                                             <div className="d-flex flex-wrap">
                                                                                 {product.specs && product.specs.map((spec, idx) => (
@@ -350,18 +416,37 @@ const RFQDetails = () => {
                                                                                 ))}
                                                                             </div>
                                                                         </div>
+
+                                                                        {/* VENDOR STATUS STATS */}
                                                                         <div className="col-md-4">
-                                                                            <div className="mb-2">
-                                                                                <strong>Total Selected Vendors: </strong>
-                                                                                <span className="badge badge-primary ml-2">{totalVendors}</span>
-                                                                            </div>
-                                                                            <div className="mb-2">
-                                                                                <strong>Vendors Responded: </strong>
-                                                                                <span className="badge badge-success ml-2">{respondedVendors}</span>
+                                                                            <div className="d-flex justify-content-between flex-wrap">
+
+                                                                                <div className="mb-2">
+                                                                                    <strong>Total Vendors: </strong>
+                                                                                    <span className="badge badge-primary ml-2">{stats.totalVendors}</span>
+                                                                                </div>
+
+                                                                                <div className="mb-2">
+                                                                                    <strong>Responded: </strong>
+                                                                                    <span className="badge badge-success ml-2">{stats.respondedVendors}</span>
+                                                                                </div>
+
+                                                                                <div className="mb-2">
+                                                                                    <strong>Regretted: </strong>
+                                                                                    <span className="badge badge-danger ml-2">{stats.regrettedVendors}</span>
+                                                                                </div>
+
+                                                                                <div className="mb-2" style = {{marginRight: '20px'}}>
+                                                                                    <strong>Pending: </strong>
+                                                                                    <span className="badge badge-secondary ml-2">{stats.pendingVendors}</span>
+                                                                                </div>
+
                                                                             </div>
                                                                         </div>
+
                                                                     </div>
                                                                 </div>
+
 
                                                                 {/* Vendors Table */}
                                                                 <div className="table-responsive">
@@ -380,9 +465,7 @@ const RFQDetails = () => {
                                                                         </thead>
                                                                         <tbody>
                                                                             { 
-                                                                            product.vendors.map((vendor, vIdx) =>
-                                                                              
-                                                                               (
+                                                                            product.vendors.map((vendor, vIdx) => (
                                                                                 <tr key={vendor.vendor_id}>
                                                                                     <td>{vIdx + 1}</td>
                                                                                     <td>{vendor.vendor_name}</td>
@@ -390,7 +473,9 @@ const RFQDetails = () => {
                                                                                     <td>{vendor.vendor_email}</td>
                                                                                     <td>{vendor.vendor_mobile}</td>
                                                                                     <td>
-                                                                                        {vendor.has_responded ? (
+                                                                                        {vendor.is_regretted ? (
+                                                                                            <span className="badge badge-danger">Regretted</span>
+                                                                                        ) : vendor.has_responded ? (
                                                                                             <span className="badge badge-success">Responded</span>
                                                                                         ) : (
                                                                                             <span className="badge badge-warning">Pending</span>
@@ -406,7 +491,10 @@ const RFQDetails = () => {
                                                                                     <td>
                                                                                         <button 
                                                                                             className="btn btn-sm btn-info"
-                                                                                            onClick={() => handleViewVendor(vendor.vendor_id)}
+                                                                                            onClick={() => {
+                                                                                                console.log("Vendor object:", vendor);
+                                                                                                handleViewVendor(vendor.vendor_id);
+                                                                                            }}
                                                                                         >
                                                                                             <FontAwesomeIcon icon={faEye} className="mr-1" />
                                                                                             View
@@ -426,7 +514,7 @@ const RFQDetails = () => {
                                             </div>
                                         )}
                                     </div>
-                                </div>
+                                
                             </>
                         }
 

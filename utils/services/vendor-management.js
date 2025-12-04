@@ -3,7 +3,7 @@ import axiosFormData from "../axios/form-data";
 import axiosxdata from "../axios/xxx-form-data";
 import axios from "axios";
 
-function handleGetVendorList(limit = 10, page = 1, verified, organization, name, email, dateFrom, dateTo, status, created_by, source, subscription_plan, is_private) {
+function handleGetVendorList(limit = 10, page = 1, verified, organization, name, email, dateFrom, dateTo, status, created_by, source, subscription_plan, is_private , mobile) {
   return new Promise(async (resolve, reject) => {
     try {
       let url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/vendor-list?limit=${limit}&page=${page}`;
@@ -19,6 +19,8 @@ function handleGetVendorList(limit = 10, page = 1, verified, organization, name,
       if (source) url += `&source=${source}`;
       if (subscription_plan) url += `&subscription_plan=${subscription_plan}`;
       if (is_private) url += `&is_private=${is_private}`;
+      if (mobile) url += `&mobile=${mobile}`;
+
 
       let response = await axiosInstance.get(url);
       resolve(response);
