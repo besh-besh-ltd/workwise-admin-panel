@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Modal, Button } from 'react-bootstrap';
+import { Modal, Button, Form } from 'react-bootstrap';
 
 const VendorSelectionModal = ({
   isOpen,
@@ -10,17 +10,49 @@ const VendorSelectionModal = ({
 }) => {
   const [selectedVendors, setSelectedVendors] = useState([]);
   const [sendLoading, setSendLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!isOpen) {
       setSelectedVendors([]);
+      setSearchTerm('');
     }
   }, [isOpen]);
+
+  // Fuzzy search function
+  const fuzzySearch = (companyName, searchTerm) => {
+    if (!searchTerm.trim()) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const companyLower = companyName.toLowerCase();
+    
+    // Simple fuzzy matching algorithm
+    let searchIndex = 0;
+    for (let i = 0; i < companyLower.length; i++) {
+      if (companyLower[i] === searchLower[searchIndex]) {
+        searchIndex++;
+      }
+      if (searchIndex === searchLower.length) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Filter vendors based on search term
+  const filteredVendors = useMemo(() => {
+    if (!searchTerm.trim()) return vendors;
+    
+    return vendors.filter(vendor => {
+      const vendorName = vendor.vendor_name || '';
+      return fuzzySearch(vendorName, searchTerm);
+    });
+  }, [vendors, searchTerm]);
 
   // Calculate total products and handle duplicate names
   const { totalGlobalProducts, processedVendors } = useMemo(() => {
     let totalGlobal = 0;
-    const processed = vendors.map(vendor => {
+    const processed = filteredVendors.map(vendor => {
       const remainingProducts = vendor.remainingProducts || [];
       totalGlobal += remainingProducts.length;
       
@@ -51,7 +83,7 @@ const VendorSelectionModal = ({
     });
     
     return { totalGlobalProducts: totalGlobal, processedVendors: processed };
-  }, [vendors]);
+  }, [filteredVendors]);
 
   const handleVendorToggle = (vendorId) => {
     setSelectedVendors(prev => {
@@ -64,10 +96,10 @@ const VendorSelectionModal = ({
   };
 
   const handleSelectAll = () => {
-    if (selectedVendors.length === vendors.length) {
+    if (selectedVendors.length === filteredVendors.length) {
       setSelectedVendors([]);
     } else {
-      setSelectedVendors(vendors.map(vendor => vendor.user_id));
+      setSelectedVendors(filteredVendors.map(vendor => vendor.user_id));
     }
   };
 
@@ -111,6 +143,24 @@ const VendorSelectionModal = ({
           </div>
         ) : (
           <div className="vendor-modal-content">
+            {/* Search Input */}
+            <div className="p-3 border-bottom">
+              <Form.Group>
+                <Form.Control
+                  type="text"
+                  placeholder="Search vendors by name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="rounded-pill"
+                />
+                {searchTerm && (
+                  <div className="mt-2 text-muted small">
+                    Showing {filteredVendors.length} of {vendors.length} vendors
+                  </div>
+                )}
+              </Form.Group>
+            </div>
+
             {/* Global Summary */}
             <div className="alert alert-info mx-3 mt-3 mb-3">
               <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
@@ -118,7 +168,8 @@ const VendorSelectionModal = ({
                   <strong>Total Products Pending:</strong> {totalGlobalProducts}
                 </div>
                 <div className="text-center text-sm-end">
-                  <strong>Total Vendors:</strong> {vendors.length}
+                  <strong>Total Vendors:</strong> {filteredVendors.length}
+                  {searchTerm && <span className="ms-1">(Filtered)</span>}
                 </div>
               </div>
             </div>
@@ -129,61 +180,70 @@ const VendorSelectionModal = ({
                   className="form-check-input"
                   type="checkbox"
                   id="selectAll"
-                  checked={selectedVendors.length === vendors.length}
+                  checked={selectedVendors.length === filteredVendors.length && filteredVendors.length > 0}
                   onChange={handleSelectAll}
+                  disabled={filteredVendors.length === 0}
                 />
                 <label className="form-check-label fw-bold" htmlFor="selectAll">
-                  Select All ({vendors.length} vendors)
+                  Select All ({filteredVendors.length} vendor{filteredVendors.length !== 1 ? 's' : ''})
                 </label>
               </div>
             </div>
             
             <div className="vendor-list-container">
-              <div className="vendor-list">
-                {processedVendors.map((vendor) => (
-                  <div key={vendor.user_id} className="vendor-card">
-                    <div className="card border-0 shadow-sm h-100">
-                      <div className="card-body p-3">
-                        <div className="form-check h-100">
-                          <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id={`vendor-${vendor.user_id}`}
-                            checked={selectedVendors.includes(vendor.user_id)}
-                            onChange={() => handleVendorToggle(vendor.user_id)}
-                          />
-                          <label className="form-check-label w-100 h-100" htmlFor={`vendor-${vendor.user_id}`}>
-                            <div className="d-flex flex-column h-100">
-                              <div className="mb-2">
-                                <h6 className="mb-0 fw-bold text-primary text-break">{vendor.vendor_name}</h6>
-                              </div>
-                              {vendor.remainingProducts?.length > 0 && (
-                                <div className="mt-auto">
-                                  <small className="text-muted fw-semibold d-block mb-2">
-                                    Pending Products ({vendor.totalVendorProducts}):
-                                  </small>
-                                  <div className="product-tags">
-                                    {vendor.remainingProducts.slice(0, 3).map((product, idx) => (
-                                      <span key={idx} className="product-tag">
-                                        {product.displayName}
-                                      </span>
-                                    ))}
-                                    {vendor.remainingProducts.length > 3 && (
-                                      <span className="product-tag more-tag">
-                                        +{vendor.remainingProducts.length - 3} more
-                                      </span>
-                                    )}
-                                  </div>
+              {filteredVendors.length === 0 ? (
+                <div className="text-center py-4 px-3">
+                  <p className="text-muted mb-0">
+                    {searchTerm ? 'No vendors found matching your search.' : 'No vendors available.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="vendor-list">
+                  {processedVendors.map((vendor) => (
+                    <div key={vendor.user_id} className="vendor-card">
+                      <div className="card border-0 shadow-sm h-100">
+                        <div className="card-body p-3">
+                          <div className="form-check h-100">
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              id={`vendor-${vendor.user_id}`}
+                              checked={selectedVendors.includes(vendor.user_id)}
+                              onChange={() => handleVendorToggle(vendor.user_id)}
+                            />
+                            <label className="form-check-label w-100 h-100" htmlFor={`vendor-${vendor.user_id}`}>
+                              <div className="d-flex flex-column h-100">
+                                <div className="mb-2">
+                                  <h6 className="mb-0 fw-bold text-primary text-break">{vendor.vendor_name}</h6>
                                 </div>
-                              )}
-                            </div>
-                          </label>
+                                {vendor.remainingProducts?.length > 0 && (
+                                  <div className="mt-auto">
+                                    <small className="text-muted fw-semibold d-block mb-2">
+                                      Pending Products ({vendor.totalVendorProducts}):
+                                    </small>
+                                    <div className="product-tags">
+                                      {vendor.remainingProducts.slice(0, 3).map((product, idx) => (
+                                        <span key={idx} className="product-tag">
+                                          {product.displayName}
+                                        </span>
+                                      ))}
+                                      {vendor.remainingProducts.length > 3 && (
+                                        <span className="product-tag more-tag">
+                                          +{vendor.remainingProducts.length - 3} more
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </label>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -313,4 +373,4 @@ const VendorSelectionModal = ({
   );
 };
 
-export default VendorSelectionModal; 
+export default VendorSelectionModal;
