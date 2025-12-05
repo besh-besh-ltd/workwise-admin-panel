@@ -9,9 +9,11 @@ import {
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
-import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
+import { getCountries ,getCountryCodes, getStates } from "@/utils/services/location-management";
 import Select from "react-select";
 import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
+import LocationModal from "../modal/LocationModal";
+
 
 const AddVendor = () => {
   const [states, setStates] = useState([]);
@@ -26,6 +28,15 @@ const AddVendor = () => {
   const [selectedSubscriptionOption, setSelectedSubscriptionOption] = useState("");
   const[countryCode , setCountryCode] = useState([]);
   const [buyerCompanyOptions, setBuyerCompanyOptions] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState(null);
+
+const handleAddLocation = (newLocation) => {
+  setLocations([...locations, newLocation]);
+};
+
+
   
   const router = useRouter();
 
@@ -100,7 +111,8 @@ let getSubscriptionDuration = {
     const { countryCode, ...updatedValues } = { 
       ...values, 
       mobile: fullMobile,
-      name:orgName
+      name:orgName,
+      locations: [...locations],
     };   
     updatedValues.vendor_access_type = values.vendor_access_type;
     updatedValues.buyer_company_ids = JSON.stringify(
@@ -238,6 +250,17 @@ const handleSubscriptionChange = (event) => {
       setSelectedStateOption("");
       setSelectedCityOption("");
     }
+  };
+
+   const handleDeleteLocation = (locationId) => {
+    if (window.confirm("Are you sure you want to delete this location?")) {
+      setLocations(locations.filter(loc => loc.id !== locationId));
+    }
+  };
+
+   const handleEditLocation = (location) => {
+    setEditingLocation(location);
+    setIsLocationModalOpen(true);
   };
   const handleCityChange = (event) => {
     let id = event.target.value;
@@ -471,7 +494,7 @@ const handleSubscriptionChange = (event) => {
                           />
                         </div>
 
-                        <div className="col-6">
+                        {/* <div className="col-6">
                           <label htmlFor="address" className="form-label">
                             Address
                           </label>
@@ -489,7 +512,7 @@ const handleSubscriptionChange = (event) => {
                               </div>
                             )}
                           />
-                        </div>
+                        </div> */}
 
                         <div className="col-6">
                           <label htmlFor="about-vendro">About Vendor</label>
@@ -505,7 +528,7 @@ const handleSubscriptionChange = (event) => {
                             )}
                           />
                         </div>
-                        <div className="col-6">
+                        {/* <div class="col-6">
                           <label htmlFor="about-vendro">Postal Code</label>
                           <Field
                             type="string"
@@ -519,8 +542,8 @@ const handleSubscriptionChange = (event) => {
                               <div className="form-error">{msg}</div>
                             )}
                           />
-                        </div>
-                        <div className="col-4">
+                        </div> */}
+                        {/* <div class="col-4">
                           <label htmlFor="city">Country</label>
                           <Field
                             onChange={handleCountryChange}
@@ -538,6 +561,8 @@ const handleSubscriptionChange = (event) => {
                           </Field>
                         </div>
                         <div className="col-4">
+                        </div> */}
+                        {/* <div class="col-4">
                           <label htmlFor="state">State</label>
                           <Field
                             value={selectedStateOption}
@@ -554,8 +579,8 @@ const handleSubscriptionChange = (event) => {
                               </option>
                             ))}
                           </Field>
-                        </div>
-                        <div className="col-4">
+                        </div> */}
+                        {/* <div class="col-4">
                           <label htmlFor="city">City</label>
                           <Field
                             value={selectedCityOption}
@@ -572,8 +597,8 @@ const handleSubscriptionChange = (event) => {
                               </option>
                             ))}
                           </Field>
-                        </div>
-                        <div className="col-6">
+                        </div> */}
+                        <div class="col-6">
                           <label htmlFor="website">Website</label>
                           <Field
                             type="text"
@@ -758,7 +783,6 @@ const handleSubscriptionChange = (event) => {
                             ))}
                           </Field>
                         </div>
-
                         {/* SPOC Section */}
                         <div className="mt-4">
                           <h5>Vendor SPOCs</h5>
@@ -901,6 +925,71 @@ const handleSubscriptionChange = (event) => {
                         </div>
                       </div>
 
+                      {/* Locations Section */}
+                  <div className="mt-4">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <h5>Vendor Locations</h5>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          setEditingLocation(null);
+                          setIsLocationModalOpen(true);
+                        }}
+                      >
+                        + Add Location
+                      </button>
+                    </div>
+
+                    {locations.length > 0 ? (
+                      <div className="table-responsive">
+                        <table className="table table-bordered">
+                          <thead>
+                            <tr>
+                              <th>Country</th>
+                              <th>State</th>
+                              <th>City</th>
+                              <th>Address</th>
+                              <th>Postal Code</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {locations.map((location) => (
+                              <tr key={location.id}>
+                                <td>{location.country_name}</td>
+                                <td>{location.state_name}</td>
+                                <td>{location.city_name}</td>
+                                <td>{location.address || "-"}</td>
+                                <td>{location.postal_code || "-"}</td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-info me-2"
+                                    onClick={() => handleEditLocation(location)}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-danger"
+                                    onClick={() => handleDeleteLocation(location.id)}
+                                  >
+                                    Delete
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="alert alert-info">
+                        No locations added yet. Click "Add Location" to add vendor locations.
+                      </div>
+                    )}
+                  </div>
+
                       <div className="d-flex justify-content-end mt-4">
                         <button type="submit" className="btn btn-secondary">
                           Save
@@ -914,6 +1003,19 @@ const handleSubscriptionChange = (event) => {
           </div>
         </div>
         <ToastContainer />
+
+        <LocationModal
+        isOpen={isLocationModalOpen}
+        onClose={() => {
+          setIsLocationModalOpen(false);
+          setEditingLocation(null);
+        }}
+        onSave={handleAddLocation}
+        countryList={countryList}
+        handleGetStates={handleGetStates}
+        handleGetCities={handleGetCities}
+        editingLocation={editingLocation}
+      />
       </section>
     </>
   );

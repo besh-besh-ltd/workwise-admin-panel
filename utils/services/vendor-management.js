@@ -53,6 +53,62 @@ function handleGetVendorEditDetails(id) {
     }
   });
 }
+
+function getVendorlocations(company_id) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const response = await axiosInstance.get(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/get-vendor-locations/${company_id}`
+      );
+      resolve(response);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function saveVendorlocations(payload) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/add-vendor-location`,
+        payload
+      );
+      resolve(response);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function updateVendorlocation(payload,id) {
+  return new Promise(async (resolve, reject) => {
+    try {
+
+      const response = await axiosInstance.put(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/update-vendor-location/:${id}`,
+        payload
+      );
+      resolve(response);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function handleDeleteVendorLocation(loc_id){
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.delete(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/delete-vendor-location/${loc_id}`
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  });
+}
+
 function handleGetStates(country_id) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -317,5 +373,9 @@ export {
   handleDeleteSpoc,
   getAdminsList,
   handleGetSpocList,
-  handleGetBuyerCompanyDropdown
+  handleGetBuyerCompanyDropdown,
+  getVendorlocations,
+  saveVendorlocations,
+  updateVendorlocation,
+  handleDeleteVendorLocation
 };
