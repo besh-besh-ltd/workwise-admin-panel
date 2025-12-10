@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 const MapSpocModal = ({ show, onClose, spocDetails, onSave, defaultSelected }) => {
   const [selectedSpocs, setSelectedSpocs] = useState([]);
 
-  console.log("Default Selected SPOCs:", defaultSelected);
 
   useEffect(() => {
     setSelectedSpocs(defaultSelected || []);
