@@ -109,6 +109,25 @@ function handleDeleteVendorLocation(loc_id){
   });
 }
 
+function handleSpocLocationMap({ spoc_id, location_id }) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/map-spoc-location`,
+        {
+          location_id,
+          spoc_id, // array of spoc ids
+        }
+      );
+
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  });
+}
+
+
 function handleGetStates(country_id) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -377,5 +396,6 @@ export {
   getVendorlocations,
   saveVendorlocations,
   updateVendorlocation,
-  handleDeleteVendorLocation
+  handleDeleteVendorLocation,
+  handleSpocLocationMap
 };

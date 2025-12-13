@@ -16,7 +16,8 @@ import {
   getVendorlocations,
   updateVendorlocation,
   saveVendorlocations,
-  handleDeleteVendorLocation
+  handleDeleteVendorLocation,
+  handleSpocLocationMap
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
@@ -28,6 +29,7 @@ import { getCountries ,getCountryCodes } from "@/utils/services/location-managem
 import Select from "react-select";
 import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
 import LocationModal from "../modal/LocationModal";
+import MapSpocModal from "../modal/MapSpocModal";
 
 const UpdateVendor = () => {
   const [dtaCount, setdtaCount] = useState(0);
@@ -64,7 +66,48 @@ const UpdateVendor = () => {
   const [locations, setLocations] = useState([]);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
+  const [spocDetails, setSpocDetails] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState(null);
 
+  const [defaultSelectedSpocs, setDefaultSelectedSpocs] = useState([]);
+  const [refreshToggle, setRefreshToggle] = useState(false);
+
+
+const openSpocModal = (locationId) => {
+  setSelectedLocationId(locationId);
+
+  // extract mapped SPOC IDs from location data
+  const location = locations.find((l) => l.id === locationId);
+  const mappedSpocs = location?.spocs?.map((s) => s.spoc_id) || [];
+  setDefaultSelectedSpocs(mappedSpocs);
+  setShowModal(true);
+};
+
+
+  const closeSpocModal = () => {
+    setShowModal(false);
+    setSelectedLocationId(null);
+  };
+
+const onSaveSpocMapping = async (selectedSpocIds) => {
+  await handleSpocLocationMap({
+    location_id: selectedLocationId,
+    spoc_ids: selectedSpocIds,  // array
+  });
+
+  closeSpocModal();
+
+  // trigger locations reload
+  setRefreshToggle((prev) => !prev);
+};
+
+
+  useEffect(() => {
+    if(editDetails && editDetails.spocDetails){
+      setSpocDetails(editDetails.spocDetails)
+    }
+  },[editDetails])
 
   useEffect(() => {
   if (!editDetails?.companyDetails?.id) return;
@@ -84,10 +127,9 @@ const UpdateVendor = () => {
  useEffect(() => {
   if (company_id) {
     fetchLocations();
-    if(locations.length>0)
-    console.log("locations --->", locations)
+
   }
-}, [company_id]);
+}, [company_id, refreshToggle]);
 
 
 
@@ -390,6 +432,7 @@ useEffect(() => {
         setSelectedCountryOption(editDetails?.vendorDetails?.country)
         setSelectedStateOption(editDetails?.vendorDetails?.state)
         setSelectedCityOption(editDetails?.vendorDetails?.city)
+        setSpocDetails(editDetails?.spocDetails || [])
       })
       .catch((err) => console.log("err", err));
   }
@@ -400,7 +443,6 @@ useEffect(() => {
     getApprovedProductsByVendor(router.query.id, 1, 50)
       .then((res) => {
         const list = res?.data?.data || res?.data || [];
-        console.log('Vendor products data:', list);
         setVendorProducts(Array.isArray(list) ? list : []);
       })
       .catch(() => setVendorProducts([]));
@@ -1324,7 +1366,7 @@ const handleDeleteLocation = (locationId) => {
                     </thead>
                     <tbody>
                       {vendorProducts.map((mapping) => {
-                        console.log('Individual mapping:', mapping);
+                       
                         return (
                           <tr key={mapping.mapping_id || mapping.id}>
                             <td>{mapping.variant_name || '-'}</td>
@@ -1440,7 +1482,9 @@ const handleDeleteLocation = (locationId) => {
                         <th>City</th>
                         <th>Address</th>
                         <th>Postal Code</th>
+                        <th>Assigned Spocs</th>
                         <th>Actions</th>
+                        <th>Map Loc</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1451,6 +1495,8 @@ const handleDeleteLocation = (locationId) => {
                           <td>{location.city_name}</td>
                           <td>{location.address || "-"}</td>
                           <td>{location.postal_code || "-"}</td>
+                          <td>{location.spocs.map((spoc) => spoc.spoc_name).join(", ") || "-"}</td>
+                          
                           <td>
                             <button
                               type="button"
@@ -1465,6 +1511,15 @@ const handleDeleteLocation = (locationId) => {
                               onClick={() => handleDeleteLocation(location.id)}
                             >
                               Delete
+                            </button>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-primary"
+                              onClick={() => openSpocModal(location.id)}
+                            >
+                              Map SPOC
                             </button>
                           </td>
                         </tr>
@@ -1490,6 +1545,16 @@ const handleDeleteLocation = (locationId) => {
         handleGetStates={handleGetStates}
         handleGetCities={handleGetCities}
         editingLocation={editingLocation}
+      />
+
+      {/* Modal Component */}
+      <MapSpocModal
+        show={showModal}
+        onClose={closeSpocModal}
+        spocDetails={spocDetails}
+        
+        onSave={onSaveSpocMapping}
+        defaultSelected={defaultSelectedSpocs}
       />
     </>
   );
