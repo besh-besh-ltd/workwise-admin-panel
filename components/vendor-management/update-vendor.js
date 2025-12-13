@@ -12,7 +12,11 @@ import {
   handleUpdateVendorSpoc,
   addNewSpoc,
   handleDeleteSpoc,
-  handleGetBuyerCompanyDropdown
+  handleGetBuyerCompanyDropdown,
+  getVendorlocations,
+  updateVendorlocation,
+  saveVendorlocations,
+  handleDeleteVendorLocation
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
@@ -23,6 +27,7 @@ import { getApprovedProductsByVendor, deleteVariantVendorMapping } from "@/utils
 import { getCountries ,getCountryCodes } from "@/utils/services/location-management";
 import Select from "react-select";
 import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
+import LocationModal from "../modal/LocationModal";
 
 const UpdateVendor = () => {
   const [dtaCount, setdtaCount] = useState(0);
@@ -53,6 +58,38 @@ const UpdateVendor = () => {
  
   const [spocCountryCode, setSpocCountryCode] = useState("+91");
   const [buyerCompanyOptions, setBuyerCompanyOptions] = useState([]);
+  const [company_id,setCompanyId] = useState(null);
+
+
+  const [locations, setLocations] = useState([]);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState(null);
+
+
+  useEffect(() => {
+  if (!editDetails?.companyDetails?.id) return;
+
+  setCompanyId(editDetails.companyDetails.id);
+}, [editDetails?.companyDetails?.id]);
+
+
+  const fetchLocations = async () =>{
+     getVendorlocations(company_id)
+     .then((res)=>setLocations(res?.data))
+     .catch((error) => {
+       console.error('Error fetching locations:', error);
+       setLocations([]);
+     })
+  }
+ useEffect(() => {
+  if (company_id) {
+    fetchLocations();
+    if(locations.length>0)
+    console.log("locations --->", locations)
+  }
+}, [company_id]);
+
+
 
 
   const router = useRouter();
@@ -144,6 +181,7 @@ const UpdateVendor = () => {
     const { countryCode, ...updatedValues } = { 
       ...values, 
       mobile: fullMobile,
+      locations: [...locations], // Add locations to updatedValues
        };
 
     updatedValues.vendor_access_type = values.vendor_access_type;
@@ -151,7 +189,7 @@ const UpdateVendor = () => {
       values.buyer_company_ids || []
     );
 
-       console.log("checking update",updatedValues)
+      //  console.log("checking update",updatedValues)
     handleUpdateVendor(updatedValues, id)
       .then((res) => {
         resetForm();
@@ -311,11 +349,12 @@ useEffect(() => {
     email: editDetails?.vendorDetails?.email || "",
     mobile: editDetails?.vendorDetails?.mobile ? editDetails?.vendorDetails?.mobile.replace(/^\+?\d+-/, "") : "",
     organization_name: editDetails?.companyDetails?.company_name || "",
+    company_id : editDetails?.companyDetails?.id || "",
     logo: editDetails?.logo,
     ptr_track: editDetails?.ptr_track,
-    address: editDetails?.vendorDetails?.address || "",
+    // address: editDetails?.vendorDetails?.address || "",
     website: editDetails?.companyDetails?.website || "",
-    postal_code: editDetails?.vendorDetails?.postal_code || "",
+    // postal_code: editDetails?.vendorDetails?.postal_code || "",
     about_vendor_company: editDetails?.companyDetails?.profile || "",
     nature_business: editDetails?.companyDetails?.nature_of_business || "",
     estd_year: editDetails?.companyDetails?.established_year || "",
@@ -333,13 +372,12 @@ useEffect(() => {
           .filter((item) => !Number.isNaN(item))
       : [],
   };
-
+  
  
 
   function getVendorDetails(id){
     handleGetVendorEditDetails(id)
       .then(res => {
-        console.log("edit details data..", res.data)
         seteditDetails(res.data)
         if (editDetails?.vendorDetails?.city) {
           setIsCityDisabled(false)
@@ -412,6 +450,77 @@ useEffect(() => {
               setOpenAddSpoc(false);
             }) // Call the submission handler
 }
+
+const handleAddLocation = (newLocation) => {
+  newLocation.company_id = company_id;
+
+  if (editingLocation) {
+    // Update existing
+    setLocations(
+      locations.map((loc) =>
+        loc.id === newLocation.id ? newLocation : loc
+      )
+    );
+
+    updateVendorlocation(newLocation, newLocation.id)
+      .then((res) => {
+        toast(res.message, { position: "top-right" });
+      })
+      .catch((error) => {
+        toast(error?.response?.data?.message, { position: "top-right" });
+        console.log(error);
+      })
+      .finally(() => {
+        getVendorDetails(id);
+        setIsLocationModalOpen(false);
+        setEditingLocation(null);  // 🔥 FIXED
+      });
+
+  } else {
+    // Add new
+    const newLoc = { ...newLocation, id: Date.now() };
+    setLocations([...locations, newLoc]);
+
+    saveVendorlocations(newLoc)
+      .then((res) => {
+        toast(res.message, { position: "top-right" });
+      })
+      .catch((error) => {
+        toast(error?.response?.data?.message, { position: "top-right" });
+        console.log(error);
+      })
+      .finally(() => {
+        getVendorDetails(id);
+        setIsLocationModalOpen(false);
+        setEditingLocation(null);  // 🔥 FIXED
+      });
+
+    console.log("locations2", locations.length); // Will always log old length
+  }
+};
+
+
+const handleEditLocation = (location) => {
+  setEditingLocation(location);
+  setIsLocationModalOpen(true);
+};
+
+const handleDeleteLocation = (locationId) => {
+  if (window.confirm("Are you sure you want to delete this location?")) {
+    setLocations(locations.filter(loc => loc.id !== locationId));
+    handleDeleteVendorLocation(locationId)
+      .then((res) => {
+          toast(res.message, { position: "top-right" });
+      })
+      .catch((error) => {
+          toast(error?.response?.data?.message, { position: "top-right" });
+          console.log(error);
+      })
+      .finally(() => {
+          getVendorDetails(id);   
+      })
+  }
+};
 
   return (
     <>
@@ -651,7 +760,7 @@ useEffect(() => {
                             )}
                           />
                         </div>
-                        <div className="row">
+                        {/* <div className="row">
                           <div className="col-md-6 mb-3">
                             <label htmlFor="address" className="form-label">
                               Address
@@ -697,9 +806,9 @@ useEffect(() => {
                               )}
                             />
                           </div>
-                        </div>
+                        </div> */}
 
-                        <div className="col-6">
+                        {/* <div class="col-6">
                           <label htmlFor="about-vendro">Postal Code</label>
                           <Field
                             type="string"
@@ -766,8 +875,8 @@ useEffect(() => {
                               </option>
                             ))}
                           </Field>
-                        </div>
-                        <div className="col-6">
+                        </div> */}
+                        <div class="col-6">
                           <label htmlFor="website">Website</label>
                           <Field
                             type="text"
@@ -1306,6 +1415,82 @@ useEffect(() => {
           countryCode={countryCode}
         />
       )}
+          <div class="card col-12 mt-3">
+            <div className="d-flex justify-content-between align-items-center px-3 pt-3">
+              <h6 className="mb-0">Vendor Locations</h6>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setEditingLocation(null);
+                  setIsLocationModalOpen(true);
+                }}
+              >
+                + Add Location
+              </button>
+            </div>
+            <div class="card-body">
+              {locations && locations.length > 0 ? (
+                <div className="table-responsive">
+                  <table className="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>Country</th>
+                        <th>State</th>
+                        <th>City</th>
+                        <th>Address</th>
+                        <th>Postal Code</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {locations.map((location) => (
+                        <tr key={location.id}>
+                          <td>{location.country_name}</td>
+                          <td>{location.state_name}</td>
+                          <td>{location.city_name}</td>
+                          <td>{location.address || "-"}</td>
+                          <td>{location.postal_code || "-"}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-info me-2"
+                              onClick={() => handleEditLocation(location)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              onClick={() => handleDeleteLocation(location.id)}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="alert alert-info">
+                  No locations found for this vendor.
+                </div>
+              )}
+            </div>
+          </div>
+      <LocationModal
+        isOpen={isLocationModalOpen}
+        onClose={() => {
+          setIsLocationModalOpen(false);
+          setEditingLocation(null);
+        }}
+        onSave={handleAddLocation}
+        countryList={countryList}
+        handleGetStates={handleGetStates}
+        handleGetCities={handleGetCities}
+        editingLocation={editingLocation}
+      />
     </>
   );
 };
