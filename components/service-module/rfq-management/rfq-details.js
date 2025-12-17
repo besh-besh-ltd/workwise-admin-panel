@@ -84,9 +84,9 @@ const RFQDetails = () => {
         setVendors([]);
     };
 
-    const handleSendSelectiveReminder = async (vendorIds) => {
+    const handleSendSelectiveReminder = async (vendorIds, useMailGun) => {
         try {
-            const response = await sendSelectiveReminder(rfq_id, vendorIds);
+            const response = await sendSelectiveReminder(rfq_id, vendorIds, useMailGun);
             toast.success(response.data?.message || "Reminder sent successfully to selected vendors!");
         } catch (err) {
             console.error("Error sending selective reminder:", err);
