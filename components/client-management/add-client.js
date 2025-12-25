@@ -13,14 +13,12 @@ import {
 
 const AddBlog = () => {
   const router = useRouter();
-  const [categoryDropdown, setCategoryDropdown] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [selectedFilesTds, setSelectedFilesTds] = useState([]);
-  const [selectedFilesQap, setSelectedFilesQap] = useState([]);
   const [selectedFilesReset, setSelectedFilesReset] = useState(false);
   const initialValues = {
     name: "",
-    Status: "",
+    status: "",
   };
 
   const validationSchema = yup.object().shape({
