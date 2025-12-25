@@ -30,7 +30,7 @@ const FormikField = ({
 						id={`${name}`}
 						name={`${name}`}
 						placeholder={`Enter ${label}`}
-						onChange={onChange}
+						{...(onChange && { onChange })}
 						disabled={disabled}
 					>
 						{selectOptions?.map((item, index) => {
