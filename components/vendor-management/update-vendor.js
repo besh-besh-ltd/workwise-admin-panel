@@ -93,7 +93,7 @@ const openSpocModal = (locationId) => {
 const onSaveSpocMapping = async (selectedSpocIds) => {
   await handleSpocLocationMap({
     location_id: selectedLocationId,
-    spoc_ids: selectedSpocIds,  // array
+    spoc_id: selectedSpocIds,  // array
   });
 
   closeSpocModal();
@@ -473,88 +473,79 @@ useEffect(() => {
   );
 
 
-  const handleAddSpoc =  (spocDetails) => {
+  const handleAddSpoc = (spocDetails) => {
     addNewSpoc(spocDetails, id)
-            .then((res) => {
-              toast(res.message, { position: "top-right", });
-            })
-            .catch((error) => {
-                toast(error.message?.response?.data?.message, { position: "top-right", });
-                console.log(error)
-            })
-            .finally(() => {
-                getVendorDetails(id)
-                 handleGetCities(editDetails?.vendorDetails?.state)
-                .then(res => {
-                setCities(res.data.data)
-                })
-                .catch((err) => console.log("err", err));
-              setOpenAddSpoc(false);
-            }) // Call the submission handler
-}
-
-const handleAddLocation = (newLocation) => {
-  newLocation.company_id = company_id;
-
-  if (editingLocation) {
-    // Update existing
-    setLocations(
-      locations.map((loc) =>
-        loc.id === newLocation.id ? newLocation : loc
-      )
-    );
-
-    updateVendorlocation(newLocation, newLocation.id)
       .then((res) => {
-        toast(res.message, { position: "top-right" });
+        toast(res.message, { position: "top-right", });
       })
       .catch((error) => {
-        toast(error?.response?.data?.message, { position: "top-right" });
-        console.log(error);
+        toast(error.message?.response?.data?.message, { position: "top-right", });
+        console.log(error)
       })
       .finally(() => {
-        getVendorDetails(id);
-        setIsLocationModalOpen(false);
-        setEditingLocation(null);  // 🔥 FIXED
-      });
-
-  } else {
-    // Add new
-    const newLoc = { ...newLocation, id: Date.now() };
-    setLocations([...locations, newLoc]);
-
-    saveVendorlocations(newLoc)
-      .then((res) => {
-        toast(res.message, { position: "top-right" });
-      })
-      .catch((error) => {
-        toast(error?.response?.data?.message, { position: "top-right" });
-        console.log(error);
-      })
-      .finally(() => {
-        getVendorDetails(id);
-        setIsLocationModalOpen(false);
-        setEditingLocation(null);  // 🔥 FIXED
-      });
-
-    console.log("locations2", locations.length); // Will always log old length
+        getVendorDetails(id)
+        handleGetCities(editDetails?.vendorDetails?.state)
+          .then(res => {
+            setCities(res.data.data)
+          })
+          .catch((err) => console.log("err", err));
+        setOpenAddSpoc(false);
+      }) // Call the submission handler
   }
-};
 
+  const handleAddLocation = (newLocation) => {
+    newLocation.company_id = company_id;
 
-const handleEditLocation = (location) => {
-  setEditingLocation(location);
-  setIsLocationModalOpen(true);
-};
-
-const handleDeleteLocation = (locationId) => {
-  if (window.confirm("Are you sure you want to delete this location?")) {
-    setLocations(locations.filter(loc => loc.id !== locationId));
-    handleDeleteVendorLocation(locationId)
-      .then((res) => {
+    if (editingLocation) {
+      // Update existing
+      updateVendorlocation(newLocation, editingLocation.id)
+        .then((res) => {
           toast(res.message, { position: "top-right" });
-      })
-      .catch((error) => {
+          fetchLocations(); // Fetch latest locations from database
+        })
+        .catch((error) => {
+          toast(error?.response?.data?.message, { position: "top-right" });
+          console.log(error);
+        })
+        .finally(() => {
+          setIsLocationModalOpen(false);
+          setEditingLocation(null);
+        });
+
+    } else {
+      // Add new
+      const newLoc = { ...newLocation };
+
+      saveVendorlocations(newLoc)
+        .then((res) => {
+          toast(res.message, { position: "top-right" });
+          fetchLocations(); // Fetch latest locations from database
+        })
+        .catch((error) => {
+          toast(error?.response?.data?.message, { position: "top-right" });
+          console.log(error);
+        })
+        .finally(() => {
+          setIsLocationModalOpen(false);
+          setEditingLocation(null);
+        });
+    }
+  };
+
+
+  const handleEditLocation = (location) => {
+    setEditingLocation(location);
+    setIsLocationModalOpen(true);
+  };
+
+  const handleDeleteLocation = (locationId) => {
+    if (window.confirm("Are you sure you want to delete this location?")) {
+      setLocations(locations.filter(loc => loc.id !== locationId));
+      handleDeleteVendorLocation(locationId)
+        .then((res) => {
+          toast(res.message, { position: "top-right" });
+        })
+        .catch((error) => {
           toast(error?.response?.data?.message, { position: "top-right" });
           console.log(error);
       })

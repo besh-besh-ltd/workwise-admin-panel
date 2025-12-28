@@ -9,7 +9,7 @@ import {
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
-import { getCountries ,getCountryCodes, getStates } from "@/utils/services/location-management";
+import { getCountries, getCountryCodes, getStates } from "@/utils/services/location-management";
 import Select from "react-select";
 import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
 import LocationModal from "../modal/LocationModal";
@@ -23,63 +23,68 @@ const AddVendor = () => {
   const [selectedCityOption, setSelectedCityOption] = useState("");
   const [isStateDisabled, setIsStateDisabled] = useState(true);
   const [isCityDisabled, setIsCityDisabled] = useState(true);
-  const [countryList,setCountryList] = useState([]);
+  const [countryList, setCountryList] = useState([]);
   const [subscriptionList, setSubscriptionList] = useState([]);
   const [selectedSubscriptionOption, setSelectedSubscriptionOption] = useState("");
-  const[countryCode , setCountryCode] = useState([]);
+  const [countryCode, setCountryCode] = useState([]);
   const [buyerCompanyOptions, setBuyerCompanyOptions] = useState([]);
   const [locations, setLocations] = useState([]);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
 
-const handleAddLocation = (newLocation) => {
-  setLocations([...locations, newLocation]);
-};
+  const handleAddLocation = (newLocation) => {
+    if (editingLocation) {
+      setLocations(
+        locations.map((loc) => (loc.id === newLocation.id ? newLocation : loc))
+      );
+    } else {
+      setLocations([...locations, newLocation]);
+    }
+  };
 
 
-  
+
   const router = useRouter();
 
-  	const businessOptions = [
-      {value : "Authorised Distributor", label : "Authorised Distributor"},
-      {value : "Authorised Dealer", label : "Authorised Dealer"},
-      {value : "Branch", label : "Branch"},
-      {value : "Channel Partner", label : "Channel Partner"},
-      {value : "Distributor", label : "Distributor"},
-      {value : "Constructor", label : "Constructor"},
-      {value : "Contractor", label : "Contractor"},
-      {value : "Dealer", label: "Dealer" },
-      {value : "Designer", label : "Designer"},
-      {value : "Exporter", label : "Exporter"},
-      {value : "Importer", label : "Importer"},
-      {value : 'Manufacturer', label: 'Manufacturer' },
-      {value : "OEM (Original EquipmentManufacturer)", label : "OEM (Original EquipmentManufacturer)"},
-      {value : "Official Distributor", label : "Official Distributor"},
-      {Value : "Partner", label : "Partner"},
-      {value : "Retailer", label : "Retailer"},
-      {value : "Service Provider", label : "Service Provider"},
-      {value : "Supplier", label : "Supplier"},
-      {value : "Subsidiary" , label : 'Subsidiary'},
-      {value : "Stockist", label : "Stockist"},
-      {value : "Trader", label : "Trader"},
-      { value: 'Wholesaler', label: 'Wholesaler' } 
-];
+  const businessOptions = [
+    { value: "Authorised Distributor", label: "Authorised Distributor" },
+    { value: "Authorised Dealer", label: "Authorised Dealer" },
+    { value: "Branch", label: "Branch" },
+    { value: "Channel Partner", label: "Channel Partner" },
+    { value: "Distributor", label: "Distributor" },
+    { value: "Constructor", label: "Constructor" },
+    { value: "Contractor", label: "Contractor" },
+    { value: "Dealer", label: "Dealer" },
+    { value: "Designer", label: "Designer" },
+    { value: "Exporter", label: "Exporter" },
+    { value: "Importer", label: "Importer" },
+    { value: 'Manufacturer', label: 'Manufacturer' },
+    { value: "OEM (Original EquipmentManufacturer)", label: "OEM (Original EquipmentManufacturer)" },
+    { value: "Official Distributor", label: "Official Distributor" },
+    { Value: "Partner", label: "Partner" },
+    { value: "Retailer", label: "Retailer" },
+    { value: "Service Provider", label: "Service Provider" },
+    { value: "Supplier", label: "Supplier" },
+    { value: "Subsidiary", label: 'Subsidiary' },
+    { value: "Stockist", label: "Stockist" },
+    { value: "Trader", label: "Trader" },
+    { value: 'Wholesaler', label: 'Wholesaler' }
+  ];
 
-let getSubscriptionDuration = {
-  "-1": "Lifetime",
-  1: "Monthly",
-  3: "Quarterly",
-  12: "Yearly",
-};
+  let getSubscriptionDuration = {
+    "-1": "Lifetime",
+    1: "Monthly",
+    3: "Quarterly",
+    12: "Yearly",
+  };
 
   const getSubscriptionList = () => {
     handleGetSubscriptionList("3")
       .then((res) => {
         const formattedData = res.data.map((obj) => ({
-          label: `${obj.plan_name} (${
-            getSubscriptionDuration[parseInt(obj.duration)] ||
+          label: `${obj.plan_name} (${getSubscriptionDuration[parseInt(obj.duration)] ||
             obj.duration + " Months"
-          })`,
+            })`,
           value: obj.id.toString(),
         }));
         setSubscriptionList(formattedData);
@@ -93,33 +98,33 @@ let getSubscriptionDuration = {
     const orgName = values.organization_name;
     const fullMobile = `${values.countryCode}-${values.mobile.trim().replace(/^0+/, "")}`;
 
-   values.spocs.forEach((spoc) => {
-     const rawMobile = spoc.spoc_mobile || "";
+    values.spocs.forEach((spoc) => {
+      const rawMobile = spoc.spoc_mobile || "";
 
-     // Remove any existing country code or prefix like "+91-", "undefined-", etc.
-     const sanitizedMobile = rawMobile
-       .replace(/^\+?\w*-/, "")
-       .trim()
-       .replace(/^0+/, "");
+      // Remove any existing country code or prefix like "+91-", "undefined-", etc.
+      const sanitizedMobile = rawMobile
+        .replace(/^\+?\w*-/, "")
+        .trim()
+        .replace(/^0+/, "");
 
-     const countryCode = spoc.country_code || "+91"; // fallback if undefined
+      const countryCode = spoc.country_code || "+91"; // fallback if undefined
 
-     spoc.spoc_mobile = `${countryCode}-${sanitizedMobile}`;
-     delete spoc.country_code;
-   });
+      spoc.spoc_mobile = `${countryCode}-${sanitizedMobile}`;
+      delete spoc.country_code;
+    });
 
-    const { countryCode, ...updatedValues } = { 
-      ...values, 
+    const { countryCode, ...updatedValues } = {
+      ...values,
       mobile: fullMobile,
-      name:orgName,
+      name: orgName,
       locations: [...locations],
-    };   
+    };
     updatedValues.vendor_access_type = values.vendor_access_type;
     updatedValues.buyer_company_ids = JSON.stringify(
       values.buyer_company_ids || []
     );
-   
-    handleAddVendor(updatedValues )
+
+    handleAddVendor(updatedValues)
       .then((res) => {
         resetForm();
         toast(res.message);
@@ -134,13 +139,13 @@ let getSubscriptionDuration = {
           errorFlag = false;
         }
 
-        if (errorFlag){
+        if (errorFlag) {
           toast.error("Something went wrong");
         }
 
       });
   };
- 
+
   useEffect(() => {
     if (selectedCountryOption) {
       handleGetStates(selectedCountryOption)
@@ -156,12 +161,12 @@ let getSubscriptionDuration = {
   useEffect(() => {
     getSubscriptionList();
   }, [])
-  
-useEffect(() => {
-  handleGetBuyerCompanyDropdown("", 500)
-    .then((res) => {
-      const formatted = Array.isArray(res?.data)
-        ? res.data.map((item) => ({
+
+  useEffect(() => {
+    handleGetBuyerCompanyDropdown("", 500)
+      .then((res) => {
+        const formatted = Array.isArray(res?.data)
+          ? res.data.map((item) => ({
             value: Number(item.company_id),
             label: item.company_name
               ? item.buyer_name
@@ -169,25 +174,25 @@ useEffect(() => {
                 : item.company_name
               : item.buyer_email || `Company #${item.company_id}`,
           }))
-        : [];
-      setBuyerCompanyOptions(formatted);
-    })
-    .catch(() => {
-      toast.error("Failed to load buyer companies");
-    });
-}, []);
+          : [];
+        setBuyerCompanyOptions(formatted);
+      })
+      .catch(() => {
+        toast.error("Failed to load buyer companies");
+      });
+  }, []);
 
 
-useEffect(() => {
-  fetchCountryCodes()
-  getCountries()
-  .then((res) => {
-       setCountryList(res.data) // Set country list state
-    })
-    .catch((err) => console.error("Error fetching countries:", err));
-}, []);
+  useEffect(() => {
+    fetchCountryCodes()
+    getCountries()
+      .then((res) => {
+        setCountryList(res.data) // Set country list state
+      })
+      .catch((err) => console.error("Error fetching countries:", err));
+  }, []);
 
- const fetchCountryCodes = () => {
+  const fetchCountryCodes = () => {
     getCountryCodes()
       .then((response) => {
         if (response?.data) {
@@ -202,38 +207,38 @@ useEffect(() => {
       });
   };
 
-const handleCountryChange = (event) => {
-  const selectedCountry = event.target.value;
-  setSelectedCountryOption(selectedCountry);
+  const handleCountryChange = (event) => {
+    const selectedCountry = event.target.value;
+    setSelectedCountryOption(selectedCountry);
 
-  if (selectedCountry !== "") {
-    setIsStateDisabled(false); // Enable the state dropdown
+    if (selectedCountry !== "") {
+      setIsStateDisabled(false); // Enable the state dropdown
 
-    // Fetch states for the selected country
-    handleGetStates(selectedCountry)
-      .then((res) => {
-        setStates(res.data.data); // Populate the states list
-        setIsCityDisabled(true);  // Disable city dropdown until a state is selected
-        setSelectedStateOption(""); // Clear any previously selected state
-        setSelectedCityOption(""); // Clear any previously selected city
-      })
-      .catch((err) => console.log("Error fetching states:", err));
-  } else {
-    // Reset all selections if no country is selected
-    setIsStateDisabled(true);
-    setIsCityDisabled(true);
-    setSelectedCountryOption("");
-    setSelectedStateOption("");
-    setSelectedCityOption("");
-    setStates([]); // Clear the state list
+      // Fetch states for the selected country
+      handleGetStates(selectedCountry)
+        .then((res) => {
+          setStates(res.data.data); // Populate the states list
+          setIsCityDisabled(true);  // Disable city dropdown until a state is selected
+          setSelectedStateOption(""); // Clear any previously selected state
+          setSelectedCityOption(""); // Clear any previously selected city
+        })
+        .catch((err) => console.log("Error fetching states:", err));
+    } else {
+      // Reset all selections if no country is selected
+      setIsStateDisabled(true);
+      setIsCityDisabled(true);
+      setSelectedCountryOption("");
+      setSelectedStateOption("");
+      setSelectedCityOption("");
+      setStates([]); // Clear the state list
+    }
+  };
+
+  // Handle Subscription Change
+  const handleSubscriptionChange = (event) => {
+    const selectedSubscription = event.target.value;
+    setSelectedSubscriptionOption(selectedSubscription);
   }
-};
-
-// Handle Subscription Change
-const handleSubscriptionChange = (event) => {
-  const selectedSubscription = event.target.value;
-  setSelectedSubscriptionOption(selectedSubscription);
-}
 
   const handleStateChange = (event) => {
     let id = event.target.value;
@@ -252,13 +257,13 @@ const handleSubscriptionChange = (event) => {
     }
   };
 
-   const handleDeleteLocation = (locationId) => {
+  const handleDeleteLocation = (locationId) => {
     if (window.confirm("Are you sure you want to delete this location?")) {
       setLocations(locations.filter(loc => loc.id !== locationId));
     }
   };
 
-   const handleEditLocation = (location) => {
+  const handleEditLocation = (location) => {
     setEditingLocation(location);
     setIsLocationModalOpen(true);
   };
@@ -347,7 +352,7 @@ const handleSubscriptionChange = (event) => {
                   return (
                     <Form>
                       <div className="row form-common-row mb-4">
-   
+
                         <div className="col-6">
                           <label htmlFor="organization_Name">
                             Organization Name
@@ -626,10 +631,10 @@ const handleSubscriptionChange = (event) => {
                                 value={
                                   field.value
                                     ? businessOptions.filter((option) =>
-                                        field.value
-                                          .split(",")
-                                          .includes(option.value)
-                                      )
+                                      field.value
+                                        .split(",")
+                                        .includes(option.value)
+                                    )
                                     : []
                                 }
                                 onChange={(selectedOptions) => {
@@ -926,69 +931,69 @@ const handleSubscriptionChange = (event) => {
                       </div>
 
                       {/* Locations Section */}
-                  <div className="mt-4">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                      <h5>Vendor Locations</h5>
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-sm"
-                        onClick={() => {
-                          setEditingLocation(null);
-                          setIsLocationModalOpen(true);
-                        }}
-                      >
-                        + Add Location
-                      </button>
-                    </div>
+                      <div className="mt-4">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                          <h5>Vendor Locations</h5>
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            onClick={() => {
+                              setEditingLocation(null);
+                              setIsLocationModalOpen(true);
+                            }}
+                          >
+                            + Add Location
+                          </button>
+                        </div>
 
-                    {locations.length > 0 ? (
-                      <div className="table-responsive">
-                        <table className="table table-bordered">
-                          <thead>
-                            <tr>
-                              <th>Country</th>
-                              <th>State</th>
-                              <th>City</th>
-                              <th>Address</th>
-                              <th>Postal Code</th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {locations.map((location) => (
-                              <tr key={location.id}>
-                                <td>{location.country_name}</td>
-                                <td>{location.state_name}</td>
-                                <td>{location.city_name}</td>
-                                <td>{location.address || "-"}</td>
-                                <td>{location.postal_code || "-"}</td>
-                                <td>
-                                  <button
-                                    type="button"
-                                    className="btn btn-sm btn-info me-2"
-                                    onClick={() => handleEditLocation(location)}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn btn-sm btn-danger"
-                                    onClick={() => handleDeleteLocation(location.id)}
-                                  >
-                                    Delete
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                        {locations.length > 0 ? (
+                          <div className="table-responsive">
+                            <table className="table table-bordered">
+                              <thead>
+                                <tr>
+                                  <th>Country</th>
+                                  <th>State</th>
+                                  <th>City</th>
+                                  <th>Address</th>
+                                  <th>Postal Code</th>
+                                  <th>Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {locations.map((location) => (
+                                  <tr key={location.id}>
+                                    <td>{location.country_name}</td>
+                                    <td>{location.state_name}</td>
+                                    <td>{location.city_name}</td>
+                                    <td>{location.address || "-"}</td>
+                                    <td>{location.postal_code || "-"}</td>
+                                    <td>
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-info me-2"
+                                        onClick={() => handleEditLocation(location)}
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-danger"
+                                        onClick={() => handleDeleteLocation(location.id)}
+                                      >
+                                        Delete
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="alert alert-info">
+                            No locations added yet. Click "Add Location" to add vendor locations.
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="alert alert-info">
-                        No locations added yet. Click "Add Location" to add vendor locations.
-                      </div>
-                    )}
-                  </div>
 
                       <div className="d-flex justify-content-end mt-4">
                         <button type="submit" className="btn btn-secondary">
@@ -1005,17 +1010,17 @@ const handleSubscriptionChange = (event) => {
         <ToastContainer />
 
         <LocationModal
-        isOpen={isLocationModalOpen}
-        onClose={() => {
-          setIsLocationModalOpen(false);
-          setEditingLocation(null);
-        }}
-        onSave={handleAddLocation}
-        countryList={countryList}
-        handleGetStates={handleGetStates}
-        handleGetCities={handleGetCities}
-        editingLocation={editingLocation}
-      />
+          isOpen={isLocationModalOpen}
+          onClose={() => {
+            setIsLocationModalOpen(false);
+            setEditingLocation(null);
+          }}
+          onSave={handleAddLocation}
+          countryList={countryList}
+          handleGetStates={handleGetStates}
+          handleGetCities={handleGetCities}
+          editingLocation={editingLocation}
+        />
       </section>
     </>
   );
