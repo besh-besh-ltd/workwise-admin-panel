@@ -93,7 +93,7 @@ const openSpocModal = (locationId) => {
 const onSaveSpocMapping = async (selectedSpocIds) => {
   await handleSpocLocationMap({
     location_id: selectedLocationId,
-    spoc_ids: selectedSpocIds,  // array
+    spoc_id: selectedSpocIds,  // array
   });
 
   closeSpocModal();
