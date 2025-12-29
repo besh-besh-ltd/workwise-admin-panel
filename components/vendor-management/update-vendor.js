@@ -1479,14 +1479,14 @@ useEffect(() => {
                       </tr>
                     </thead>
                     <tbody>
-                      {locations.map((location) => (
+                      {locations?.map((location) => (
                         <tr key={location.id}>
                           <td>{location.country_name}</td>
                           <td>{location.state_name}</td>
                           <td>{location.city_name}</td>
                           <td>{location.address || "-"}</td>
                           <td>{location.postal_code || "-"}</td>
-                          <td>{location.spocs.map((spoc) => spoc.spoc_name).join(", ") || "-"}</td>
+                          <td>{location?.spocs?.map((spoc) => spoc.spoc_name).join(", ") || "-"}</td>
                           
                           <td>
                             <button

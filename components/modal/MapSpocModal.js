@@ -36,7 +36,7 @@ const MapSpocModal = ({ show, onClose, spocDetails, onSave, defaultSelected }) =
           <div className="modal-body">
             <label className="form-label">Select SPOCs</label>
             <div className="list-group" style={{ maxHeight: "250px", overflowY: "auto" }}>
-              {spocDetails.map((spoc) => (
+              {spocDetails?.map((spoc) => (
                 <label key={spoc.id} className="list-group-item d-flex align-items-center">
                   <input
                     type="checkbox"
