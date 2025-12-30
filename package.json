@@ -3,11 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "env-cmd -f .env.development next dev",
-    "start": "env-cmd -f .env.development next start ",
-    "build:dev": "env-cmd -f .env.development next build",
-    "build:prod": "env-cmd -f .env.production next build",
-    "build:test": "env-cmd -f .env.test next build",
+    "dev": "env-cmd -f .env next dev",
+    "start": "env-cmd -f .env next start ",
+    "build": "env-cmd -f .env next build",
+   
     "lint": "next lint"
   },
   "dependencies": {
