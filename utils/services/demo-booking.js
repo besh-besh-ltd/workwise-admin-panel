@@ -14,3 +14,17 @@ export const getDemoBookingList = (page = 1, limit = 10)=>{
     });
 
 }
+
+export const updateDemoBookingComment = (id, comment) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/book-a-demo/`,
+        { id, comment }
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  });
+};
