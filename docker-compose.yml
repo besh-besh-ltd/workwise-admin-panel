@@ -1,0 +1,6 @@
+services:
+  workwise-admin:
+    image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${TAG}
+    restart: unless-stopped
+    ports:
+      - '8110:8110'
