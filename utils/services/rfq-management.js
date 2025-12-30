@@ -81,11 +81,12 @@ export const getVendorsForReminder = (id) => {
     });
 };
 
-export const sendSelectiveReminder = (id, vendorIds) => {
+export const sendSelectiveReminder = (id, vendorIds, useMailGun) => {
     return new Promise(async (resolve, reject) => {
         try {
             let response = await axiosInstance.post(`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/rfq/send-selective-reminder/${id}`, {
-                vendor_ids: vendorIds
+                vendor_ids: vendorIds,
+                use_mailgun: useMailGun
             });
             resolve(response);
         } catch (error) {

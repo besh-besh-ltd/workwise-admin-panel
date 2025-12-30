@@ -11,6 +11,7 @@ const VendorSelectionModal = ({
   const [selectedVendors, setSelectedVendors] = useState([]);
   const [sendLoading, setSendLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [useMailGun, setUseMailGun] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -108,7 +109,8 @@ const VendorSelectionModal = ({
     
     setSendLoading(true);
     try {
-      await onSendReminder(selectedVendors);
+      await onSendReminder(selectedVendors, useMailGun);
+      setUseMailGun(false);
       onClose();
     } catch (error) {
       console.error('Error sending reminder:', error);
@@ -128,6 +130,18 @@ const VendorSelectionModal = ({
     >
       <Modal.Header className="border-bottom">
         <Modal.Title className="fs-5 fw-bold">Select Vendors for Reminder</Modal.Title>
+        {!!selectedVendors.length &&
+        <div className='d-flex justify-content-center align-items-center gap-2'>
+        <input
+          id='mail-gun'
+          type="checkbox"
+          checked={useMailGun}
+          className="btn-close mx-1"
+          aria-label="send mail via mailgun"
+          onClick={()=>{setUseMailGun((prev)=>!prev)}}
+          />
+        <label htmlFor="mail-gun" className="m-0">Use MailGun to send Email</label>
+          </div>}
       </Modal.Header>
       
       <Modal.Body className="p-0">
