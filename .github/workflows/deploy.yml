@@ -57,8 +57,8 @@ jobs:
       - name: Deploy application
         run: |
           ssh ${{ secrets.WORKWISE_SSH_USER }}@${{ secrets.WORKWISE_SSH_HOST }} "
-            docker compose down workwise-portal 2>/dev/null || true &&
-            TAG=${{ env.DEPLOY_SHA }} ECR_REGISTRY=${{ env.ECR_REGISTRY }} ECR_REPOSITORY=${{ env.ECR_REPOSITORY }} docker compose up -d workwise-portal
+            docker compose down workwise-admin 2>/dev/null || true &&
+            TAG=${{ env.DEPLOY_SHA }} ECR_REGISTRY=${{ env.ECR_REGISTRY }} ECR_REPOSITORY=${{ env.ECR_REPOSITORY }} docker compose up -d workwise-admin
           "
 
       - name: Docker prune on VM
