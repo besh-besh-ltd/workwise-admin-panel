@@ -1,0 +1,69 @@
+name: Deployment Pipeline
+
+on:
+  workflow_run:
+    workflows: ['Build Docker Image']
+    types:
+      - completed
+    branches:
+      - qa
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: 'Commit SHA to deploy'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy-app:
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      ECR_REGISTRY: 861276115761.dkr.ecr.ap-south-1.amazonaws.com
+      ECR_REPOSITORY: workwise/admin
+
+    concurrency:
+      group: ${{ github.workflow }}
+
+    steps:
+      - name: Set DEPLOY_SHA
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "DEPLOY_SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_SHA=${{ github.event.inputs.commit_sha || github.sha }}" >> $GITHUB_ENV
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Add SSH Key for VM
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.WORKWISE_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 -H ${{ secrets.WORKWISE_SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Upload docker-compose.yml to VM
+        run: |
+          scp docker-compose.yml ${{ secrets.WORKWISE_SSH_USER }}@${{ secrets.WORKWISE_SSH_HOST }}:~/docker-compose.yml
+
+      - name: Deploy application
+        run: |
+          ssh ${{ secrets.WORKWISE_SSH_USER }}@${{ secrets.WORKWISE_SSH_HOST }} "
+            aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }} &&
+            docker compose down workwise-admin 2>/dev/null || true &&
+            TAG=${{ env.DEPLOY_SHA }} ECR_REGISTRY=${{ env.ECR_REGISTRY }} ECR_REPOSITORY=${{ env.ECR_REPOSITORY }} docker compose up -d workwise-admin
+          "
+
+      - name: Docker prune on VM
+        run: |
+          ssh ${{ secrets.WORKWISE_SSH_USER }}@${{ secrets.WORKWISE_SSH_HOST }} "
+            docker image prune -a --force
+          "
