@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import ReactPaginate from "react-paginate";
-import { getDemoBookingList, updateDemoBookingComment} from "@/utils/services/demo-booking";
+import { getDemoBookingList, updateDemoBookingRemark} from "@/utils/services/demo-booking";
 import { Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
 
@@ -10,7 +10,7 @@ const DemoBook = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [editRow, setEditRow] = useState(null); // which row is editing
-  const [tempComment, setTempComment] = useState(""); // temporary comment
+  const [tempRemark, setTempRemark] = useState(""); // temporary remark
   const [isRemoving, setIsRemoving] = useState(false);
 
   const getBookDemoDetails = () => {
@@ -24,7 +24,7 @@ const DemoBook = () => {
               id: item.id,
               mobile: item.mobile.trim(), // Trim spaces from mobile number
               createdAt: item.created_at,
-              comment: item.comment
+              remark: item.remark
             }))
           );
         }
@@ -42,36 +42,36 @@ const DemoBook = () => {
     setPage(e.selected + 1);
   };
 
-  const startAddComment = (item) => {
+  const startAddRemark = (item) => {
   setEditRow(item.id);
-  setTempComment(item.comment || "");
+  setTempRemark(item.remark || "");
 };
 
 const cancelEdit = () => {
   setEditRow(null);
-  setTempComment("");
+  setTempRemark("");
 };
 
-const saveComment = (item, remove = false) => {
+const saveRemark = (item, remove = false) => {
   if (remove) {
-    // Remove comment
-    item.comment = null;
+    // Remove remark
+    item.remark = null;
     setEditRow(null);
-    setTempComment("");
+    setTempRemark("");
     setIsRemoving(false);
   }
   
-updateDemoBookingComment(item.id, tempComment.trim())
+updateDemoBookingRemark(item.id, tempRemark.trim())
   .then((res) => {
-    toast.success("Comment updated successfully");
+    toast.success("Remark updated successfully");
   })
   .catch((err) => {
-    toast.error("Error updating comment");
+    toast.error("Error updating remark");
   });
-  // Save normal comment
-  item.comment = tempComment.trim();
+  // Save normal remark
+  item.remark = tempRemark.trim();
   setEditRow(null);
-  setTempComment("");
+  setTempRemark("");
 };
 
   return (
@@ -83,7 +83,7 @@ updateDemoBookingComment(item.id, tempComment.trim())
             <th>S No.</th>
             <th>Mobile</th>
             <th>Created At</th>
-            <th>Comment</th>
+            <th>Remark</th>
           </tr>
         </thead>
         <tbody>
@@ -100,33 +100,33 @@ updateDemoBookingComment(item.id, tempComment.trim())
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="Add comment here"
-                      value={tempComment}
+                      placeholder="Add remark here"
+                      value={tempRemark}
                       onChange={(e) => {
                         const value = e.target.value.trim();
-                        setTempComment(e.target.value);
+                        setTempRemark(e.target.value);
                         setIsRemoving(value === "--");
                       }}
                     />
                     {isRemoving ? (
-                      <Badge  bg="success" onClick={() => saveComment(item, true)}>Save</Badge>
-                    ) : tempComment.trim() === "" ? (
+                      <Badge  bg="success" onClick={() => saveRemark(item, true)}>Save</Badge>
+                    ) : tempRemark.trim() === "" ? (
                       <Badge bg="danger" onClick={cancelEdit}>Cancel</Badge>
                     ) : (
-                      <Badge bg="success" onClick={() => saveComment(item, false)}>Save</Badge>
+                      <Badge bg="success" onClick={() => saveRemark(item, false)}>Save</Badge>
                     )}
                   </>
-                ) : item.comment ? (
-                  // CASE 3: Has comment
+                ) : item.remark ? (
+                  // CASE 3: Has remark
                   <>
-                    <span>{item.comment}</span>
-                    <Badge bg="secondary" onClick={() => startAddComment(item)}>Edit</Badge>
+                    <span>{item.remark}</span>
+                    <Badge bg="secondary" onClick={() => startAddRemark(item)}>Edit</Badge>
                   </>
                 ) : (
-                  // CASE 1: No comment
+                  // CASE 1: No remark
                   <>
                     <span>--</span>
-                    <Badge onClick={() => startAddComment(item)}>Add Comment</Badge>
+                    <Badge onClick={() => startAddRemark(item)}>Add Remark</Badge>
                   </>
                 )}
               </td>
