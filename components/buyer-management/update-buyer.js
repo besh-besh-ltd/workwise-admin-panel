@@ -135,7 +135,7 @@ const UpdateBuyer = () => {
     }
 
     const selectedCountry = countryCode.find(
-      (item) => item.phone_code === (editDetails?.mobile.match(/^\+?\d+/)?.[0] || "+91")
+      (item) => item.phone_code === (editDetails?.mobile?.match(/^\+?\d+/)?.[0] || "+91")
     );
 
     const fullMobile = values.countryCode 
@@ -180,7 +180,7 @@ const UpdateBuyer = () => {
     return <div>Loading...</div>;
   }
 
-  const extractedCountryCode = editDetails?.mobile.match(/^\+?\d+/)?.[0] || "+91";
+  const extractedCountryCode = editDetails?.mobile?.match(/^\+?\d+/)?.[0] || "+91";
   const selectedCountry = countryCode.find(
     (item) => item.phone_code === extractedCountryCode
   );
@@ -192,6 +192,7 @@ const UpdateBuyer = () => {
     organization_name: editDetails?.company_name || editDetails?.organization_name || "",
     image: editDetails?.profile_image || null,
     subscription: editDetails?.subscription_plan_id || "-1",
+    countryCode: "",
   };
 
   const accountLimitsInitialValues = {
@@ -270,7 +271,7 @@ const UpdateBuyer = () => {
                         className="form-select me-2 w-auto"
                         disabled={!canEditUser()}
                       >
-                        <option value="countryCode">{selectedCountry?.country_code} ({selectedCountry?.phone_code})</option>
+                        <option value="">{selectedCountry?.country_code} ({selectedCountry?.phone_code})</option>
                         {countryCode.map((item) => (
                           <option key={item.id} value={item.phone_code}>
                             {item.country_code} ({item.phone_code})
@@ -336,7 +337,7 @@ const UpdateBuyer = () => {
                       name="subscription"
                     >
                       <option value="" disabled>Select</option>
-                      <option value="-1" selected>No Subscription</option>
+                      <option value="-1">No Subscription</option>
                       {subscriptionList?.map((subscription) => (
                         <option key={subscription.value} value={subscription.value}>
                           {subscription.label}
