@@ -122,59 +122,131 @@ const BulkVendorUpload = () => {
     return ((success / total) * 100).toFixed(1);
   };
 
-  // Download errors as PDF
-  const downloadErrors = () => {
-    if (!results?.errors?.length) return;
+  // Download full report as Excel
+  const downloadReport = () => {
+    if (!results) return;
 
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
+    const escapeHtml = (str) => (str || '-').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const tableHTML = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
         <head>
           <meta charset="UTF-8">
-          <title>Bulk Upload Errors - ${new Date().toLocaleDateString()}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h1 { color: #dc3545; font-size: 20px; margin-bottom: 5px; }
-            .date { color: #666; font-size: 12px; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th { background-color: #dc3545; color: white; padding: 10px 8px; text-align: left; }
-            td { padding: 8px; border: 1px solid #ddd; }
-            tr:nth-child(even) { background-color: #f9f9f9; }
-            .footer { margin-top: 20px; font-size: 10px; color: #666; text-align: center; }
+            table { border-collapse: collapse; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; }
+            th { background-color: #4472C4; color: white; font-weight: bold; }
+            .section-title { background-color: #2E75B6; color: white; font-size: 14px; font-weight: bold; }
+            .success { background-color: #C6EFCE; }
+            .warning { background-color: #FFEB9C; }
+            .danger { background-color: #FFC7CE; }
           </style>
         </head>
         <body>
-          <h1>Bulk Vendor Upload - Error Report</h1>
-          <p class="date">Generated on: ${new Date().toLocaleString()}</p>
+          <!-- Summary Section -->
           <table>
-            <thead>
+            <tr><th colspan="2" class="section-title">Summary</th></tr>
+            <tr><th>Metric</th><th>Value</th></tr>
+            <tr><td>Total Rows</td><td>${results.summary?.totalRows || 0}</td></tr>
+            <tr><td>Total Vendors</td><td>${results.summary?.totalVendors || 0}</td></tr>
+            <tr class="success"><td>Vendors Created</td><td>${results.summary?.vendorsCreated || 0}</td></tr>
+            <tr class="warning"><td>Vendors Existing</td><td>${results.summary?.vendorsExisting || 0}</td></tr>
+            <tr class="danger"><td>Vendors Failed</td><td>${results.summary?.vendorsFailed || 0}</td></tr>
+            <tr><td>Total Products</td><td>${results.summary?.totalProducts || 0}</td></tr>
+            <tr class="success"><td>Products Mapped</td><td>${results.summary?.productsMapped || 0}</td></tr>
+            <tr><td>Products Skipped</td><td>${results.summary?.productsSkipped || 0}</td></tr>
+            <tr class="danger"><td>Products Failed</td><td>${results.summary?.productsFailed || 0}</td></tr>
+            <tr><td>Approvals Mapped</td><td>${results.summary?.approvalsMapped || 0}</td></tr>
+            <tr><td>Processing Time</td><td>${results.summary?.processingTimeMs || 0}ms</td></tr>
+          </table>
+
+          <!-- Vendors Section -->
+          <table>
+            <tr><th colspan="9" class="section-title">Vendors</th></tr>
+            <tr>
+              <th>Row</th>
+              <th>Company</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Vendor ID</th>
+              <th>Products</th>
+              <th>Mapped</th>
+              <th>Skipped</th>
+              <th>Failed</th>
+            </tr>
+            ${(results.vendors || []).map(vendor => `
               <tr>
-                <th style="width: 60px;">Row</th>
-                <th style="width: 150px;">Vendor</th>
+                <td>${vendor.startRow || '-'}</td>
+                <td>${escapeHtml(vendor.company_name)}</td>
+                <td>${escapeHtml(vendor.email)}</td>
+                <td>${vendor.isNew ? 'NEW' : (vendor.status?.toUpperCase() || '-')}</td>
+                <td>${vendor.vendorId || '-'}</td>
+                <td>${vendor.productsProcessed || 0}</td>
+                <td>${vendor.productsMapped || 0}</td>
+                <td>${vendor.productsSkipped || 0}</td>
+                <td>${vendor.productsFailed || 0}</td>
+              </tr>
+            `).join('')}
+          </table>
+
+          <!-- Row Details Section -->
+          <table>
+            <tr><th colspan="5" class="section-title">Row Details</th></tr>
+            <tr>
+              <th>Excel Row</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Message</th>
+              <th>Details</th>
+            </tr>
+            ${(results.rows || []).map(row => `
+              <tr>
+                <td>${row.excelRow || '-'}</td>
+                <td>${row.type || '-'}</td>
+                <td>${row.status || '-'}</td>
+                <td>${escapeHtml(row.message)}</td>
+                <td>${escapeHtml([
+                  row.data?.email ? `Email: ${row.data.email}` : '',
+                  row.data?.variant_id ? `Variant: ${row.data.variant_id}` : '',
+                  row.data?.vendor_id ? `Vendor ID: ${row.data.vendor_id}` : ''
+                ].filter(Boolean).join(' | '))}</td>
+              </tr>
+            `).join('')}
+          </table>
+
+          <!-- Errors Section -->
+          ${results.errors?.length > 0 ? `
+            <table>
+              <tr><th colspan="3" class="section-title">Errors (${results.errors.length})</th></tr>
+              <tr>
+                <th>Row</th>
+                <th>Vendor</th>
                 <th>Error</th>
               </tr>
-            </thead>
-            <tbody>
               ${results.errors.map(error => `
-                <tr>
+                <tr class="danger">
                   <td>${error.row || '-'}</td>
-                  <td>${(error.vendor || '-').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
-                  <td>${(error.error || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+                  <td>${escapeHtml(error.vendor)}</td>
+                  <td>${escapeHtml(error.error)}</td>
                 </tr>
               `).join('')}
-            </tbody>
-          </table>
-          <p class="footer">Total Errors: ${results.errors.length}</p>
+            </table>
+          ` : ''}
         </body>
       </html>
     `;
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.onload = () => {
-      printWindow.print();
-    };
+    const blob = new Blob([tableHTML], { type: 'application/vnd.ms-excel' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+    link.download = `bulk_upload_report_${dateStr}_${timeStr}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
   };
 
   return (
@@ -319,6 +391,13 @@ const BulkVendorUpload = () => {
                       <i className="fa fa-clock"></i> {results.summary.processingTimeMs}ms
                     </span>
                   )}
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-success"
+                    onClick={downloadReport}
+                  >
+                    <i className="fa fa-download"></i> Download Report
+                  </button>
                 </div>
               </div>
               <div className="card-body">
@@ -515,7 +594,7 @@ const BulkVendorUpload = () => {
                                     {vendor.isNew ? 'NEW' : vendor.status?.toUpperCase()}
                                   </span>
                                 </td>
-                                <td>{vendor.vendorId || '-'}</td>
+                                <td>{vendor.vendorId || '--'}</td>
                                 <td>{vendor.productsProcessed || 0}</td>
                                 <td className="text-success">{vendor.productsMapped || 0}</td>
                                 <td className="text-info">{vendor.productsSkipped || 0}</td>
@@ -550,7 +629,7 @@ const BulkVendorUpload = () => {
                                   <span className={`badge badge-${
                                     row.type === 'vendor' ? 'primary' :
                                     row.type === 'product' ? 'info' :
-                                    row.type === 'vendor+product' ? 'purple' : 'secondary'
+                                    row.type === 'vendor+product' ? 'primary' : 'secondary'
                                   }`}>
                                     {row.type || 'unknown'}
                                   </span>
@@ -565,12 +644,14 @@ const BulkVendorUpload = () => {
                                     {row.status}
                                   </span>
                                 </td>
-                                <td><small>{row.message}</small></td>
+                                <td><small>{row.message ? row.message : '--'}</small></td>
                                 <td>
                                   <small className="text-muted">
-                                    {row.data?.email && `Email: ${row.data.email}`}
-                                    {row.data?.variant_id && ` | Variant: ${row.data.variant_id}`}
-                                    {row.data?.vendor_id && ` | Vendor ID: ${row.data.vendor_id}`}
+                                    {[
+                                      row.data?.email && `Email: ${row.data.email}`,
+                                      row.data?.variant_id && `Variant: ${row.data.variant_id}`,
+                                      row.data?.vendor_id && `Vendor ID: ${row.data.vendor_id}`
+                                    ].filter(Boolean).join(' | ') || '--'}
                                   </small>
                                 </td>
                               </tr>
@@ -585,16 +666,7 @@ const BulkVendorUpload = () => {
                   {activeTab === 'errors' && results.errors?.length > 0 && (
                     <div className="tab-pane active">
                       <div className="alert alert-danger">
-                        <div className="d-flex justify-content-between align-items-center mb-2">
-                          <h5 className="mb-0"><i className="fa fa-exclamation-triangle"></i> Errors Found</h5>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-danger"
-                            onClick={downloadErrors}
-                          >
-                            <i className="fa fa-file-pdf"></i> Download PDF
-                          </button>
-                        </div>
+                        <h5><i className="fa fa-exclamation-triangle"></i> Errors Found</h5>
                         <div className="table-responsive">
                           <table className="table table-sm table-bordered mb-0">
                             <thead>
