@@ -122,6 +122,61 @@ const BulkVendorUpload = () => {
     return ((success / total) * 100).toFixed(1);
   };
 
+  // Download errors as PDF
+  const downloadErrors = () => {
+    if (!results?.errors?.length) return;
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Bulk Upload Errors - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { color: #dc3545; font-size: 20px; margin-bottom: 5px; }
+            .date { color: #666; font-size: 12px; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th { background-color: #dc3545; color: white; padding: 10px 8px; text-align: left; }
+            td { padding: 8px; border: 1px solid #ddd; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .footer { margin-top: 20px; font-size: 10px; color: #666; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <h1>Bulk Vendor Upload - Error Report</h1>
+          <p class="date">Generated on: ${new Date().toLocaleString()}</p>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 60px;">Row</th>
+                <th style="width: 150px;">Vendor</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${results.errors.map(error => `
+                <tr>
+                  <td>${error.row || '-'}</td>
+                  <td>${(error.vendor || '-').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+                  <td>${(error.error || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <p class="footer">Total Errors: ${results.errors.length}</p>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  };
+
   return (
     <>
       <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover />
@@ -530,7 +585,16 @@ const BulkVendorUpload = () => {
                   {activeTab === 'errors' && results.errors?.length > 0 && (
                     <div className="tab-pane active">
                       <div className="alert alert-danger">
-                        <h5><i className="fa fa-exclamation-triangle"></i> Errors Found</h5>
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <h5 className="mb-0"><i className="fa fa-exclamation-triangle"></i> Errors Found</h5>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger"
+                            onClick={downloadErrors}
+                          >
+                            <i className="fa fa-file-pdf"></i> Download PDF
+                          </button>
+                        </div>
                         <div className="table-responsive">
                           <table className="table table-sm table-bordered mb-0">
                             <thead>
