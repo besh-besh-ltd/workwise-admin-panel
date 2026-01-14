@@ -75,6 +75,13 @@
         "active": false
       },
        {
+        "title": "Vendor Stats",
+        "link": "/service-module/vendor-stats",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+       {
         "title": "Client Dashboard",
         "link": "/service-module/client-dashboard",
         "class": "",
