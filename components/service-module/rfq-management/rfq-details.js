@@ -549,7 +549,7 @@ const RFQDetails = () => {
                                                                                     </td>
                                                                                     <td>
                                                                                         {vendor.subscription_plan_id ? (
-                                                                                            <span className="badge badge-warning">Yes</span>
+                                                                                            <span className="badge badge-primary">Yes</span>
                                                                                         ) : (
                                                                                             <span className="badge badge-secondary">No</span>
                                                                                         )}
@@ -560,7 +560,7 @@ const RFQDetails = () => {
                                                                                         ) : vendor.has_responded ? (
                                                                                             <span className="badge badge-success">Responded</span>
                                                                                         ) : (
-                                                                                            <span className="badge badge-warning">Pending</span>
+                                                                                            <span className="badge badge-secondary">Pending</span>
                                                                                         )}
                                                                                     </td>
                                                                                     <td>
