@@ -29,7 +29,7 @@ import {
   faChartBar,
   faChartLine
 } from "@fortawesome/free-solid-svg-icons";
-import { fetchVendorStatsOverview, fetchVendorStatsByVendor } from "@/utils/services/vendor-stats";
+import { fetchVendorStatsOverview, fetchVendorStatsByVendor, fetchQuotationFinancialAnalysis } from "@/utils/services/vendor-stats";
 import { handleGetVendorList } from "@/utils/services/vendor-management";
 import { getParentCategories } from "@/utils/services/product-management";
 import { searchAllVariants } from "@/utils/services/product-management";
@@ -63,6 +63,8 @@ const VendorStatsDashboard = () => {
   const [showVendorDropdown, setShowVendorDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [vendorLoading, setVendorLoading] = useState({}); // Track loading per vendor
+  const [financialData, setFinancialData] = useState(null);
+  const [financialLoading, setFinancialLoading] = useState(false);
   const [leaderboardFilters, setLeaderboardFilters] = useState({
     source: "",
     sortBy: "awards_desc",
@@ -375,6 +377,29 @@ const VendorStatsDashboard = () => {
     }
   };
 
+  const fetchFinancialAnalysis = async () => {
+    try {
+      setFinancialLoading(true);
+      const filtersWithVendors = {
+        ...filters,
+        ...(selectedVendors.length > 0 && {
+          vendor_ids: selectedVendors.map(id => parseInt(id, 10)).filter(id => !isNaN(id))
+        })
+      };
+      const res = await fetchQuotationFinancialAnalysis(filtersWithVendors);
+      if (res?.status === 1) {
+        setFinancialData(res.data);
+      } else {
+        setFinancialData(null);
+      }
+    } catch (error) {
+      setFinancialData(null);
+      console.error("Financial analysis error", error);
+    } finally {
+      setFinancialLoading(false);
+    }
+  };
+
   const fetchVendors = async () => {
     try {
       const res = await handleGetVendorList(50, 1);
@@ -458,6 +483,9 @@ const VendorStatsDashboard = () => {
 
   const handleApplyFilters = () => {
     fetchOverview();
+    if (activeTab === "financial") {
+      fetchFinancialAnalysis();
+    }
     if (selectedVendors.length > 0) {
       fetchVendorStats(selectedVendors);
     }
@@ -712,7 +740,16 @@ const VendorStatsDashboard = () => {
     fetchOverview();
     fetchVendors();
     fetchCategories();
+    if (activeTab === "financial") {
+      fetchFinancialAnalysis();
+    }
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "financial") {
+      fetchFinancialAnalysis();
+    }
+  }, [activeTab, filters, selectedVendors]);
 
   const fetchCategories = async () => {
     try {
@@ -1390,6 +1427,14 @@ const VendorStatsDashboard = () => {
                   onClick={() => setActiveTab("queries")}
                 >
                   <i className="fas fa-question-circle me-2"></i>Queries & Deviations
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className={`nav-link ${activeTab === "financial" ? "active" : ""}`}
+                  onClick={() => setActiveTab("financial")}
+                >
+                  <FontAwesomeIcon icon={faChartLine} className="me-2" />Financial Analysis
                 </button>
               </li>
             </ul>
@@ -2486,6 +2531,287 @@ const VendorStatsDashboard = () => {
           </div>
         )}
         </>
+      )}
+
+      {/* Financial Analysis Tab */}
+      {!financialLoading && activeTab === "financial" && (
+        <>
+          <FilterBar showVariant={true} showBuyer={true} showVendor={true} />
+          
+          {/* KPI Cards */}
+          {financialData?.overall_stats && (
+            <div className="row mb-4">
+              <div className="col-md-3 mb-3">
+                <div className="card border-primary">
+                  <div className="card-body text-center">
+                    <h3 className="text-primary">{financialData.overall_stats.total_quotes_submitted || 0}</h3>
+                    <p className="mb-0 text-muted">Total Quotes Submitted</p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-3 mb-3">
+                <div className="card border-info">
+                  <div className="card-body text-center">
+                    <h3 className="text-info">{Number(financialData.overall_stats.avg_revisions || 0).toFixed(1)}</h3>
+                    <p className="mb-0 text-muted">Avg Revisions</p>
+                  </div>
+                </div>
+              </div>
+              {(filters.product_id || filters.category_id) && financialData.overall_stats.avg_unit_price && (
+                <>
+                  <div className="col-md-3 mb-3">
+                    <div className="card border-success">
+                      <div className="card-body text-center">
+                        <h3 className="text-success">
+                          ₹{Number(financialData.overall_stats.avg_unit_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                        </h3>
+                        <p className="mb-0 text-muted">Avg Price Quoted</p>
+                        <small className="text-muted">(Filtered)</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-3 mb-3">
+                    <div className="card border-warning">
+                      <div className="card-body text-center">
+                        <h3 className="text-warning">{financialData.overall_stats.total_finalizations || 0}</h3>
+                        <p className="mb-0 text-muted">Total Awards/Finalizations</p>
+                        <small className="text-muted">(Filtered)</small>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+              {(!filters.product_id && !filters.category_id) && (
+                <div className="col-md-3 mb-3">
+                  <div className="card border-warning">
+                    <div className="card-body text-center">
+                      <h3 className="text-warning">{financialData.overall_stats.total_finalizations || 0}</h3>
+                      <p className="mb-0 text-muted">Total Awards/Finalizations</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Price Range - Only when product/category is selected */}
+          {(filters.product_id || filters.category_id) && financialData?.overall_stats?.min_unit_price && financialData?.overall_stats?.max_unit_price && (
+            <div className="row mb-4">
+              <div className="col-md-6 mb-3">
+                <div className="card border-secondary">
+                  <div className="card-body text-center">
+                    <h5 className="text-secondary">
+                      ₹{Number(financialData.overall_stats.min_unit_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </h5>
+                    <p className="mb-0 text-muted">Min Price</p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-6 mb-3">
+                <div className="card border-secondary">
+                  <div className="card-body text-center">
+                    <h5 className="text-secondary">
+                      ₹{Number(financialData.overall_stats.max_unit_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </h5>
+                    <p className="mb-0 text-muted">Max Price</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Top Buyers */}
+          {financialData?.top_buyers && Array.isArray(financialData.top_buyers) && financialData.top_buyers.length > 0 && (
+            <div className="card mb-3 shadow-sm">
+              <div className="card-body">
+                <h5 className="card-title mb-3 fw-bold">
+                  <FontAwesomeIcon icon={faChartLine} className="me-2 text-primary" />
+                  Top Buyers by Interactions
+                </h5>
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead className="table-light">
+                      <tr>
+                        <th>#</th>
+                        <th>Buyer Name</th>
+                        <th>Organization</th>
+                        <th>Quotes Sent</th>
+                        <th>Awards Given</th>
+                        <th>Total Interactions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {financialData.top_buyers.map((buyer, idx) => (
+                        <tr key={buyer.buyer_id || idx}>
+                          <td>{idx + 1}</td>
+                          <td className="fw-semibold">{buyer.buyer_name || "N/A"}</td>
+                          <td>{buyer.buyer_organization || "N/A"}</td>
+                          <td><span className="badge bg-info">{buyer.quotes_sent || 0}</span></td>
+                          <td><span className="badge bg-success">{buyer.awards_given || 0}</span></td>
+                          <td><span className="badge bg-primary">{buyer.total_interactions || 0}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Vendor Financial Leaderboard */}
+          {financialData?.vendor_leaderboard && Array.isArray(financialData.vendor_leaderboard) && financialData.vendor_leaderboard.length > 0 && (
+            <div className="card shadow-sm">
+              <div className="card-body">
+                <h5 className="card-title mb-3 fw-bold">
+                  <FontAwesomeIcon icon={faChartBar} className="me-2 text-primary" />
+                  Vendor Financial Leaderboard
+                </h5>
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead className="table-light">
+                      <tr>
+                        <th>#</th>
+                        <th>Vendor Name</th>
+                        <th>Company</th>
+                        <th>Quotes Submitted</th>
+                        <th>Avg Revisions</th>
+                        <th>Avg Price</th>
+                        <th>Finalizations</th>
+                        <th>Top Buyer</th>
+                        <th>Top Product</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {financialData.vendor_leaderboard.map((vendor, idx) => {
+                        const topBuyer = Array.isArray(vendor.top_buyers) && vendor.top_buyers.length > 0 
+                          ? vendor.top_buyers[0] 
+                          : null;
+                        const topProduct = Array.isArray(vendor.top_products) && vendor.top_products.length > 0 
+                          ? vendor.top_products[0] 
+                          : null;
+                        return (
+                          <tr key={vendor.vendor_id || idx}>
+                            <td>{idx + 1}</td>
+                            <td className="fw-semibold">{vendor.vendor_name || "N/A"}</td>
+                            <td>{vendor.company_name || "N/A"}</td>
+                            <td><span className="badge bg-primary">{vendor.total_quotes_submitted || 0}</span></td>
+                            <td>{Number(vendor.avg_revisions || 0).toFixed(1)}</td>
+                            <td>
+                              {vendor.avg_unit_price && Number(vendor.avg_unit_price) > 0
+                                ? `₹${Number(vendor.avg_unit_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+                                : "N/A"}
+                            </td>
+                            <td><span className="badge bg-success">{vendor.total_finalizations || 0}</span></td>
+                            <td>
+                              {topBuyer ? (
+                                <div>
+                                  <div className="fw-semibold small">{topBuyer.buyer_name || "N/A"}</div>
+                                  <small className="text-muted">{topBuyer.total_interactions || 0} interactions</small>
+                                </div>
+                              ) : (
+                                <span className="text-muted">-</span>
+                              )}
+                            </td>
+                            <td>
+                              {topProduct ? (
+                                <div>
+                                  <div className="fw-semibold small">{topProduct.product_name || "N/A"}</div>
+                                  <small className="text-muted">{topProduct.finalizations_count || 0} awards</small>
+                                </div>
+                              ) : (
+                                <span className="text-muted">-</span>
+                              )}
+                            </td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => {
+                                  const vendorId = String(vendor.vendor_id || "");
+                                  setSelectedVendors([vendorId]);
+                                  fetchVendorStats([vendorId]);
+                                }}
+                                title="View Details"
+                              >
+                                <FontAwesomeIcon icon={faEye} className="me-1" />View Details
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Product Summary - Only when product/category is selected */}
+          {(filters.product_id || filters.category_id) && financialData?.product_summary && Array.isArray(financialData.product_summary) && financialData.product_summary.length > 0 && (
+            <div className="card mt-3 shadow-sm">
+              <div className="card-body">
+                <h5 className="card-title mb-3 fw-bold">
+                  <FontAwesomeIcon icon={faChartBar} className="me-2 text-primary" />
+                  Product Financial Summary
+                </h5>
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead className="table-light">
+                      <tr>
+                        <th>#</th>
+                        <th>Product</th>
+                        <th>Variant</th>
+                        <th>Quotes</th>
+                        <th>Finalizations</th>
+                        <th>Avg Price</th>
+                        <th>Avg Total Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {financialData.product_summary.map((product, idx) => (
+                        <tr key={product.product_variant_id || idx}>
+                          <td>{idx + 1}</td>
+                          <td className="fw-semibold">{product.product_name || "N/A"}</td>
+                          <td>{product.variant_name || "N/A"}</td>
+                          <td><span className="badge bg-info">{product.quote_count || 0}</span></td>
+                          <td><span className="badge bg-success">{product.finalization_count || 0}</span></td>
+                          <td>
+                            {product.avg_price && Number(product.avg_price) > 0
+                              ? `₹${Number(product.avg_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+                              : "N/A"}
+                          </td>
+                          <td>
+                            {product.avg_total_price && Number(product.avg_total_price) > 0
+                              ? `₹${Number(product.avg_total_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+                              : "N/A"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(!financialData || 
+            ((!financialData.top_buyers || (Array.isArray(financialData.top_buyers) && financialData.top_buyers.length === 0)) && 
+            (!financialData.vendor_leaderboard || (Array.isArray(financialData.vendor_leaderboard) && financialData.vendor_leaderboard.length === 0)))) && (
+            <div className="text-center text-muted py-5">
+              <FontAwesomeIcon icon={faChartLine} className="fa-3x mb-3 d-block" />
+              <p>No financial data available</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {financialLoading && activeTab === "financial" && (
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="text-muted mt-2">Loading financial analysis...</p>
+        </div>
       )}
 
       {/* Per Vendor Detail - Global Section */}

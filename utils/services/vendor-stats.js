@@ -31,3 +31,21 @@ export const fetchVendorStatsByVendor = (vendorId, params = {}) => {
   );
 };
 
+export const fetchQuotationFinancialAnalysis = (params = {}) => {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      // Handle arrays (like vendor_ids) by joining with comma
+      if (Array.isArray(value) && value.length > 0) {
+        query.append(key, value.join(','));
+      } else if (!Array.isArray(value)) {
+        query.append(key, value);
+      }
+    }
+  });
+
+  return axiosInstance.get(
+    `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/stats/quotation/financial${query.toString() ? `?${query.toString()}` : ""}`
+  );
+};
+
