@@ -13,3 +13,17 @@ export const getContactUsPage = (page = 1, limit = 10) => {
   });
   
 }
+
+export const updateCommunicationRemark = (id, remark) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosInstance.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/contact-us-list/`,
+        { id, remark }
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  });
+};

@@ -405,8 +405,7 @@ useEffect(() => {
     cin: editDetails?.companyDetails?.cin || "",
     turn_over: editDetails?.companyDetails?.turnover || "",
     total_employees: editDetails?.companyDetails?.no_of_employess || "",
-    subscription: editDetails?.vendorDetails?.subscription_plan_id || "-1",
-    subscription_plan: editDetails?.companyDetails?.subscription_plan || "",
+    subscription_plan: editDetails?.vendorDetails?.subscription_plan_id || "",
     vendor_access_type: editDetails?.vendorAccessType || "public",
     buyer_company_ids: Array.isArray(editDetails?.mappedCompanies)
       ? editDetails.mappedCompanies
@@ -462,7 +461,7 @@ useEffect(() => {
         .catch((err) => console.log("err", err));
     }
     // Set city when state, country change also run when subscription plan changes.
-  }, [id, editDetails?.vendorDetails?.country, editDetails?.vendorDetails?.state, editDetails?.vendorDetails?.city,  editDetails?.companyDetails?.subscription_plan])
+  }, [id, editDetails?.vendorDetails?.country, editDetails?.vendorDetails?.state, editDetails?.vendorDetails?.city,  editDetails?.vendorDetails?.subscription_plan_id])
 
 
   const extractedCountryCode = editDetails?.vendorDetails?.mobile.match(/^\+?\d+/)?.[0] || "+91";
@@ -607,7 +606,7 @@ useEffect(() => {
                   values.city =
                     selectedCityOption || editDetails?.vendorDetails?.city;
                   values.subscription_plan = 
-                    selectedSubscriptionOption || editDetails?.companyDetails?.subscription_plan;
+                    selectedSubscriptionOption || editDetails?.vendorDetails?.subscription_plan_id;
                   submitHandler(values, resetForm);
                 }}
               >

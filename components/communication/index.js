@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import ReactPaginate from "react-paginate";
-import { Button, Modal } from "react-bootstrap";
-import { getContactUsPage } from "@/utils/services/contact-us";
+import { Button, Modal, Badge } from "react-bootstrap";
+import { getContactUsPage, updateCommunicationRemark } from "@/utils/services/contact-us";
+import { toast } from "react-toastify";
 
 const Message = () => {
    // let BuyerData = [
@@ -60,10 +61,39 @@ const Message = () => {
 
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [editRow, setEditRow] = useState(null);
+  const [tempRemark, settempRemark] = useState("");
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const handleShowMessage = (item) => {
     setSelectedMessage(item);
     setShowModal(true);
+  };
+
+  const startAddRemark = (item) => {
+    setEditRow(item.id);
+    settempRemark(item.remark || "");
+  };
+
+  const cancelEdit = () => {
+    setEditRow(null);
+    settempRemark("");
+  };
+
+  const saveRemark = (item, remove = false) => {
+    const remarkToSave = remove ? null : tempRemark.trim();
+
+    updateCommunicationRemark(item.id, remarkToSave)
+      .then((res) => {
+        toast.success("Comment updated successfully");
+      })
+      .catch((err) => {
+        toast.error("Error updating comment");
+      });
+    item.remark = remarkToSave;
+    setEditRow(null);
+    settempRemark("");
+    setIsRemoving(false);
   };
 
   const getContactUs = () => {
@@ -127,8 +157,8 @@ const Message = () => {
                 </div>
               </div>
             </div> */}
-            <div className="card card-body product-table">
-              <table className="table table-hover mb-3">
+            <div className="card card-body product-table overflow overflow-x-auto">
+              <table className="table table-hover mb-3 max-w-max">
                 <thead>
                   <tr>
                     <th scope="col">Customer Name</th>
@@ -136,6 +166,7 @@ const Message = () => {
                     <th scope="col">Phone</th>
                     <th scope="col">Message</th>
                     <th scope="col">Date</th>
+                    <th scope="col">Remark</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -145,7 +176,7 @@ const Message = () => {
                         <td>{item.name}</td>
                         <td>{item.email}</td>
                         <td>{item.phone}</td>
-                        <td>
+                        <td style={{width:'150px'}}>
                           <div>
                             {item.subject.length > 50
                               ? `${item.subject.substring(0, 50)}...`
@@ -160,6 +191,40 @@ const Message = () => {
                           </Button>
                          </td>
                         <td>{new Date(item.createdAt).toLocaleDateString()}</td>
+                        <td className="d-flex justify-content-between align-items-center gap-2">
+                          {editRow === item.id ? (
+                            <>
+                              <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Add remark here"
+                                value={tempRemark}
+                                onChange={(e) => {
+                                  const value = e.target.value.trim();
+                                  settempRemark(e.target.value);
+                                  setIsRemoving(value === "--");
+                                }}
+                              />
+                              {isRemoving ? (
+                                <Badge bg="success" onClick={() => saveRemark(item, true)}>Save</Badge>
+                              ) : tempRemark.trim() === "" ? (
+                                <Badge bg="danger" onClick={cancelEdit}>Cancel</Badge>
+                              ) : (
+                                <Badge bg="success" onClick={() => saveRemark(item, false)}>Save</Badge>
+                              )}
+                            </>
+                          ) : item.remark ? (
+                            <>
+                              <span>{item.remark}</span>
+                              <Badge bg="secondary" onClick={() => startAddRemark(item)}>Edit</Badge>
+                            </>
+                          ) : (
+                            <>
+                              <span>--</span>
+                              <Badge onClick={() => startAddRemark(item)}>Add Remark</Badge>
+                            </>
+                          )}
+                        </td>
                       </tr>
                     ))}
                 </tbody>
