@@ -11,6 +11,24 @@ import {
   Legend,
   Chart as ChartJS,
 } from "chart.js";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { 
+  faFilter, 
+  faSort, 
+  faSortUp, 
+  faSortDown,
+  faTrophy,
+  faBan,
+  faClipboardCheck,
+  faFileContract,
+  faQuestionCircle,
+  faTimes,
+  faEye,
+  faPlus,
+  faChartPie,
+  faChartBar,
+  faChartLine
+} from "@fortawesome/free-solid-svg-icons";
 import { fetchVendorStatsOverview, fetchVendorStatsByVendor } from "@/utils/services/vendor-stats";
 import { handleGetVendorList } from "@/utils/services/vendor-management";
 import { getParentCategories } from "@/utils/services/product-management";
@@ -58,8 +76,29 @@ const VendorStatsDashboard = () => {
     awardRegret: 0, // 0 = bar, 1 = line
   });
 
-  const formatResponseTime = (minutes) => {
-    if (!minutes || minutes === 0) return "0 min";
+  // Check if vendor has actually submitted quotes (has response time data)
+  const hasResponseData = (vendor) => {
+    // If vendor has awards or regrets, they've submitted quotes
+    const hasQuotes = (vendor?.awards || 0) > 0 || (vendor?.regrets || 0) > 0;
+    // If they have response time data (not null and > 0), they've submitted quotes
+    const hasResponseTime = vendor?.avg_response_minutes != null && vendor.avg_response_minutes > 0;
+    return hasQuotes || hasResponseTime;
+  };
+
+  const formatResponseTime = (minutes, vendor = null) => {
+    // If vendor is provided, check if they have actual quote data
+    if (vendor && !hasResponseData(vendor)) {
+      return "N/A";
+    }
+    // If minutes is null, undefined, or 0 and we don't have quote data, show N/A
+    if (!minutes || minutes === 0) {
+      // If vendor has awards/regrets, 0 might be valid (instant response)
+      // Otherwise, it's likely no data
+      if (vendor && ((vendor.awards || 0) > 0 || (vendor.regrets || 0) > 0)) {
+        return "0 min";
+      }
+      return "N/A";
+    }
     if (minutes < 60) return `${Math.round(minutes)} min`;
     const hours = Math.floor(minutes / 60);
     const mins = Math.round(minutes % 60);
@@ -97,7 +136,7 @@ const VendorStatsDashboard = () => {
       },
       { 
         label: "Avg Response Time", 
-        value: formatResponseTime(overview.avg_response_minutes),
+        value: formatResponseTime(overview.avg_response_minutes, overview),
         icon: "clock",
         color: "info"
       },
@@ -148,23 +187,49 @@ const VendorStatsDashboard = () => {
 
   const handleColumnFilter = (column) => {
     if (columnFilter.column === column) {
-      // Cycle through: asc -> desc -> null
-      if (columnFilter.direction === "asc") {
-        setColumnFilter({ column, direction: "desc" });
-        setLeaderboardFilters((prev) => ({ ...prev, sortBy: `${column}_desc` }));
-      } else if (columnFilter.direction === "desc") {
-        setColumnFilter({ column: null, direction: null });
-        setLeaderboardFilters((prev) => ({ ...prev, sortBy: "awards_desc" }));
-      }
+      // Toggle off: reset filter
+      setColumnFilter({ column: null, direction: null });
+      setLeaderboardFilters((prev) => ({ ...prev, sortBy: "awards_desc" }));
     } else {
+      // Toggle on: set new filter with ascending sort
       setColumnFilter({ column, direction: "asc" });
       setLeaderboardFilters((prev) => ({ ...prev, sortBy: `${column}_asc` }));
     }
   };
 
+  const toggleSortDirection = (e, column) => {
+    e.stopPropagation(); // Prevent toggle off when clicking sort icon
+    if (columnFilter.column === column) {
+      const newDirection = columnFilter.direction === "asc" ? "desc" : "asc";
+      setColumnFilter({ column, direction: newDirection });
+      setLeaderboardFilters((prev) => ({ ...prev, sortBy: `${column}_${newDirection}` }));
+    }
+  };
+
   const getColumnSortIcon = (column) => {
-    if (columnFilter.column !== column) return "fa-sort";
-    return columnFilter.direction === "asc" ? "fa-sort-up" : "fa-sort-down";
+    if (columnFilter.column !== column) return faSort;
+    return columnFilter.direction === "asc" ? faSortUp : faSortDown;
+  };
+
+  const isColumnVisible = (columnName) => {
+    // Always show essential columns
+    if (["#", "Vendor Name", "Company", "Source", "Action"].includes(columnName)) {
+      return true;
+    }
+    // If no filter is active, show all columns
+    if (!columnFilter.column) {
+      return true;
+    }
+    // If filter is active, only show the filtered column
+    const columnMap = {
+      "response": "Avg Response Time",
+      "awards": "Awards",
+      "regrets": "Regrets",
+      "tech_eval": "Tech Eval",
+      "clauses": "Clauses",
+      "queries": "Queries",
+    };
+    return columnMap[columnFilter.column] === columnName;
   };
 
   const filteredLeaderboard = useMemo(() => {
@@ -176,6 +241,41 @@ const VendorStatsDashboard = () => {
       list = list.filter((row) => 
         selectedVendors.includes(String(row.vendor_id || row.id || ""))
       );
+    }
+
+    // Filter out vendors without data for the active column filter
+    if (columnFilter.column) {
+      switch (columnFilter.column) {
+        case "response":
+          // Only show vendors who have actually submitted quotes
+          list = list.filter((row) => hasResponseData(row));
+          break;
+        case "awards":
+          // Only show vendors with awards data
+          list = list.filter((row) => (row.awards || 0) > 0);
+          break;
+        case "regrets":
+          // Only show vendors with regrets data
+          list = list.filter((row) => (row.regrets || 0) > 0);
+          break;
+        case "tech_eval":
+          // Only show vendors with tech eval data
+          list = list.filter((row) => 
+            ((row.tech_eval_accepted || 0) + (row.tech_eval_rejected || 0)) > 0
+          );
+          break;
+        case "clauses":
+          // Only show vendors with clauses data
+          list = list.filter((row) => (row.clauses_agreed || 0) > 0);
+          break;
+        case "queries":
+          // Only show vendors with queries data
+          list = list.filter((row) => (row.queries_raised || 0) > 0);
+          break;
+        // "name" filter shows all vendors
+        default:
+          break;
+      }
     }
 
     // Apply source filter (from main filters - backend already filtered, but we can do client-side refinement)
@@ -381,6 +481,32 @@ const VendorStatsDashboard = () => {
       setVendorDetail(null);
     }
   }, [selectedVendors]);
+
+  // Sync top scrollbar width with table width
+  useEffect(() => {
+    const syncScrollbar = () => {
+      const tableScroll = document.getElementById('bottom-table-scroll');
+      const scrollContent = document.getElementById('top-scroll-content');
+      if (tableScroll && scrollContent) {
+        // Get the actual scrollable width of the table
+        const table = tableScroll.querySelector('table');
+        if (table) {
+          scrollContent.style.width = `${table.offsetWidth}px`;
+        } else {
+          scrollContent.style.width = `${tableScroll.scrollWidth}px`;
+        }
+      }
+    };
+    
+    // Sync on load and when filters change
+    const timeoutId = setTimeout(syncScrollbar, 200);
+    window.addEventListener('resize', syncScrollbar);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', syncScrollbar);
+    };
+  }, [filteredLeaderboard, columnFilter, loading]);
 
   const sourceChartData = useMemo(() => {
     const labels = overview?.source_distribution?.map((item) => {
@@ -702,7 +828,7 @@ const VendorStatsDashboard = () => {
         vendorId,
         name: vendor?.name || "N/A",
         company: vendor?.company_name || "N/A",
-        responseTime: formatResponseTime(detail?.avg_response_minutes || 0),
+        responseTime: formatResponseTime(detail?.avg_response_minutes || 0, detail),
         awards: detail?.awards || 0,
         regrets: detail?.regrets || 0,
         techEvalAccepted: detail?.tech_eval_accepted || 0,
@@ -1185,14 +1311,14 @@ const VendorStatsDashboard = () => {
                       onClick={() => setChartViews(prev => ({ ...prev, sourceDistribution: 0 }))}
                       title="Doughnut Chart"
                     >
-                      <i className="fas fa-chart-pie"></i>
+                      <FontAwesomeIcon icon={faChartPie} />
                     </button>
                     <button
                       className={`btn btn-sm ${chartViews.sourceDistribution === 1 ? "btn-primary" : "btn-outline-primary"}`}
                       onClick={() => setChartViews(prev => ({ ...prev, sourceDistribution: 1 }))}
                       title="Bar Chart"
                     >
-                      <i className="fas fa-chart-bar"></i>
+                      <FontAwesomeIcon icon={faChartBar} />
                     </button>
                   </div>
                 </div>
@@ -1234,14 +1360,14 @@ const VendorStatsDashboard = () => {
                       onClick={() => setChartViews(prev => ({ ...prev, responseTime: 0 }))}
                       title="Line Chart"
                     >
-                      <i className="fas fa-chart-line"></i>
+                      <FontAwesomeIcon icon={faChartLine} />
                     </button>
                     <button
                       className={`btn btn-sm ${chartViews.responseTime === 1 ? "btn-primary" : "btn-outline-primary"}`}
                       onClick={() => setChartViews(prev => ({ ...prev, responseTime: 1 }))}
                       title="Bar Chart"
                     >
-                      <i className="fas fa-chart-bar"></i>
+                      <FontAwesomeIcon icon={faChartBar} />
                     </button>
                   </div>
                 </div>
@@ -1281,19 +1407,47 @@ const VendorStatsDashboard = () => {
                     <i className="fas fa-trophy me-2 text-warning"></i>Vendor Leaderboard
                   </h4>
                   {selectedVendors.length > 3 && (
-                    <small className="text-muted">
+                    <small className="text-muted d-block">
                       Showing {selectedVendors.length} selected vendors
                     </small>
                   )}
+                  {columnFilter.column && (
+                    <small className="text-primary d-block mt-1">
+                      <strong>Filtered by:</strong> <strong>
+                        {columnFilter.column === "response" ? "Avg Response Time" :
+                         columnFilter.column === "awards" ? "Awards" :
+                         columnFilter.column === "regrets" ? "Regrets" :
+                         columnFilter.column === "tech_eval" ? "Tech Eval" :
+                         columnFilter.column === "clauses" ? "Clauses" :
+                         columnFilter.column === "queries" ? "Queries" :
+                         columnFilter.column === "name" ? "Vendor Name" : columnFilter.column}
+                      </strong> ({columnFilter.direction === "asc" ? "↑ Ascending" : "↓ Descending"})
+                    </small>
+                  )}
                 </div>
-                {selectedVendors.length > 3 && (
-                  <button
-                    className="btn btn-sm btn-outline-secondary"
-                    onClick={() => setSelectedVendors([])}
-                  >
-                    <i className="fas fa-times me-1"></i>Clear Selection
-                  </button>
-                )}
+                <div className="d-flex gap-2">
+                  {columnFilter.column && (
+                    <button
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => {
+                        setColumnFilter({ column: null, direction: null });
+                        setLeaderboardFilters((prev) => ({ ...prev, sortBy: "awards_desc" }));
+                      }}
+                      title="Clear Column Filter"
+                    >
+                      <FontAwesomeIcon icon={faTimes} className="me-1" />
+                      Clear Filter
+                    </button>
+                  )}
+                  {selectedVendors.length > 3 && (
+                    <button
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() => setSelectedVendors([])}
+                    >
+                      <i className="fas fa-times me-1"></i>Clear Selection
+                    </button>
+                  )}
+                </div>
               </div>
 
             {/* Enhanced Filter Bar */}
@@ -1376,7 +1530,7 @@ const VendorStatsDashboard = () => {
                       <div className="col-md-3 mb-3">
                         <div className="card border-info">
                           <div className="card-body text-center">
-                            <h5 className="text-info">{formatResponseTime(vendorDetail?.avg_response_minutes || 0)}</h5>
+                            <h5 className="text-info">{formatResponseTime(vendorDetail?.avg_response_minutes || 0, vendorDetail)}</h5>
                             <small className="text-muted">Avg Response Time</small>
                           </div>
                         </div>
@@ -1462,204 +1616,384 @@ const VendorStatsDashboard = () => {
               </div>
             ) : (
               // More than 3 or No Selection - Show Leaderboard Table
-              <div className="table-responsive">
+              <div className="position-relative">
+                {/* Top Horizontal Scrollbar */}
+                <div 
+                  className="overflow-x-auto mb-2"
+                  style={{ 
+                    height: "17px",
+                    direction: "rtl",
+                    scrollbarWidth: "thin",
+                    scrollbarColor: "#cbd5e0 #f7fafc"
+                  }}
+                  id="top-scrollbar"
+                  onScroll={(e) => {
+                    const bottomScroll = document.getElementById('bottom-table-scroll');
+                    if (bottomScroll) {
+                      bottomScroll.scrollLeft = e.currentTarget.scrollLeft;
+                    }
+                  }}
+                >
+                  <div 
+                    id="top-scroll-content"
+                    style={{ 
+                      direction: "ltr", 
+                      height: "1px",
+                      width: "100%",
+                      minWidth: "1000px"
+                    }}
+                  ></div>
+                </div>
+                <div 
+                  id="bottom-table-scroll"
+                  className="table-responsive" 
+                  style={{ maxHeight: "600px", overflowY: "auto" }}
+                  onScroll={(e) => {
+                    const topScroll = document.getElementById('top-scrollbar');
+                    if (topScroll) {
+                      topScroll.scrollLeft = e.currentTarget.scrollLeft;
+                    }
+                    // Update top scrollbar width to match content
+                    const scrollContent = document.getElementById('top-scroll-content');
+                    if (scrollContent) {
+                      scrollContent.style.width = `${e.currentTarget.scrollWidth}px`;
+                    }
+                  }}
+                >
                 <table className="table table-hover align-middle mb-0">
                   <thead className="table-light">
                     <tr>
-                      <th>#</th>
-                      <th>
-                        <div className="d-flex align-items-center justify-content-between">
-                          <span>Vendor Name</span>
-                          <button
-                            className="btn btn-sm btn-link p-0 ms-2"
-                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
-                            onClick={() => handleColumnFilter("name")}
-                            title="Sort by Vendor Name"
-                          >
-                            <i className={`fas ${getColumnSortIcon("name")} ${columnFilter.column === "name" ? "text-primary" : "text-muted"}`}></i>
-                          </button>
-                        </div>
-                      </th>
-                      <th>Company</th>
-                      <th>Source</th>
-                      <th>
-                        <div className="d-flex align-items-center justify-content-between">
-                          <span>Avg Response Time</span>
-                          <button
-                            className="btn btn-sm btn-link p-0 ms-2"
-                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
-                            onClick={() => handleColumnFilter("response")}
-                            title="Sort by Response Time"
-                          >
-                            <i className={`fas ${getColumnSortIcon("response")} ${columnFilter.column === "response" ? "text-primary" : "text-muted"}`}></i>
-                          </button>
-                        </div>
-                      </th>
-                      <th>
-                        <div className="d-flex align-items-center justify-content-between">
-                          <span>
-                            <i className="fas fa-trophy text-warning me-1"></i>Awards
-                          </span>
-                          <button
-                            className="btn btn-sm btn-link p-0 ms-2"
-                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
-                            onClick={() => handleColumnFilter("awards")}
-                            title="Sort by Awards"
-                          >
-                            <i className={`fas ${getColumnSortIcon("awards")} ${columnFilter.column === "awards" ? "text-primary" : "text-muted"}`}></i>
-                          </button>
-                        </div>
-                      </th>
-                      <th>
-                        <div className="d-flex align-items-center justify-content-between">
-                          <span>
-                            <i className="fas fa-ban text-danger me-1"></i>Regrets
-                          </span>
-                          <button
-                            className="btn btn-sm btn-link p-0 ms-2"
-                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
-                            onClick={() => handleColumnFilter("regrets")}
-                            title="Sort by Regrets"
-                          >
-                            <i className={`fas ${getColumnSortIcon("regrets")} ${columnFilter.column === "regrets" ? "text-primary" : "text-muted"}`}></i>
-                          </button>
-                        </div>
-                      </th>
-                      <th>
-                        <div className="d-flex align-items-center justify-content-between">
-                          <span>
-                            <i className="fas fa-clipboard-check text-success me-1"></i>Tech Eval
-                          </span>
-                          <button
-                            className="btn btn-sm btn-link p-0 ms-2"
-                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
-                            onClick={() => handleColumnFilter("tech_eval")}
-                            title="Sort by Tech Eval"
-                          >
-                            <i className={`fas ${getColumnSortIcon("tech_eval")} ${columnFilter.column === "tech_eval" ? "text-primary" : "text-muted"}`}></i>
-                          </button>
-                        </div>
-                      </th>
-                      <th>
-                        <div className="d-flex align-items-center justify-content-between">
-                          <span>
-                            <i className="fas fa-file-contract text-info me-1"></i>Clauses
-                          </span>
-                          <button
-                            className="btn btn-sm btn-link p-0 ms-2"
-                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
-                            onClick={() => handleColumnFilter("clauses")}
-                            title="Sort by Clauses"
-                          >
-                            <i className={`fas ${getColumnSortIcon("clauses")} ${columnFilter.column === "clauses" ? "text-primary" : "text-muted"}`}></i>
-                          </button>
-                        </div>
-                      </th>
-                      <th>
-                        <div className="d-flex align-items-center justify-content-between">
-                          <span>
-                            <i className="fas fa-question-circle text-warning me-1"></i>Queries
-                          </span>
-                          <button
-                            className="btn btn-sm btn-link p-0 ms-2"
-                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
-                            onClick={() => handleColumnFilter("queries")}
-                            title="Sort by Queries"
-                          >
-                            <i className={`fas ${getColumnSortIcon("queries")} ${columnFilter.column === "queries" ? "text-primary" : "text-muted"}`}></i>
-                          </button>
-                        </div>
-                      </th>
-                      <th>Action</th>
+                      {isColumnVisible("#") && <th>#</th>}
+                      {isColumnVisible("Vendor Name") && (
+                        <th>
+                          <div className="d-flex align-items-center justify-content-between">
+                            <span>Vendor Name</span>
+                            <div className="d-flex align-items-center gap-1">
+                              <button
+                                className={`btn btn-sm ${columnFilter.column === "name" ? "btn-primary" : "btn-outline-primary"}`}
+                                style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                onClick={() => handleColumnFilter("name")}
+                                title="Filter by Vendor Name"
+                              >
+                                <FontAwesomeIcon icon={faFilter} className="me-1" />
+                                Filter
+                              </button>
+                              {columnFilter.column === "name" && (
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                  onClick={(e) => toggleSortDirection(e, "name")}
+                                  title="Toggle Sort Direction"
+                                >
+                                  <FontAwesomeIcon icon={getColumnSortIcon("name")} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </th>
+                      )}
+                      {isColumnVisible("Company") && <th>Company</th>}
+                      {isColumnVisible("Source") && <th>Source</th>}
+                      {isColumnVisible("Avg Response Time") && (
+                        <th>
+                          <div className="d-flex align-items-center justify-content-between">
+                            <span>Avg Response Time</span>
+                            <div className="d-flex align-items-center gap-1">
+                              <button
+                                className={`btn btn-sm ${columnFilter.column === "response" ? "btn-primary" : "btn-outline-primary"}`}
+                                style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                onClick={() => handleColumnFilter("response")}
+                                title="Filter by Response Time"
+                              >
+                                <FontAwesomeIcon icon={faFilter} className="me-1" />
+                                Filter
+                              </button>
+                              {columnFilter.column === "response" && (
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                  onClick={(e) => toggleSortDirection(e, "response")}
+                                  title="Toggle Sort Direction"
+                                >
+                                  <FontAwesomeIcon icon={getColumnSortIcon("response")} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </th>
+                      )}
+                      {isColumnVisible("Awards") && (
+                        <th>
+                          <div className="d-flex align-items-center justify-content-between">
+                            <span>Awards</span>
+                            <div className="d-flex align-items-center gap-1">
+                              <button
+                                className={`btn btn-sm ${columnFilter.column === "awards" ? "btn-primary" : "btn-outline-primary"}`}
+                                style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                onClick={() => handleColumnFilter("awards")}
+                                title="Filter by Awards"
+                              >
+                                <FontAwesomeIcon icon={faFilter} className="me-1" />
+                                Filter
+                              </button>
+                              {columnFilter.column === "awards" && (
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                  onClick={(e) => toggleSortDirection(e, "awards")}
+                                  title="Toggle Sort Direction"
+                                >
+                                  <FontAwesomeIcon icon={getColumnSortIcon("awards")} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </th>
+                      )}
+                      {isColumnVisible("Regrets") && (
+                        <th>
+                          <div className="d-flex align-items-center justify-content-between">
+                            <span>Regrets</span>
+                            <div className="d-flex align-items-center gap-1">
+                              <button
+                                className={`btn btn-sm ${columnFilter.column === "regrets" ? "btn-primary" : "btn-outline-primary"}`}
+                                style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                onClick={() => handleColumnFilter("regrets")}
+                                title="Filter by Regrets"
+                              >
+                                <FontAwesomeIcon icon={faFilter} className="me-1" />
+                                Filter
+                              </button>
+                              {columnFilter.column === "regrets" && (
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                  onClick={(e) => toggleSortDirection(e, "regrets")}
+                                  title="Toggle Sort Direction"
+                                >
+                                  <FontAwesomeIcon icon={getColumnSortIcon("regrets")} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </th>
+                      )}
+                      {isColumnVisible("Tech Eval") && (
+                        <th>
+                          <div className="d-flex align-items-center justify-content-between">
+                            <span>Tech Eval</span>
+                            <div className="d-flex align-items-center gap-1">
+                              <button
+                                className={`btn btn-sm ${columnFilter.column === "tech_eval" ? "btn-primary" : "btn-outline-primary"}`}
+                                style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                onClick={() => handleColumnFilter("tech_eval")}
+                                title="Filter by Tech Eval"
+                              >
+                                <FontAwesomeIcon icon={faFilter} className="me-1" />
+                                Filter
+                              </button>
+                              {columnFilter.column === "tech_eval" && (
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                  onClick={(e) => toggleSortDirection(e, "tech_eval")}
+                                  title="Toggle Sort Direction"
+                                >
+                                  <FontAwesomeIcon icon={getColumnSortIcon("tech_eval")} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </th>
+                      )}
+                      {isColumnVisible("Clauses") && (
+                        <th>
+                          <div className="d-flex align-items-center justify-content-between">
+                            <span>Clauses</span>
+                            <div className="d-flex align-items-center gap-1">
+                              <button
+                                className={`btn btn-sm ${columnFilter.column === "clauses" ? "btn-primary" : "btn-outline-primary"}`}
+                                style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                onClick={() => handleColumnFilter("clauses")}
+                                title="Filter by Clauses"
+                              >
+                                <FontAwesomeIcon icon={faFilter} className="me-1" />
+                                Filter
+                              </button>
+                              {columnFilter.column === "clauses" && (
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                  onClick={(e) => toggleSortDirection(e, "clauses")}
+                                  title="Toggle Sort Direction"
+                                >
+                                  <FontAwesomeIcon icon={getColumnSortIcon("clauses")} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </th>
+                      )}
+                      {isColumnVisible("Queries") && (
+                        <th>
+                          <div className="d-flex align-items-center justify-content-between">
+                            <span>Queries</span>
+                            <div className="d-flex align-items-center gap-1">
+                              <button
+                                className={`btn btn-sm ${columnFilter.column === "queries" ? "btn-primary" : "btn-outline-primary"}`}
+                                style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                onClick={() => handleColumnFilter("queries")}
+                                title="Filter by Queries"
+                              >
+                                <FontAwesomeIcon icon={faFilter} className="me-1" />
+                                Filter
+                              </button>
+                              {columnFilter.column === "queries" && (
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
+                                  onClick={(e) => toggleSortDirection(e, "queries")}
+                                  title="Toggle Sort Direction"
+                                >
+                                  <FontAwesomeIcon icon={getColumnSortIcon("queries")} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </th>
+                      )}
+                      {isColumnVisible("Action") && <th>Action</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredLeaderboard.length ? (
-                      filteredLeaderboard.map((row, idx) => (
-                        <tr key={row.vendor_id}>
-                          <td className="text-muted">{idx + 1}</td>
-                          <td className="fw-semibold">{row.name || "N/A"}</td>
-                          <td>{row.company_name || "N/A"}</td>
-                          <td>
-                            <span
-                              className={`badge ${
-                                row.source === "admin"
-                                  ? "bg-primary"
-                                  : row.source === "self"
-                                  ? "bg-success"
-                                  : row.source === "buyer"
-                                  ? "bg-info"
-                                  : "bg-secondary"
-                              }`}
-                            >
-                              {row.source === "admin"
-                                ? "Admin Added"
-                                : row.source === "self"
-                                ? "Self Registration"
-                                : row.source === "buyer"
-                                ? "Private Vendor"
-                                : row.source || "Unknown"}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="badge bg-info">
-                              {formatResponseTime(row.avg_response_minutes)}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="badge bg-success">{row.awards ?? 0}</span>
-                          </td>
-                          <td>
-                            <span className="badge bg-danger">{row.regrets ?? 0}</span>
-                          </td>
-                          <td>
-                            <span className="badge bg-success">
-                              {row.tech_eval_accepted ?? 0}/{row.tech_eval_rejected ?? 0}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="badge bg-info">{row.clauses_agreed ?? 0}</span>
-                          </td>
-                          <td>
-                            <span className="badge bg-warning">{row.queries_raised ?? 0}</span>
-                          </td>
-                          <td>
-                            <div className="d-flex gap-1">
-                              <button
-                                className="btn btn-sm btn-outline-primary"
-                                onClick={() => {
-                                  const vendorId = String(row.vendor_id || row.id || "");
-                                  if (!selectedVendors.includes(vendorId)) {
-                                    setSelectedVendors([vendorId]);
-                                    fetchVendorStats([vendorId]);
-                                  }
-                                }}
-                                title="View Details"
-                              >
-                                <i className="fas fa-eye"></i>
-                              </button>
-                              <button
-                                className="btn btn-sm btn-primary"
-                                onClick={() => {
-                                  const vendorId = String(row.vendor_id || row.id || "");
-                                  if (selectedVendors.includes(vendorId)) {
-                                    setSelectedVendors((prev) => prev.filter((id) => id !== vendorId));
-                                  } else {
-                                    setSelectedVendors((prev) => [...prev, vendorId]);
-                                  }
-                                }}
-                                title="Add to Selection"
-                              >
-                                <i className="fas fa-plus me-1"></i>
-                                {selectedVendors.includes(String(row.vendor_id || row.id || "")) ? "Selected" : "Select"}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                      filteredLeaderboard.map((row, idx) => {
+                        // Calculate visible columns count for colSpan
+                        const visibleColumnsCount = [
+                          isColumnVisible("#"),
+                          isColumnVisible("Vendor Name"),
+                          isColumnVisible("Company"),
+                          isColumnVisible("Source"),
+                          isColumnVisible("Avg Response Time"),
+                          isColumnVisible("Awards"),
+                          isColumnVisible("Regrets"),
+                          isColumnVisible("Tech Eval"),
+                          isColumnVisible("Clauses"),
+                          isColumnVisible("Queries"),
+                          isColumnVisible("Action"),
+                        ].filter(Boolean).length;
+
+                        return (
+                          <tr key={row.vendor_id}>
+                            {isColumnVisible("#") && <td className="text-muted">{idx + 1}</td>}
+                            {isColumnVisible("Vendor Name") && (
+                              <td className="fw-semibold">{row.name || "N/A"}</td>
+                            )}
+                            {isColumnVisible("Company") && <td>{row.company_name || "N/A"}</td>}
+                            {isColumnVisible("Source") && (
+                              <td>
+                                <span
+                                  className={`badge ${
+                                    row.source === "admin"
+                                      ? "bg-primary"
+                                      : row.source === "self"
+                                      ? "bg-success"
+                                      : row.source === "buyer"
+                                      ? "bg-info"
+                                      : "bg-secondary"
+                                  }`}
+                                >
+                                  {row.source === "admin"
+                                    ? "Admin Added"
+                                    : row.source === "self"
+                                    ? "Self Registration"
+                                    : row.source === "buyer"
+                                    ? "Private Vendor"
+                                    : row.source || "Unknown"}
+                                </span>
+                              </td>
+                            )}
+                            {isColumnVisible("Avg Response Time") && (
+                              <td>
+                                <span className={`badge ${hasResponseData(row) ? "bg-info" : "bg-secondary"}`}>
+                                  {formatResponseTime(row.avg_response_minutes, row)}
+                                </span>
+                              </td>
+                            )}
+                            {isColumnVisible("Awards") && (
+                              <td>
+                                <span className="badge bg-success">{row.awards ?? 0}</span>
+                              </td>
+                            )}
+                            {isColumnVisible("Regrets") && (
+                              <td>
+                                <span className="badge bg-danger">{row.regrets ?? 0}</span>
+                              </td>
+                            )}
+                            {isColumnVisible("Tech Eval") && (
+                              <td>
+                                <span className="badge bg-success">
+                                  {row.tech_eval_accepted ?? 0}/{row.tech_eval_rejected ?? 0}
+                                </span>
+                              </td>
+                            )}
+                            {isColumnVisible("Clauses") && (
+                              <td>
+                                <span className="badge bg-info">{row.clauses_agreed ?? 0}</span>
+                              </td>
+                            )}
+                            {isColumnVisible("Queries") && (
+                              <td>
+                                <span className="badge bg-warning">{row.queries_raised ?? 0}</span>
+                              </td>
+                            )}
+                            {isColumnVisible("Action") && (
+                              <td>
+                                <button
+                                  className={`btn btn-sm ${selectedVendors.includes(String(row.vendor_id || row.id || "")) ? "btn-success" : "btn-primary"}`}
+                                  onClick={() => {
+                                    const vendorId = String(row.vendor_id || row.id || "");
+                                    if (selectedVendors.includes(vendorId)) {
+                                      // If already selected, remove from selection
+                                      setSelectedVendors((prev) => prev.filter((id) => id !== vendorId));
+                                      if (selectedVendors.length === 1) {
+                                        setVendorDetail(null);
+                                      }
+                                    } else {
+                                      // If not selected, add to selection and fetch details
+                                      const newSelection = [...selectedVendors, vendorId];
+                                      setSelectedVendors(newSelection);
+                                      fetchVendorStats([vendorId]);
+                                    }
+                                  }}
+                                  title={selectedVendors.includes(String(row.vendor_id || row.id || "")) ? "Remove from Selection" : "View Details & Add to Selection"}
+                                >
+                                  <FontAwesomeIcon icon={faEye} className="me-1" />
+                                  {selectedVendors.includes(String(row.vendor_id || row.id || "")) ? "Selected" : "View Details"}
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
-                        <td colSpan="11" className="text-center text-muted py-4">
+                        <td 
+                          colSpan={[
+                            isColumnVisible("#"),
+                            isColumnVisible("Vendor Name"),
+                            isColumnVisible("Company"),
+                            isColumnVisible("Source"),
+                            isColumnVisible("Avg Response Time"),
+                            isColumnVisible("Awards"),
+                            isColumnVisible("Regrets"),
+                            isColumnVisible("Tech Eval"),
+                            isColumnVisible("Clauses"),
+                            isColumnVisible("Queries"),
+                            isColumnVisible("Action"),
+                          ].filter(Boolean).length} 
+                          className="text-center text-muted py-4"
+                        >
                           <i className="fas fa-inbox fa-2x mb-2 d-block"></i>
                           No vendor data available
                         </td>
@@ -1667,6 +2001,7 @@ const VendorStatsDashboard = () => {
                     )}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </div>
@@ -1713,7 +2048,7 @@ const VendorStatsDashboard = () => {
                               <td className="fw-semibold">{row.name || "N/A"}</td>
                               <td>
                                 <span className="badge bg-info">
-                                  {formatResponseTime(row.avg_response_minutes)}
+                                  {formatResponseTime(row.avg_response_minutes, row)}
                                 </span>
                               </td>
                               <td>
@@ -1741,7 +2076,7 @@ const VendorStatsDashboard = () => {
                                   }}
                                   title="View Details"
                                 >
-                                  <i className="fas fa-eye me-1"></i>View Details
+                                  <FontAwesomeIcon icon={faEye} className="me-1" />View Details
                                 </button>
                               </td>
                             </tr>
@@ -2197,7 +2532,7 @@ const VendorStatsDashboard = () => {
                         <div className="d-flex justify-content-between align-items-start">
                           <div>
                             <p className="text-muted text-uppercase fs-12 mb-1">Avg Response Time</p>
-                            <h4 className="mb-0 fw-bold">{formatResponseTime(vendorDetail.avg_response_minutes)}</h4>
+                            <h4 className="mb-0 fw-bold">{formatResponseTime(vendorDetail.avg_response_minutes, vendorDetail)}</h4>
                           </div>
                           <div className="text-info fs-2">
                             <i className="fas fa-clock"></i>
