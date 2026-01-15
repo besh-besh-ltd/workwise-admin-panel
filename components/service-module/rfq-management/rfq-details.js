@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane, faEdit, faEye } from '@fortawesome/free-solid-svg-icons';
@@ -44,7 +44,6 @@ const RFQDetails = () => {
                 getRfqById();
             })
             .catch((error) => {
-                console.log(error)
                 toast.error(error.message)
             })
             .finally(() => setLoading(false))
@@ -58,7 +57,7 @@ const RFQDetails = () => {
                 setVendorDetails(res.data[0]?.vendor_details)
             })
             .catch((error) => {
-                console.log(error)
+                console.error(error)
             })
             .finally(() => {
                 setLoading(false)
@@ -108,17 +107,17 @@ const RFQDetails = () => {
         return true;
     };
 
-    // Get product-wise data with variants as separate products
-    const getProductWiseData = () => {
+    // Get product-wise data with variants as separate products (memoized)
+    const productWiseData = useMemo(() => {
         if (!vendorDetails || vendorDetails.length === 0) return [];
-        
+
         const productMap = new Map();
-        
+
         vendorDetails.forEach(vendor => {
             vendor.products?.forEach(product => {
                 // Create unique key with product_id and variant
                 const key = `${product.product_id}-${product.variant}`;
-                
+
                 if (!productMap.has(key)) {
                     productMap.set(key, {
                         product_id: product.product_id,
@@ -129,17 +128,17 @@ const RFQDetails = () => {
                         vendors: []
                     });
                 }
-                
+
                 // Check if vendor has responded (has quotation_details AND is_regret is 0)
                 let hasResponded = false;
                 let isRegretted = false;
-                
+
                 if (product.quotation_details !== null && product.quotation_details.length > 0) {
                     const quotation = product.quotation_details[0];
                     hasResponded = quotation.is_regret === 0;
                     isRegretted = quotation.is_regret === 1;
                 }
-                
+
                 productMap.get(key).vendors.push({
                     vendor_id: vendor.vendor_id,
                     vendor_name: vendor.vendor_name,
@@ -155,13 +154,12 @@ const RFQDetails = () => {
                 });
             });
         });
-        
+
         return Array.from(productMap.values());
-    };
+    }, [vendorDetails]);
 
     // Calculate statistics for a product
     const calculateProductStats = (vendors) => {
-        console.log("Calculating stats for vendors:", vendors);
         const totalVendors = vendors.length;
         const respondedVendors = vendors.filter(v => v.has_responded).length;
         const regrettedVendors = vendors.filter(v => v.is_regretted).length;
@@ -181,8 +179,8 @@ const RFQDetails = () => {
         };
     };
 
-    // Calculate overall statistics
-    const calculateOverallStats = () => {
+    // Calculate overall statistics (memoized)
+    const overallStats = useMemo(() => {
         if (!vendorDetails || vendorDetails.length === 0) return null;
 
         const totalVendors = vendorDetails.length;
@@ -219,7 +217,7 @@ const RFQDetails = () => {
             totalRegretted,
             totalPending
         };
-    };
+    }, [vendorDetails]);
 
     const handleViewVendor = (vendorId) => {
         router.push(`https://letsworkwise.com/vendor/vendor-profile?id=${vendorId}`);
@@ -230,14 +228,6 @@ const RFQDetails = () => {
             getRfqById();
         }
     }, [router, rfq_id])
-
-    const productWiseData = getProductWiseData();
-    const overallStats = calculateOverallStats();
-
-
-    useEffect(()=>{
-        console.log("Overall Stats:", overallStats);
-    },[overallStats]);
 
     return (
         <>
@@ -574,7 +564,6 @@ const RFQDetails = () => {
                                                                                         <button 
                                                                                             className="btn btn-sm btn-info"
                                                                                             onClick={() => {
-                                                                                                console.log("Vendor object:", vendor);
                                                                                                 handleViewVendor(vendor.vendor_id);
                                                                                             }}
                                                                                         >
