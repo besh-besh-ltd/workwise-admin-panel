@@ -1243,61 +1243,9 @@ const VendorStatsDashboard = () => {
         </div>
       )}
 
-      {/* Tabs Navigation */}
+      {/* Charts - Always Visible */}
       {!loading && (
-        <div className="card mb-3 shadow-sm border-0">
-          <div className="card-body p-0">
-            <ul className="nav nav-tabs nav-tabs-custom" role="tablist">
-              <li className="nav-item" role="presentation">
-                <button
-                  className={`nav-link ${activeTab === "overview" ? "active" : ""}`}
-                  onClick={() => setActiveTab("overview")}
-                >
-                  <i className="fas fa-chart-bar me-2"></i>Overview
-                </button>
-              </li>
-              <li className="nav-item" role="presentation">
-                <button
-                  className={`nav-link ${activeTab === "behavior" ? "active" : ""}`}
-                  onClick={() => setActiveTab("behavior")}
-                >
-                  <i className="fas fa-user-chart me-2"></i>Behavior Analysis
-                </button>
-              </li>
-              <li className="nav-item" role="presentation">
-                <button
-                  className={`nav-link ${activeTab === "tech-eval" ? "active" : ""}`}
-                  onClick={() => setActiveTab("tech-eval")}
-                >
-                  <i className="fas fa-clipboard-check me-2"></i>Tech Evaluation
-                </button>
-              </li>
-              <li className="nav-item" role="presentation">
-                <button
-                  className={`nav-link ${activeTab === "clauses" ? "active" : ""}`}
-                  onClick={() => setActiveTab("clauses")}
-                >
-                  <i className="fas fa-file-contract me-2"></i>Clauses
-                </button>
-              </li>
-              <li className="nav-item" role="presentation">
-                <button
-                  className={`nav-link ${activeTab === "queries" ? "active" : ""}`}
-                  onClick={() => setActiveTab("queries")}
-                >
-                  <i className="fas fa-question-circle me-2"></i>Queries & Deviations
-                </button>
-              </li>
-            </ul>
-          </div>
-        </div>
-      )}
-
-      {/* Overview Tab Content */}
-      {!loading && activeTab === "overview" && (
-        <>
-          {/* Charts */}
-          <div className="row">
+        <div className="row mb-4">
           <div className="col-md-5 mb-4">
             <div className="card h-100 shadow-sm">
               <div className="card-body p-4">
@@ -1397,7 +1345,61 @@ const VendorStatsDashboard = () => {
             </div>
           </div>
         </div>
+      )}
 
+      {/* Tabs Navigation */}
+      {!loading && (
+        <div className="card mb-3 shadow-sm border-0">
+          <div className="card-body p-0">
+            <ul className="nav nav-tabs nav-tabs-custom" role="tablist">
+              <li className="nav-item" role="presentation">
+                <button
+                  className={`nav-link ${activeTab === "overview" ? "active" : ""}`}
+                  onClick={() => setActiveTab("overview")}
+                >
+                  <i className="fas fa-chart-bar me-2"></i>Overview
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className={`nav-link ${activeTab === "behavior" ? "active" : ""}`}
+                  onClick={() => setActiveTab("behavior")}
+                >
+                  <i className="fas fa-user-chart me-2"></i>Behavior Analysis
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className={`nav-link ${activeTab === "tech-eval" ? "active" : ""}`}
+                  onClick={() => setActiveTab("tech-eval")}
+                >
+                  <i className="fas fa-clipboard-check me-2"></i>Tech Evaluation
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className={`nav-link ${activeTab === "clauses" ? "active" : ""}`}
+                  onClick={() => setActiveTab("clauses")}
+                >
+                  <i className="fas fa-file-contract me-2"></i>Clauses
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className={`nav-link ${activeTab === "queries" ? "active" : ""}`}
+                  onClick={() => setActiveTab("queries")}
+                >
+                  <i className="fas fa-question-circle me-2"></i>Queries & Deviations
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* Overview Tab Content */}
+      {!loading && activeTab === "overview" && (
+        <>
           {/* Leaderboard */}
           <div className="card mb-3 shadow-sm">
             <div className="card-body">
