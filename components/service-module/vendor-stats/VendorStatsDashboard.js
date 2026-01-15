@@ -51,6 +51,12 @@ const VendorStatsDashboard = () => {
     minAwards: "",
     maxRegrets: "",
   });
+  const [columnFilter, setColumnFilter] = useState({ column: null, direction: null });
+  const [chartViews, setChartViews] = useState({
+    sourceDistribution: 0, // 0 = doughnut, 1 = bar
+    responseTime: 0, // 0 = line, 1 = bar
+    awardRegret: 0, // 0 = bar, 1 = line
+  });
 
   const formatResponseTime = (minutes) => {
     if (!minutes || minutes === 0) return "0 min";
@@ -140,6 +146,27 @@ const VendorStatsDashboard = () => {
     ];
   }, [overview]);
 
+  const handleColumnFilter = (column) => {
+    if (columnFilter.column === column) {
+      // Cycle through: asc -> desc -> null
+      if (columnFilter.direction === "asc") {
+        setColumnFilter({ column, direction: "desc" });
+        setLeaderboardFilters((prev) => ({ ...prev, sortBy: `${column}_desc` }));
+      } else if (columnFilter.direction === "desc") {
+        setColumnFilter({ column: null, direction: null });
+        setLeaderboardFilters((prev) => ({ ...prev, sortBy: "awards_desc" }));
+      }
+    } else {
+      setColumnFilter({ column, direction: "asc" });
+      setLeaderboardFilters((prev) => ({ ...prev, sortBy: `${column}_asc` }));
+    }
+  };
+
+  const getColumnSortIcon = (column) => {
+    if (columnFilter.column !== column) return "fa-sort";
+    return columnFilter.direction === "asc" ? "fa-sort-up" : "fa-sort-down";
+  };
+
   const filteredLeaderboard = useMemo(() => {
     if (!overview || !overview.leaderboard) return [];
     let list = [...overview.leaderboard];
@@ -178,6 +205,32 @@ const VendorStatsDashboard = () => {
       const aResp = a.avg_response_minutes ?? 1e9;
       const bResp = b.avg_response_minutes ?? 1e9;
 
+      // Check column filter first
+      if (columnFilter.column && columnFilter.direction) {
+        const direction = columnFilter.direction === "asc" ? 1 : -1;
+        switch (columnFilter.column) {
+          case "name":
+            return direction * (a.name || "").localeCompare(b.name || "");
+          case "response":
+            return direction * (aResp - bResp);
+          case "awards":
+            return direction * (aAwards - bAwards);
+          case "regrets":
+            return direction * ((a.regrets || 0) - (b.regrets || 0));
+          case "tech_eval":
+            const aTech = (a.tech_eval_accepted || 0) + (a.tech_eval_rejected || 0);
+            const bTech = (b.tech_eval_accepted || 0) + (b.tech_eval_rejected || 0);
+            return direction * (aTech - bTech);
+          case "clauses":
+            return direction * ((a.clauses_agreed || 0) - (b.clauses_agreed || 0));
+          case "queries":
+            return direction * ((a.queries_raised || 0) - (b.queries_raised || 0));
+          default:
+            break;
+        }
+      }
+
+      // Fallback to sortBy filter
       switch (leaderboardFilters.sortBy) {
         case "response_asc":
           return aResp - bResp;
@@ -196,7 +249,7 @@ const VendorStatsDashboard = () => {
     });
 
     return list;
-  }, [overview, leaderboardFilters, filters, selectedVendors]);
+  }, [overview, leaderboardFilters, filters, selectedVendors, columnFilter]);
 
   const fetchOverview = async () => {
     try {
@@ -1122,12 +1175,34 @@ const VendorStatsDashboard = () => {
           <div className="col-md-5 mb-4">
             <div className="card h-100 shadow-sm">
               <div className="card-body p-4">
-                <h4 className="card-title mb-4 fw-bold">
-                  <i className="fas fa-chart-pie me-2 text-primary"></i>Source Distribution
-                </h4>
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <h4 className="card-title mb-0 fw-bold">
+                    <i className="fas fa-chart-pie me-2 text-primary"></i>Source Distribution
+                  </h4>
+                  <div className="btn-group" role="group">
+                    <button
+                      className={`btn btn-sm ${chartViews.sourceDistribution === 0 ? "btn-primary" : "btn-outline-primary"}`}
+                      onClick={() => setChartViews(prev => ({ ...prev, sourceDistribution: 0 }))}
+                      title="Doughnut Chart"
+                    >
+                      <i className="fas fa-chart-pie"></i>
+                    </button>
+                    <button
+                      className={`btn btn-sm ${chartViews.sourceDistribution === 1 ? "btn-primary" : "btn-outline-primary"}`}
+                      onClick={() => setChartViews(prev => ({ ...prev, sourceDistribution: 1 }))}
+                      title="Bar Chart"
+                    >
+                      <i className="fas fa-chart-bar"></i>
+                    </button>
+                  </div>
+                </div>
                 {sourceChartData.labels.length > 0 ? (
                   <div style={{ height: "480px", position: "relative", minHeight: "480px" }}>
-                    <Doughnut data={sourceChartData} options={doughnutChartOptions} />
+                    {chartViews.sourceDistribution === 0 ? (
+                      <Doughnut data={sourceChartData} options={doughnutChartOptions} />
+                    ) : (
+                      <Bar data={sourceChartData} options={barChartOptions} />
+                    )}
                   </div>
                 ) : (
                   <div
@@ -1149,12 +1224,34 @@ const VendorStatsDashboard = () => {
           <div className="col-md-7 mb-4">
             <div className="card h-100 shadow-sm">
               <div className="card-body p-4">
-                <h4 className="card-title mb-4 fw-bold">
-                  <i className="fas fa-chart-line me-2 text-success"></i>Activity Timeline
-                </h4>
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <h4 className="card-title mb-0 fw-bold">
+                    <i className="fas fa-chart-line me-2 text-success"></i>Activity Timeline
+                  </h4>
+                  <div className="btn-group" role="group">
+                    <button
+                      className={`btn btn-sm ${chartViews.responseTime === 0 ? "btn-primary" : "btn-outline-primary"}`}
+                      onClick={() => setChartViews(prev => ({ ...prev, responseTime: 0 }))}
+                      title="Line Chart"
+                    >
+                      <i className="fas fa-chart-line"></i>
+                    </button>
+                    <button
+                      className={`btn btn-sm ${chartViews.responseTime === 1 ? "btn-primary" : "btn-outline-primary"}`}
+                      onClick={() => setChartViews(prev => ({ ...prev, responseTime: 1 }))}
+                      title="Bar Chart"
+                    >
+                      <i className="fas fa-chart-bar"></i>
+                    </button>
+                  </div>
+                </div>
                 {timelineData.labels.length > 0 ? (
                   <div style={{ height: "480px", position: "relative", minHeight: "480px" }}>
-                    <Line data={timelineData} options={lineChartOptions} />
+                    {chartViews.responseTime === 0 ? (
+                      <Line data={timelineData} options={lineChartOptions} />
+                    ) : (
+                      <Bar data={timelineData} options={barChartOptions} />
+                    )}
                   </div>
                 ) : (
                   <div
@@ -1370,24 +1467,108 @@ const VendorStatsDashboard = () => {
                   <thead className="table-light">
                     <tr>
                       <th>#</th>
-                      <th>Vendor Name</th>
+                      <th>
+                        <div className="d-flex align-items-center justify-content-between">
+                          <span>Vendor Name</span>
+                          <button
+                            className="btn btn-sm btn-link p-0 ms-2"
+                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
+                            onClick={() => handleColumnFilter("name")}
+                            title="Sort by Vendor Name"
+                          >
+                            <i className={`fas ${getColumnSortIcon("name")} ${columnFilter.column === "name" ? "text-primary" : "text-muted"}`}></i>
+                          </button>
+                        </div>
+                      </th>
                       <th>Company</th>
                       <th>Source</th>
-                      <th>Avg Response Time</th>
                       <th>
-                        <i className="fas fa-trophy text-warning me-1"></i>Awards
+                        <div className="d-flex align-items-center justify-content-between">
+                          <span>Avg Response Time</span>
+                          <button
+                            className="btn btn-sm btn-link p-0 ms-2"
+                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
+                            onClick={() => handleColumnFilter("response")}
+                            title="Sort by Response Time"
+                          >
+                            <i className={`fas ${getColumnSortIcon("response")} ${columnFilter.column === "response" ? "text-primary" : "text-muted"}`}></i>
+                          </button>
+                        </div>
                       </th>
                       <th>
-                        <i className="fas fa-ban text-danger me-1"></i>Regrets
+                        <div className="d-flex align-items-center justify-content-between">
+                          <span>
+                            <i className="fas fa-trophy text-warning me-1"></i>Awards
+                          </span>
+                          <button
+                            className="btn btn-sm btn-link p-0 ms-2"
+                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
+                            onClick={() => handleColumnFilter("awards")}
+                            title="Sort by Awards"
+                          >
+                            <i className={`fas ${getColumnSortIcon("awards")} ${columnFilter.column === "awards" ? "text-primary" : "text-muted"}`}></i>
+                          </button>
+                        </div>
                       </th>
                       <th>
-                        <i className="fas fa-clipboard-check text-success me-1"></i>Tech Eval
+                        <div className="d-flex align-items-center justify-content-between">
+                          <span>
+                            <i className="fas fa-ban text-danger me-1"></i>Regrets
+                          </span>
+                          <button
+                            className="btn btn-sm btn-link p-0 ms-2"
+                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
+                            onClick={() => handleColumnFilter("regrets")}
+                            title="Sort by Regrets"
+                          >
+                            <i className={`fas ${getColumnSortIcon("regrets")} ${columnFilter.column === "regrets" ? "text-primary" : "text-muted"}`}></i>
+                          </button>
+                        </div>
                       </th>
                       <th>
-                        <i className="fas fa-file-contract text-info me-1"></i>Clauses
+                        <div className="d-flex align-items-center justify-content-between">
+                          <span>
+                            <i className="fas fa-clipboard-check text-success me-1"></i>Tech Eval
+                          </span>
+                          <button
+                            className="btn btn-sm btn-link p-0 ms-2"
+                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
+                            onClick={() => handleColumnFilter("tech_eval")}
+                            title="Sort by Tech Eval"
+                          >
+                            <i className={`fas ${getColumnSortIcon("tech_eval")} ${columnFilter.column === "tech_eval" ? "text-primary" : "text-muted"}`}></i>
+                          </button>
+                        </div>
                       </th>
                       <th>
-                        <i className="fas fa-question-circle text-warning me-1"></i>Queries
+                        <div className="d-flex align-items-center justify-content-between">
+                          <span>
+                            <i className="fas fa-file-contract text-info me-1"></i>Clauses
+                          </span>
+                          <button
+                            className="btn btn-sm btn-link p-0 ms-2"
+                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
+                            onClick={() => handleColumnFilter("clauses")}
+                            title="Sort by Clauses"
+                          >
+                            <i className={`fas ${getColumnSortIcon("clauses")} ${columnFilter.column === "clauses" ? "text-primary" : "text-muted"}`}></i>
+                          </button>
+                        </div>
+                      </th>
+                      <th>
+                        <div className="d-flex align-items-center justify-content-between">
+                          <span>
+                            <i className="fas fa-question-circle text-warning me-1"></i>Queries
+                          </span>
+                          <button
+                            className="btn btn-sm btn-link p-0 ms-2"
+                            style={{ fontSize: "0.75rem", minWidth: "20px" }}
+                            onClick={() => handleColumnFilter("queries")}
+                            title="Sort by Queries"
+                          >
+                            <i className={`fas ${getColumnSortIcon("queries")} ${columnFilter.column === "queries" ? "text-primary" : "text-muted"}`}></i>
+                          </button>
+                        </div>
                       </th>
                       <th>Action</th>
                     </tr>
@@ -1443,20 +1624,36 @@ const VendorStatsDashboard = () => {
                             <span className="badge bg-warning">{row.queries_raised ?? 0}</span>
                           </td>
                           <td>
-                            <button
-                              className="btn btn-sm btn-primary"
-                              onClick={() => {
-                                const vendorId = String(row.vendor_id || row.id || "");
-                                if (selectedVendors.includes(vendorId)) {
-                                  setSelectedVendors((prev) => prev.filter((id) => id !== vendorId));
-                                } else {
-                                  setSelectedVendors((prev) => [...prev, vendorId]);
-                                }
-                              }}
-                            >
-                              <i className="fas fa-plus me-1"></i>
-                              {selectedVendors.includes(String(row.vendor_id || row.id || "")) ? "Selected" : "Select"}
-                            </button>
+                            <div className="d-flex gap-1">
+                              <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => {
+                                  const vendorId = String(row.vendor_id || row.id || "");
+                                  if (!selectedVendors.includes(vendorId)) {
+                                    setSelectedVendors([vendorId]);
+                                    fetchVendorStats([vendorId]);
+                                  }
+                                }}
+                                title="View Details"
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                              <button
+                                className="btn btn-sm btn-primary"
+                                onClick={() => {
+                                  const vendorId = String(row.vendor_id || row.id || "");
+                                  if (selectedVendors.includes(vendorId)) {
+                                    setSelectedVendors((prev) => prev.filter((id) => id !== vendorId));
+                                  } else {
+                                    setSelectedVendors((prev) => [...prev, vendorId]);
+                                  }
+                                }}
+                                title="Add to Selection"
+                              >
+                                <i className="fas fa-plus me-1"></i>
+                                {selectedVendors.includes(String(row.vendor_id || row.id || "")) ? "Selected" : "Select"}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1499,6 +1696,7 @@ const VendorStatsDashboard = () => {
                         <th>Tech Eval Success</th>
                         <th>Clause Agreement</th>
                         <th>Query Frequency</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1533,12 +1731,25 @@ const VendorStatsDashboard = () => {
                               <td>
                                 <span className="badge bg-warning">{row.queries_raised || 0}</span>
                               </td>
+                              <td>
+                                <button
+                                  className="btn btn-sm btn-outline-primary"
+                                  onClick={() => {
+                                    const vendorId = String(row.vendor_id || row.id || "");
+                                    setSelectedVendors([vendorId]);
+                                    fetchVendorStats([vendorId]);
+                                  }}
+                                  title="View Details"
+                                >
+                                  <i className="fas fa-eye me-1"></i>View Details
+                                </button>
+                              </td>
                             </tr>
                           );
                         })
                       ) : (
                         <tr>
-                          <td colSpan="7" className="text-center text-muted py-4">
+                          <td colSpan="8" className="text-center text-muted py-4">
                             No data available
                           </td>
                         </tr>
@@ -1654,6 +1865,7 @@ const VendorStatsDashboard = () => {
                     <th>Rejected</th>
                     <th>Total</th>
                     <th>Success Rate</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1670,12 +1882,25 @@ const VendorStatsDashboard = () => {
                             <td><span className="badge bg-danger">{row.tech_eval_rejected || 0}</span></td>
                             <td><span className="badge bg-info">{total}</span></td>
                             <td><span className="badge bg-primary">{successRate}%</span></td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => {
+                                  const vendorId = String(row.vendor_id || row.id || "");
+                                  setSelectedVendors([vendorId]);
+                                  fetchVendorStats([vendorId]);
+                                }}
+                                title="View Details"
+                              >
+                                <i className="fas fa-eye me-1"></i>View Details
+                              </button>
+                            </td>
                           </tr>
                         );
                       })
                   ) : (
                     <tr>
-                      <td colSpan="5" className="text-center text-muted py-4">No tech evaluation data available</td>
+                      <td colSpan="6" className="text-center text-muted py-4">No tech evaluation data available</td>
                     </tr>
                   )}
                 </tbody>
@@ -1748,6 +1973,7 @@ const VendorStatsDashboard = () => {
                     <th>Clauses Agreed</th>
                     <th>Total Clauses Responded</th>
                     <th>Agreement Rate</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1764,12 +1990,25 @@ const VendorStatsDashboard = () => {
                             <td><span className="badge bg-success">{agreed}</span></td>
                             <td><span className="badge bg-info">{responded}</span></td>
                             <td><span className="badge bg-primary">{agreementRate}%</span></td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => {
+                                  const vendorId = String(row.vendor_id || row.id || "");
+                                  setSelectedVendors([vendorId]);
+                                  fetchVendorStats([vendorId]);
+                                }}
+                                title="View Details"
+                              >
+                                <i className="fas fa-eye me-1"></i>View Details
+                              </button>
+                            </td>
                           </tr>
                         );
                       })
                   ) : (
                     <tr>
-                      <td colSpan="4" className="text-center text-muted py-4">No clause data available</td>
+                      <td colSpan="5" className="text-center text-muted py-4">No clause data available</td>
                     </tr>
                   )}
                 </tbody>
@@ -1841,6 +2080,7 @@ const VendorStatsDashboard = () => {
                     <th>Queries Raised</th>
                     <th>Queries by Vendor</th>
                     <th>Total Queries</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1853,11 +2093,24 @@ const VendorStatsDashboard = () => {
                           <td><span className="badge bg-warning">{row.queries_raised || 0}</span></td>
                           <td><span className="badge bg-info">{row.queries_by_vendor || 0}</span></td>
                           <td><span className="badge bg-primary">{(row.queries_raised || 0) + (row.queries_by_vendor || 0)}</span></td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => {
+                                const vendorId = String(row.vendor_id || row.id || "");
+                                setSelectedVendors([vendorId]);
+                                fetchVendorStats([vendorId]);
+                              }}
+                              title="View Details"
+                            >
+                              <i className="fas fa-eye me-1"></i>View Details
+                            </button>
+                          </td>
                         </tr>
                       ))
                   ) : (
                     <tr>
-                      <td colSpan="4" className="text-center text-muted py-4">No query data available</td>
+                      <td colSpan="5" className="text-center text-muted py-4">No query data available</td>
                     </tr>
                   )}
                 </tbody>
