@@ -1,102 +1,332 @@
 import React, { useState, useEffect } from "react";
 import ReactPaginate from "react-paginate";
-import { Button, Modal, Badge } from "react-bootstrap";
+import { Button, Spinner, Card, InputGroup, Form, Collapse } from "react-bootstrap";
 import { getContactUsPage, updateCommunicationRemark } from "@/utils/services/contact-us";
 import { toast } from "react-toastify";
 
+
+// Avatar Component
+const Avatar = ({ name, size = 32, className = "" }) => (
+  <div
+    className={`rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 ${className}`}
+    style={{ width: size, height: size }}
+  >
+    <span className={`fw-bold ${size <= 32 ? "small" : ""}`}>
+      {name?.charAt(0)?.toUpperCase() || "?"}
+    </span>
+  </div>
+);
+
+// Date Display Component
+const DateDisplay = ({ date }) => (
+  <div className="d-flex align-items-center text-muted small">
+    <i className="fa fa-calendar me-2 text-primary" style={{ width: 14 }}></i>
+    <span>
+      {new Date(date).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })}
+    </span>
+  </div>
+);
+
+// Remark Section Component
+const RemarkSection = ({ item, isEditing, tempRemark, isRemoving, onEdit, onSave, onCancel, onRemarkChange }) => {
+  if (isEditing) {
+    return (
+      <div className="d-flex flex-column gap-2">
+        <Form.Control
+          as="textarea"
+          rows={3}
+          placeholder="Write your remark here..."
+          value={tempRemark}
+          onChange={onRemarkChange}
+          className="resize-none"
+          style={{ resize: "none" }}
+          autoFocus
+        />
+        <div className="d-flex justify-content-end gap-2">
+          <Button variant="outline-secondary" size="sm" onClick={onCancel}>
+            <i className="fa fa-times me-1"></i>
+            Cancel
+          </Button>
+          {isRemoving ? (
+            <Button variant="danger" size="sm" onClick={() => onSave(true)}>
+              <i className="fa fa-trash me-1"></i>
+              Remove
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => onSave(false)}
+              disabled={tempRemark.trim() === ""}
+            >
+              <i className="fa fa-save me-1"></i>
+              Save
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (item.remark) {
+    return (
+      <div className="d-flex flex-column gap-2">
+        <div
+          className="bg-white border rounded p-2 small text-dark"
+          style={{ whiteSpace: "pre-wrap", minHeight: "60px" }}
+        >
+          {item.remark}
+        </div>
+        <div className="d-flex gap-2 justify-content-end">
+          <Button variant="outline-primary" size="sm" onClick={onEdit}>
+            <i className="fa fa-edit me-1"></i>
+            Edit
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="d-flex flex-column align-items-center justify-content-center text-center py-2">
+      <Button variant="outline-primary" size="sm" onClick={onEdit}>
+        <i className="fa fa-plus me-1"></i>
+        Add Remark
+      </Button>
+    </div>
+  );
+};
+
+// Message Card Component
+const MessageCard = ({ item, isEditing, isExpanded, tempRemark, isRemoving, onToggleExpand, onEditRemark, onSaveRemark, onCancelEdit, onRemarkChange }) => (
+  <Card className="mb-3 shadow-sm border-0">
+    <Card.Body className="p-0">
+      {/* Card Header - Name & Date */}
+      <div className="d-flex align-items-center p-3 border-bottom bg-light">
+        <Avatar name={item.name} size={42} className="me-3" />
+        <div>
+          <h6 className="mb-1 fw-semibold">{item.name}</h6>
+          <DateDisplay date={item.createdAt} />
+        </div>
+      </div>
+
+      {/* Card Body */}
+      <div className="row g-0">
+        {/* Left Section - Email, Phone & Subject */}
+        <div className="col-12 col-xl-8">
+          <div className="p-3">
+            <div className="row g-3">
+              {/* Email */}
+              <div className="col-12 col-sm-6 col-lg-4">
+                <label className="text-uppercase small fw-semibold text-muted mb-1 d-block">
+                  Email
+                </label>
+                <div className="d-flex align-items-center text-dark small">
+                  <i className="fa fa-envelope me-2 text-primary" style={{ width: 14 }}></i>
+                  <span className="text-truncate">{item.email}</span>
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div className="col-12 col-sm-6 col-lg-4">
+                <label className="text-uppercase small fw-semibold text-muted mb-1 d-block">
+                  Phone
+                </label>
+                <div className="d-flex align-items-center text-dark small">
+                  <i className="fa fa-phone me-2 text-primary" style={{ width: 14 }}></i>
+                  <span>{item.phone}</span>
+                </div>
+              </div>
+
+              {/* Subject */}
+              <div className="col-12 col-lg-4">
+                <label className="text-uppercase small fw-semibold text-muted mb-1 d-block">
+                  Subject
+                </label>
+                <p
+                  className="mb-0 text-dark small"
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {item.subject}
+                </p>
+              </div>
+            </div>
+
+            {/* View Message Toggle Button */}
+            <div className="mt-3">
+              <Button
+                variant="link"
+                size="sm"
+                className="p-0 text-decoration-none"
+                onClick={onToggleExpand}
+                aria-expanded={isExpanded}
+              >
+                <i className={`fa fa-chevron-${isExpanded ? "up" : "down"} me-1`}></i>
+                {isExpanded ? "Hide Message" : "View Message"}
+              </Button>
+            </div>
+
+            {/* Collapsible Message Section */}
+            <Collapse in={isExpanded}>
+              <div className="mt-2">
+                <div className="bg-light border rounded p-3">
+                  <p className="mb-0 text-dark" style={{ whiteSpace: "pre-wrap" }}>
+                    {item.comment}
+                  </p>
+                </div>
+              </div>
+            </Collapse>
+          </div>
+        </div>
+
+        {/* Right Section - Remark */}
+        <div className="col-12 col-xl-4 bg-light">
+          <div className="p-3 h-100 d-flex flex-column">
+            <label className="text-uppercase small fw-semibold text-muted mb-2 d-block">
+              Remark
+            </label>
+            <RemarkSection
+              item={item}
+              isEditing={isEditing}
+              tempRemark={tempRemark}
+              isRemoving={isRemoving}
+              onEdit={() => onEditRemark(item)}
+              onSave={(remove) => onSaveRemark(item, remove)}
+              onCancel={onCancelEdit}
+              onRemarkChange={onRemarkChange}
+            />
+          </div>
+        </div>
+      </div>
+    </Card.Body>
+  </Card>
+);
+
+// Loading State Component
+const LoadingState = () => (
+  <div className="text-center py-5">
+    <Spinner animation="border" variant="primary" />
+    <p className="mt-2 text-muted mb-0">Loading messages...</p>
+  </div>
+);
+
+// Empty State Component
+const EmptyState = () => (
+  <Card className="border-0 shadow-sm">
+    <Card.Body className="text-center py-5">
+      <i className="fa fa-inbox fa-3x text-muted mb-3 d-block"></i>
+      <p className="text-muted mb-0">No messages found</p>
+    </Card.Body>
+  </Card>
+);
+
+// Pagination Component
+const PaginationSection = ({ page, totalPageCount, goToPage, onPageChange, onGoToPageChange, onGoToPage }) => (
+  <Card className="border-0 shadow-sm">
+    <Card.Body className="py-3">
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div className="text-muted small">
+          Page <strong>{page}</strong> of <strong>{totalPageCount}</strong>
+        </div>
+        <ReactPaginate
+          breakLabel="..."
+          nextLabel={<i className="fa fa-angle-right"></i>}
+          onPageChange={onPageChange}
+          pageRangeDisplayed={2}
+          pageCount={totalPageCount}
+          previousLabel={<i className="fa fa-angle-left"></i>}
+          renderOnZeroPageCount={null}
+          className="pagination pagination-sm mb-0"
+          activeClassName="active"
+          forcePage={page - 1}
+        />
+        <InputGroup size="sm" style={{ width: "auto" }}>
+          <Form.Control
+            type="number"
+            placeholder="Page"
+            min="1"
+            max={totalPageCount}
+            value={goToPage}
+            onChange={onGoToPageChange}
+            onKeyPress={(e) => e.key === "Enter" && onGoToPage()}
+            style={{ width: 70 }}
+          />
+          <Button variant="primary" onClick={onGoToPage}>
+            Go
+          </Button>
+        </InputGroup>
+      </div>
+    </Card.Body>
+  </Card>
+);
+
+// ============================================
+// Main Component
+// ============================================
+
 const Message = () => {
-   // let BuyerData = [
-  //   {
-  //     customer_id: "XX",
-  //     customer_info: "Name&Email",
-  //     customer_type: "Buyer",
-  //     subscription_plan: "Gold",
-  //     status: "0",
-  //     subscribed_on: "24 Aug 2023",
-  //     next_renewal: "02 Sep 2024"
-  //   },
-  //   {
-  //     customer_id: "XX",
-  //     customer_info: "Name&Email",
-  //     customer_type: "Buyer",
-  //     subscription_plan: "Gold",
-  //     status: "1",
-  //     subscribed_on: "24 Aug 2023",
-  //     next_renewal: "02 Sep 2024"
-  //   },
-  //   {
-  //     customer_id: "XX",
-  //     customer_info: "Name&Email",
-  //     customer_type: "Buyer",
-  //     subscription_plan: "Gold",
-  //     status: "0",
-  //     subscribed_on: "24 Aug 2023",
-  //     next_renewal: "02 Sep 2024"
-  //   },
-  //   {
-  //     customer_id: "XX",
-  //     customer_info: "Name&Email",
-  //     customer_type: "Buyer",
-  //     subscription_plan: "Gold",
-  //     status: "1",
-  //     subscribed_on: "24 Aug 2023",
-  //     next_renewal: "02 Sep 2024"
-  //   },
-  //   {
-  //     customer_id: "XX",
-  //     customer_info: "Name&Email",
-  //     customer_type: "Buyer",
-  //     subscription_plan: "Gold",
-  //     status: "0",
-  //     subscribed_on: "24 Aug 2023",
-  //     next_renewal: "02 Sep 2024"
-  //   }
-  // ];
-
-
   const [contactData, setContactData] = useState([]);
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [selectedMessage, setSelectedMessage] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [expandedCard, setExpandedCard] = useState(null);
   const [editRow, setEditRow] = useState(null);
-  const [tempRemark, settempRemark] = useState("");
+  const [tempRemark, setTempRemark] = useState("");
   const [isRemoving, setIsRemoving] = useState(false);
+  const [goToPage, setGoToPage] = useState("");
 
-  const handleShowMessage = (item) => {
-    setSelectedMessage(item);
-    setShowModal(true);
+  const totalPageCount = Math.ceil(totalPages / limit);
+
+  const toggleExpandCard = (itemId) => {
+    setExpandedCard(expandedCard === itemId ? null : itemId);
   };
 
   const startAddRemark = (item) => {
     setEditRow(item.id);
-    settempRemark(item.remark || "");
+    setTempRemark(item.remark || "");
   };
 
   const cancelEdit = () => {
     setEditRow(null);
-    settempRemark("");
+    setTempRemark("");
   };
 
   const saveRemark = (item, remove = false) => {
     const remarkToSave = remove ? null : tempRemark.trim();
 
     updateCommunicationRemark(item.id, remarkToSave)
-      .then((res) => {
+      .then(() => {
         toast.success("Comment updated successfully");
       })
-      .catch((err) => {
+      .catch(() => {
         toast.error("Error updating comment");
       });
+
     item.remark = remarkToSave;
     setEditRow(null);
-    settempRemark("");
+    setTempRemark("");
     setIsRemoving(false);
   };
 
+  const handleRemarkChange = (e) => {
+    const value = e.target.value.trim();
+    setTempRemark(e.target.value);
+    setIsRemoving(value === "--");
+  };
+
   const getContactUs = () => {
+    setIsLoading(true);
     setContactData([]);
     getContactUsPage(page, limit)
       .then((res) => {
@@ -105,6 +335,10 @@ const Message = () => {
       })
       .catch((err) => {
         console.log(err);
+        toast.error("Failed to load messages");
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
   };
 
@@ -114,6 +348,14 @@ const Message = () => {
 
   const handlePageClick = (e) => {
     setPage(e.selected + 1);
+  };
+
+  const handleGoToPage = () => {
+    const pageNum = parseInt(goToPage);
+    if (pageNum && pageNum >= 1 && pageNum <= totalPageCount) {
+      setPage(pageNum);
+      setGoToPage("");
+    }
   };
 
   return (
@@ -127,212 +369,45 @@ const Message = () => {
       </div>
 
       <section className="content">
-        <div className="card card-body mb-4">
-          <div className="container-fluid">
-            {/* <div className="card card-body product-table">
-              <h6 className="mb-2">
-                Check your message and moderate all message from site users
-              </h6>
-              <div className="row">
-                <div className="col-md-4">
-                  <div class="input-group">
-                    <div class="input-group-prepend">
-                      <span class="input-group-text" id="basic-addon1">
-                        @
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      class="form-control"
-                      placeholder="Search"
-                      aria-label="Username"
-                      aria-describedby="basic-addon1"
-                    />
-                  </div>
-                </div>
-                <div className="col-md-2">
-                  <button type="button" class="btn btn-secondary col-12">
-                    Inbox
-                  </button>
-                </div>
-              </div>
-            </div> */}
-            <div className="card card-body product-table overflow overflow-x-auto">
-              <table className="table table-hover mb-3 max-w-max">
-                <thead>
-                  <tr>
-                    <th scope="col">Customer Name</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Phone</th>
-                    <th scope="col">Message</th>
-                    <th scope="col">Date</th>
-                    <th scope="col">Remark</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {contactData &&
-                    contactData.map((item) => (
-                      <tr key={item.customer_id}>
-                        <td>{item.name}</td>
-                        <td>{item.email}</td>
-                        <td>{item.phone}</td>
-                        <td style={{width:'150px'}}>
-                          <div>
-                            {item.subject.length > 50
-                              ? `${item.subject.substring(0, 50)}...`
-                              : item.subject}
-                          </div>
-                          <Button
-                            variant="link"
-                            className="ms-2 p-0 d-block ml-0"
-                            onClick={() => handleShowMessage(item)}
-                          >
-                            View Message
-                          </Button>
-                         </td>
-                        <td>{new Date(item.createdAt).toLocaleDateString()}</td>
-                        <td className="d-flex justify-content-between align-items-center gap-2">
-                          {editRow === item.id ? (
-                            <>
-                              <input
-                                type="text"
-                                className="form-control"
-                                placeholder="Add remark here"
-                                value={tempRemark}
-                                onChange={(e) => {
-                                  const value = e.target.value.trim();
-                                  settempRemark(e.target.value);
-                                  setIsRemoving(value === "--");
-                                }}
-                              />
-                              {isRemoving ? (
-                                <Badge bg="success" onClick={() => saveRemark(item, true)}>Save</Badge>
-                              ) : tempRemark.trim() === "" ? (
-                                <Badge bg="danger" onClick={cancelEdit}>Cancel</Badge>
-                              ) : (
-                                <Badge bg="success" onClick={() => saveRemark(item, false)}>Save</Badge>
-                              )}
-                            </>
-                          ) : item.remark ? (
-                            <>
-                              <span>{item.remark}</span>
-                              <Badge bg="secondary" onClick={() => startAddRemark(item)}>Edit</Badge>
-                            </>
-                          ) : (
-                            <>
-                              <span>--</span>
-                              <Badge onClick={() => startAddRemark(item)}>Add Remark</Badge>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-              {/* <nav aria-label="Page navigation example">
-                <ul className="pagination">
-                  {Array.from(Array(totalPages), (e, i) => {
-                    if (i + 1 === page) {
-                      return (
-                        <li className="active page-item" key={i + 1}>
-                          <a
-                            className="page-link"
-                            href=""
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setpage(i + 1);
-                            }}
-                          >
-                            {i + 1}
-                          </a>
-                        </li>
-                      );
-                    } else {
-                      return (
-                        <li className="page-item" key={i + 1}>
-                          <a
-                            className="page-link"
-                            href=""
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setpage(i + 1);
-                            }}
-                          >
-                            {i + 1}
-                          </a>
-                        </li>
-                      );
-                    }
-                  })}
-                </ul>
-              </nav> */}
+        <div className="container-fluid">
+          {/* Loading State */}
+          {isLoading && <LoadingState />}
 
-              {/* Modal for Full Message */}
-              <Modal show={showModal} onHide={() => setShowModal(false)}>
-                <Modal.Header closeButton>
-                  <Modal.Title>Full Message</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                  {selectedMessage && (
-                    <>
-                      <p>
-                        <strong>Subject:</strong> {selectedMessage.subject}
-                      </p>
-                      <p>
-                        <strong>Comment:</strong> {selectedMessage.comment}
-                      </p>
-                    </>
-                  )}
-                </Modal.Body>
-                <Modal.Footer>
-                  <Button variant="secondary" onClick={() => setShowModal(false)}>
-                    Close
-                  </Button>
-                </Modal.Footer>
-              </Modal>
-            </div>
+          {/* Empty State */}
+          {!isLoading && contactData.length === 0 && <EmptyState />}
 
-            {Math.ceil(totalPages/10) > 1 && (
-              <>
-                <ReactPaginate
-                  breakLabel="..."
-                  nextLabel={<i className="fa fa-angle-right"></i>}
-                  onPageChange={handlePageClick}
-                  pageRangeDisplayed={2}
-                  pageCount={Math.ceil(totalPages / limit)}
-                  previousLabel={<i className="fa fa-angle-left"></i>}
-                  renderOnZeroPageCount={null}
-                  className="pagination"
+          {/* Message Cards List */}
+          {!isLoading && contactData.length > 0 && (
+            <div className="mb-4">
+              {contactData.map((item) => (
+                <MessageCard
+                  key={item.customer_id}
+                  item={item}
+                  isEditing={editRow === item.id}
+                  isExpanded={expandedCard === item.id}
+                  tempRemark={tempRemark}
+                  isRemoving={isRemoving}
+                  onToggleExpand={() => toggleExpandCard(item.id)}
+                  onEditRemark={startAddRemark}
+                  onSaveRemark={saveRemark}
+                  onCancelEdit={cancelEdit}
+                  onRemarkChange={handleRemarkChange}
                 />
-                <div className="d-flex align-items-center gap-2 mt-2">
-                  <input
-                    type="number"
-                    className="form-control"
-                    style={{ width: "125px" }}
-                    placeholder="Go to page"
-                    min="1"
-                    max={Math.ceil(totalPages / limit)}
-                    onChange={(e) => {
-                      const pageNum = Math.max(1, Math.min(Math.ceil(totalPages / limit), parseInt(e.target.value) || 1));
-                      setPage(pageNum);
-                    }}
-                  />
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => {
-                      const input = document.querySelector('input[type="number"]');
-                      const pageNum = parseInt(input.value);
-                      if (pageNum && pageNum >= 1 && pageNum <= Math.ceil(totalPages / limit)) {
-                        setPage(pageNum);
-                      }
-                    }}
-                  >
-                    Go
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPageCount > 1 && (
+            <PaginationSection
+              page={page}
+              totalPageCount={totalPageCount}
+              goToPage={goToPage}
+              onPageChange={handlePageClick}
+              onGoToPageChange={(e) => setGoToPage(e.target.value)}
+              onGoToPage={handleGoToPage}
+            />
+          )}
         </div>
       </section>
     </>
