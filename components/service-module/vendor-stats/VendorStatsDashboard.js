@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import { Doughnut, Line, Bar } from "react-chartjs-2";
 import {
   CategoryScale,
@@ -7,7 +8,7 @@ import {
   LineElement,
   BarElement,
   ArcElement,
-  Tooltip,
+  Tooltip as ChartTooltip,
   Legend,
   Chart as ChartJS,
 } from "chart.js";
@@ -38,8 +39,80 @@ import { handleGetBuyerList } from "@/utils/services/buyer-management";
 import Select, { components } from "react-select";
 
 if (typeof window !== "undefined") {
-  ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend);
+  ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, ChartTooltip, Legend);
 }
+
+// Custom Select Option Component for Vendors (shows email/phone)
+const CustomVendorOption = (props) => (
+  <components.Option {...props}>
+    <div>
+      <strong>{props?.data?.label}</strong>
+      {props?.data?.email && (
+        <>
+          <br />
+          <small>{props?.data?.email}</small>
+          {props?.data?.phone && <small className="ms-2">{props?.data?.phone}</small>}
+        </>
+      )}
+    </div>
+  </components.Option>
+);
+
+// Separate VendorSelect component to prevent focus loss
+const VendorSelect = React.memo(({ 
+  selectedVendors, 
+  onVendorsChange, 
+  vendorOptions, 
+  vendorSearchLoading,
+  onSearchChange
+}) => {
+  const selectedValue = useMemo(() => {
+    return vendorOptions.filter(opt => selectedVendors.includes(String(opt.value)));
+  }, [vendorOptions, selectedVendors]);
+
+  const handleChange = useCallback((selectedOptions) => {
+    const vendorIds = Array.isArray(selectedOptions) 
+      ? selectedOptions.map(opt => String(opt.value))
+      : [];
+    if (onVendorsChange) {
+      onVendorsChange(vendorIds);
+    }
+  }, [onVendorsChange]);
+
+  const handleInputChange = useCallback((newValue) => {
+    if (onSearchChange) {
+      onSearchChange(newValue);
+    }
+  }, [onSearchChange]);
+
+  return (
+    <Select
+      options={vendorOptions}
+      value={selectedValue}
+      onChange={handleChange}
+      onInputChange={handleInputChange}
+      placeholder="Search vendors (min 3 characters)..."
+      isClearable={true}
+      isSearchable={true}
+      isMulti={true}
+      isLoading={vendorSearchLoading}
+      components={{ Option: CustomVendorOption }}
+      className="basic-select"
+      classNamePrefix="select"
+      filterOption={() => true}
+      noOptionsMessage={({ inputValue }) => !inputValue || inputValue.length < 3 ? "Please enter at least 3 letters to search" : "No vendors found"}
+      blurInputOnSelect={false}
+      closeMenuOnSelect={false}
+    />
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.selectedVendors.length === nextProps.selectedVendors.length &&
+         prevProps.selectedVendors.every((id, idx) => id === nextProps.selectedVendors[idx]) &&
+         prevProps.vendorOptions.length === nextProps.vendorOptions.length &&
+         prevProps.vendorSearchLoading === nextProps.vendorSearchLoading;
+});
+
+VendorSelect.displayName = 'VendorSelect';
 
 const VendorStatsDashboard = () => {
   const [filters, setFilters] = useState({
@@ -49,6 +122,8 @@ const VendorStatsDashboard = () => {
     category_id: "",
     variant_id: "",
     created_by: "", // buyer filter
+    is_private: "",
+    subscription_plan: "",
   });
   const [activeTab, setActiveTab] = useState("overview");
   const [categories, setCategories] = useState([]);
@@ -368,6 +443,7 @@ const VendorStatsDashboard = () => {
           vendor_ids: selectedVendors.map(id => parseInt(id, 10)).filter(id => !isNaN(id))
         })
       };
+      console.log("Fetching overview with filters:", filtersWithVendors);
       const res = await fetchVendorStatsOverview(filtersWithVendors);
       if (res?.status === 1) {
         setOverview(res.data);
@@ -435,21 +511,21 @@ const VendorStatsDashboard = () => {
     }
   };
 
-  // Debounced vendor search (only search when 3+ characters, like in modal)
-  useEffect(() => {
-    if (vendorSearchTerm.length < 3) {
-      // Don't clear options - keep previous results to prevent re-render
+  // Track vendor search term from VendorSelect component via a ref/callback
+  const vendorSearchCallbackRef = useRef(null);
+  
+  // Debounced vendor search - will be called from VendorSelect
+  const triggerVendorSearch = useCallback((searchTerm) => {
+    if (searchTerm.length < 3) {
       return;
     }
-
+    
     const handler = setTimeout(() => {
-      fetchVendors(vendorSearchTerm);
+      fetchVendors(searchTerm);
     }, 1000);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [vendorSearchTerm]);
+    
+    return () => clearTimeout(handler);
+  }, []);
 
   const fetchVendorStats = async (vendorIds) => {
     if (!vendorIds || vendorIds.length === 0) {
@@ -816,31 +892,12 @@ const VendorStatsDashboard = () => {
 
   const fetchVariants = async (categoryId = null) => {
     try {
-      console.log("Fetching variants...", categoryId ? `for category ${categoryId}` : "all variants");
-      // Fetch all variants by paginating through all pages
-      let allVariants = [];
-      let page = 1;
-      let hasMore = true;
-      const limit = 1000; // Fetch 1000 per page
-
-      while (hasMore) {
-        const res = await searchAllVariants(null, "", "", "", null, categoryId || null, null, null, page, limit);        
-        // searchAllVariants returns { data: [...], pagination: {...} }
-        const variantsList = res?.data || [];
-        const pagination = res?.pagination || {};
-        const totalCount = pagination.total || 0;
-        
-        if (variantsList.length > 0) {
-          allVariants = [...allVariants, ...variantsList];
-          hasMore = allVariants.length < totalCount && variantsList.length === limit;
-          page++;
-        } else {
-          hasMore = false;
-        }
-      }
+      // Fetch all variants at once with a very large limit
+      const res = await searchAllVariants(null, "", "", "", null, categoryId || null, null, null, 1, 1000000);
+      const variantsList = res?.data || [];
 
       // Format variants for Select component
-      const vars = allVariants.map((v) => ({
+      const vars = variantsList.map((v) => ({
         id: v.id,
         name: v.variant_name || v.variant || v.name || `Variant ${v.id}`,
         product_name: v.product_name || '',
@@ -863,38 +920,21 @@ const VendorStatsDashboard = () => {
 
   const fetchBuyers = async () => {
     try {
-      // Fetch all buyers by paginating through all pages
-      let allBuyers = [];
-      let page = 1;
-      let hasMore = true;
-      const limit = 1000;
-
-      while (hasMore) {
-        // Pass empty strings instead of null to avoid URL issues
-        const res = await handleGetBuyerList(limit, page, "", "", "", "");        
-        // Check response structure - could be res.data (array) or res.data.data
-        let buyersList = [];
-        if (Array.isArray(res?.data)) {
-          buyersList = res.data;
-        } else if (Array.isArray(res?.data?.data)) {
-          buyersList = res.data.data;
-        } else if (res?.data?.status === 1 && Array.isArray(res?.data?.data)) {
-          buyersList = res.data.data;
-        }
-        
-        if (buyersList.length > 0) {
-          allBuyers = [...allBuyers, ...buyersList];
-          // Check total count from various possible locations
-          const totalCount = res.total_count || res.data?.total_count || res.data?.total || 0;
-          hasMore = allBuyers.length < totalCount && buyersList.length === limit;
-          page++;
-        } else {
-          hasMore = false;
-        }
+      // Fetch all buyers at once with a very large limit
+      const res = await handleGetBuyerList(1000000, 1, "", "", "", "");
+      
+      // Check response structure - could be res.data (array) or res.data.data
+      let buyersList = [];
+      if (Array.isArray(res?.data)) {
+        buyersList = res.data;
+      } else if (Array.isArray(res?.data?.data)) {
+        buyersList = res.data.data;
+      } else if (res?.data?.status === 1 && Array.isArray(res?.data?.data)) {
+        buyersList = res.data.data;
       }
 
-      setBuyers(allBuyers);
-      setBuyerOptions(allBuyers.map(buyer => ({
+      setBuyers(buyersList);
+      setBuyerOptions(buyersList.map(buyer => ({
         value: buyer.id,
         label: buyer.name || buyer.organization_name || `Buyer ${buyer.id}`
       })));
@@ -910,38 +950,20 @@ const VendorStatsDashboard = () => {
     fetchBuyers();
   }, []);
 
-  // Custom Select Option Component for Vendors (shows email/phone)
-  const CustomVendorOption = (props) => (
-    <components.Option {...props}>
-      <div>
-        <strong>{props?.data?.label}</strong>
-        {props?.data?.email && (
-          <>
-            <br />
-            <small>{props?.data?.email}</small>
-            {props?.data?.phone && <small className="ms-2">{props?.data?.phone}</small>}
-          </>
-        )}
-      </div>
-    </components.Option>
-  );
 
   // Memoize selected vendor value to prevent re-renders
   const selectedVendorValue = useMemo(() => {
     return vendorOptions.filter(opt => selectedVendors.includes(String(opt.value)));
   }, [vendorOptions, selectedVendors]);
 
-  // Memoize handlers to prevent re-renders
-  const handleVendorChange = useCallback((selectedOptions) => {
-    const vendorIds = Array.isArray(selectedOptions) 
-      ? selectedOptions.map(opt => String(opt.value))
-      : [];
+  // Stable handler for vendor selection
+  const handleVendorsChange = useCallback((vendorIds) => {
     setSelectedVendors(vendorIds);
   }, []);
 
-  const handleVendorInputChange = useCallback((newValue) => {
-    vendorSearchTermRef.current = newValue;
-    setVendorSearchTerm(newValue);
+  // Debounced vendor search handler for VendorSelect
+  const handleVendorSearchChange = useCallback((searchTerm) => {
+    setVendorSearchTerm(searchTerm);
   }, []);
 
   // Vendor Comparison Table Component
@@ -1121,6 +1143,37 @@ const VendorStatsDashboard = () => {
           </div>
           <div className="col-md-2">
             <label className="form-label small mb-1 fw-semibold">
+              <i className="fas fa-user-shield me-1 text-warning"></i>Private Vendor
+            </label>
+            <select
+              className="form-select form-select-sm"
+              name="is_private"
+              value={filters.is_private}
+              onChange={handleFilterChange}
+            >
+              <option value="">All</option>
+              <option value="1">Private Only</option>
+              <option value="0">Non-Private Only</option>
+            </select>
+          </div>
+          <div className="col-md-2">
+            <label className="form-label small mb-1 fw-semibold">
+              <i className="fas fa-crown me-1 text-success"></i>Premium Vendor
+            </label>
+            <select
+              className="form-select form-select-sm"
+              name="subscription_plan"
+              value={filters.subscription_plan}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Plans</option>
+              <option value="1">Premium</option>
+              <option value="2">Standard</option>
+              <option value="3">Basic</option>
+            </select>
+          </div>
+          <div className="col-md-2">
+            <label className="form-label small mb-1 fw-semibold">
               <i className="fas fa-folder me-1 text-primary"></i>Category
             </label>
             <Select
@@ -1180,24 +1233,12 @@ const VendorStatsDashboard = () => {
               <label className="form-label small mb-1 fw-semibold">
                 <i className="fas fa-store me-1 text-success"></i>Vendor
               </label>
-              <Select
-                key="vendor-select"
-                options={vendorOptions}
-                value={selectedVendorValue}
-                onChange={handleVendorChange}
-                onInputChange={handleVendorInputChange}
-                placeholder="Search vendors (min 3 characters)..."
-                isClearable={true}
-                isSearchable={true}
-                isMulti={true}
-                isLoading={vendorSearchLoading}
-                components={{ Option: CustomVendorOption }}
-                className="basic-select"
-                classNamePrefix="select"
-                filterOption={() => true}
-                noOptionsMessage={({ inputValue }) => !inputValue || inputValue.length < 3 ? "Please enter at least 3 letters to search" : "No vendors found"}
-                blurInputOnSelect={false}
-                closeMenuOnSelect={false}
+              <VendorSelect
+                selectedVendors={selectedVendors}
+                onVendorsChange={handleVendorsChange}
+                vendorOptions={vendorOptions}
+                vendorSearchLoading={vendorSearchLoading}
+                onSearchChange={handleVendorSearchChange}
               />
             </div>
           )}
