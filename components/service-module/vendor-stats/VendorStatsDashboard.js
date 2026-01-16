@@ -28,7 +28,9 @@ import {
   faPlus,
   faChartPie,
   faChartBar,
-  faChartLine
+  faChartLine,
+  faFileExcel,
+  faDownload
 } from "@fortawesome/free-solid-svg-icons";
 import { fetchVendorStatsOverview, fetchVendorStatsByVendor, fetchQuotationFinancialAnalysis } from "@/utils/services/vendor-stats";
 import { handleGetVendorList } from "@/utils/services/vendor-management";
@@ -614,6 +616,385 @@ const VendorStatsDashboard = () => {
     setTimeout(() => {
       fetchOverview();
     }, 100);
+  };
+
+  // Excel Export Functions
+  const generateExcelFile = async (data, headers, sheetName, title = null) => {
+    try {
+      // Dynamic import - try xlsx-js-style first, fallback to xlsx
+      let XLSX_USE;
+      try {
+        const xlsxModule = await import("xlsx-js-style");
+        // xlsx-js-style uses namespace import (import * as XLSX)
+        // When dynamically imported, it's already the namespace object
+        XLSX_USE = xlsxModule;
+        
+        // Verify it has the required utils
+        if (!XLSX_USE.utils) {
+          throw new Error("xlsx-js-style loaded but utils not found");
+        }
+      } catch (e) {
+        console.warn("xlsx-js-style failed, trying xlsx:", e);
+        try {
+          const xlsxModule = await import("xlsx");
+          XLSX_USE = xlsxModule;
+          
+          if (!XLSX_USE.utils) {
+            throw new Error("xlsx loaded but utils not found");
+          }
+        } catch (e2) {
+          console.error("Both Excel libraries failed:", e2);
+          throw new Error("Excel library not available. Please install xlsx-js-style package.");
+        }
+      }
+      
+      const worksheetData = [];
+      
+      // Add title row if provided
+      if (title) {
+        worksheetData.push([title]);
+        worksheetData.push([]); // Empty row
+      }
+      
+      // Add headers
+      worksheetData.push(headers);
+      
+      // Add data rows
+      data.forEach((row) => {
+        const rowData = headers.map((header) => {
+          const value = row[header] ?? "";
+          return value === null || value === undefined ? "" : value;
+        });
+        worksheetData.push(rowData);
+      });
+      
+      const ws = XLSX_USE.utils.aoa_to_sheet(worksheetData);
+      const range = XLSX_USE.utils.decode_range(ws["!ref"]);
+      
+      // Apply styling if xlsx-js-style is available (it has .s property support)
+      const hasStyleSupport = XLSX_USE.write && typeof XLSX_USE.write === 'function' && XLSX_USE.utils;
+      if (hasStyleSupport) {
+        // Style header row
+        for (let col = range.s.c; col <= range.e.c; col++) {
+          const cellAddress = XLSX_USE.utils.encode_cell({ r: title ? 2 : 0, c: col });
+          if (!ws[cellAddress]) ws[cellAddress] = {};
+          if (!ws[cellAddress].s) ws[cellAddress].s = {};
+          ws[cellAddress].s = {
+            font: { bold: true, sz: 12 },
+            fill: { fgColor: { rgb: "DDDDDD" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: {
+              top: { style: "thin" },
+              bottom: { style: "thin" },
+              left: { style: "thin" },
+              right: { style: "thin" }
+            }
+          };
+        }
+        
+        // Style title if present
+        if (title) {
+          const titleCell = XLSX_USE.utils.encode_cell({ r: 0, c: 0 });
+          if (!ws[titleCell]) ws[titleCell] = { v: title };
+          if (!ws[titleCell].s) ws[titleCell].s = {};
+          ws[titleCell].s = {
+            font: { bold: true, sz: 16 },
+            alignment: { horizontal: "left", vertical: "center" }
+          };
+          // Merge title across all columns
+          if (!ws["!merges"]) ws["!merges"] = [];
+          ws["!merges"].push({
+            s: { r: 0, c: 0 },
+            e: { r: 0, c: range.e.c }
+          });
+        }
+        
+        // Style data rows
+        for (let row = (title ? 3 : 1); row <= range.e.r; row++) {
+          for (let col = range.s.c; col <= range.e.c; col++) {
+            const cellAddress = XLSX_USE.utils.encode_cell({ r: row, c: col });
+            if (!ws[cellAddress]) ws[cellAddress] = {};
+            if (!ws[cellAddress].s) ws[cellAddress].s = {};
+            ws[cellAddress].s = {
+              alignment: { horizontal: "center", vertical: "center" },
+              border: {
+                top: { style: "thin" },
+                bottom: { style: "thin" },
+                left: { style: "thin" },
+                right: { style: "thin" }
+              }
+            };
+          }
+        }
+        
+        // Set column widths
+        ws["!cols"] = headers.map(() => ({ width: 20 }));
+      }
+      
+      const wb = XLSX_USE.utils.book_new();
+      XLSX_USE.utils.book_append_sheet(wb, ws, sheetName);
+      
+      // Generate buffer
+      const excelBuffer = XLSX_USE.write(wb, { bookType: "xlsx", type: "array" });
+      return excelBuffer;
+    } catch (error) {
+      console.error("Error generating Excel file:", error);
+      throw error;
+    }
+  };
+
+  const downloadExcel = async (data, headers, filename, sheetName, title = null) => {
+    try {
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        throw new Error("No data to export");
+      }
+      
+      if (!headers || !Array.isArray(headers) || headers.length === 0) {
+        throw new Error("No headers provided");
+      }
+      
+      const excelBuffer = await generateExcelFile(data, headers, sheetName, title);
+      
+      if (!excelBuffer || excelBuffer.length === 0) {
+        throw new Error("Generated Excel buffer is empty");
+      }
+      
+      const blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error downloading Excel:", error);
+      const errorMessage = error?.message || "Unknown error occurred";
+      alert(`Failed to download Excel file: ${errorMessage}. Please check the console for details.`);
+    }
+  };
+
+  const exportOverviewStats = async () => {
+    if (!overview) return;
+    
+    const globalData = [{
+      "Total Vendors": overview.total_vendors || 0,
+      "Active Vendors": overview.active_vendors || 0,
+      "Deactivated Vendors": overview.deactivated_vendors || 0,
+      "Avg Response Time": formatResponseTime(overview.avg_response_minutes, overview),
+      "Total Awards": overview.total_awards || 0,
+      "Total Regrets": overview.total_regrets || 0,
+      "Avg Delivery Period": formatDeliveryPeriod(overview.avg_delivery_period),
+      "Tech Eval Accepted": overview.total_tech_eval_accepted || 0,
+      "Tech Eval Rejected": overview.total_tech_eval_rejected || 0,
+      "Clauses Agreed": overview.total_clauses_agreed || 0,
+      "Queries Raised": overview.total_queries_raised || 0
+    }];
+    
+    await downloadExcel(
+      globalData,
+      ["Total Vendors", "Active Vendors", "Deactivated Vendors", "Avg Response Time", "Total Awards", "Total Regrets", "Avg Delivery Period", "Tech Eval Accepted", "Tech Eval Rejected", "Clauses Agreed", "Queries Raised"],
+      "vendor_stats_overview_global",
+      "Global Stats",
+      "Vendor Statistics - Global Overview"
+    );
+  };
+
+  const exportLeaderboard = async () => {
+    if (!filteredLeaderboard || filteredLeaderboard.length === 0) return;
+    
+    const leaderboardData = filteredLeaderboard.map((row, index) => ({
+      "#": index + 1,
+      "Vendor Name": row.name || "N/A",
+      "Company": row.company_name || "N/A",
+      "Source": row.source === "admin" ? "Admin Added" : row.source === "self" ? "Self Registration" : row.source === "buyer" ? "Private Vendor" : row.source || "Unknown",
+      "Avg Response Time": formatResponseTime(row.avg_response_minutes, row),
+      "Awards": row.awards || 0,
+      "Regrets": row.regrets || 0,
+      "Tech Eval Accepted": row.tech_eval_accepted || 0,
+      "Tech Eval Rejected": row.tech_eval_rejected || 0,
+      "Clauses Agreed": row.clauses_agreed || 0,
+      "Queries Raised": row.queries_raised || 0
+    }));
+    
+    await downloadExcel(
+      leaderboardData,
+      ["#", "Vendor Name", "Company", "Source", "Avg Response Time", "Awards", "Regrets", "Tech Eval Accepted", "Tech Eval Rejected", "Clauses Agreed", "Queries Raised"],
+      "vendor_stats_leaderboard",
+      "Leaderboard",
+      "Vendor Statistics - Leaderboard"
+    );
+  };
+
+  const exportBehaviorAnalysis = async () => {
+    if (!filteredLeaderboard || filteredLeaderboard.length === 0) return;
+    
+    const behaviorData = filteredLeaderboard.map((row) => {
+      const totalRFQs = (row.awards || 0) + (row.regrets || 0);
+      const awardRate = totalRFQs > 0 ? ((row.awards || 0) / totalRFQs * 100).toFixed(1) : 0;
+      const regretRate = totalRFQs > 0 ? ((row.regrets || 0) / totalRFQs * 100).toFixed(1) : 0;
+      const techEvalTotal = (row.tech_eval_accepted || 0) + (row.tech_eval_rejected || 0);
+      const techEvalSuccess = techEvalTotal > 0 ? ((row.tech_eval_accepted || 0) / techEvalTotal * 100).toFixed(1) : 0;
+      
+      return {
+        "Vendor Name": row.name || "N/A",
+        "Response Rate": formatResponseTime(row.avg_response_minutes, row),
+        "Award Rate (%)": awardRate,
+        "Regret Rate (%)": regretRate,
+        "Tech Eval Success (%)": techEvalSuccess,
+        "Clause Agreement": row.clauses_agreed || 0,
+        "Query Frequency": row.queries_raised || 0
+      };
+    });
+    
+    await downloadExcel(
+      behaviorData,
+      ["Vendor Name", "Response Rate", "Award Rate (%)", "Regret Rate (%)", "Tech Eval Success (%)", "Clause Agreement", "Query Frequency"],
+      "vendor_behavior_analysis",
+      "Behavior Analysis",
+      "Vendor Statistics - Behavior Analysis"
+    );
+  };
+
+  const exportTechEvalStats = async () => {
+    if (!filteredLeaderboard || filteredLeaderboard.length === 0) return;
+    
+    const techEvalData = filteredLeaderboard.map((row) => {
+      const accepted = row.tech_eval_accepted || 0;
+      const rejected = row.tech_eval_rejected || 0;
+      const total = accepted + rejected;
+      const successRate = total > 0 ? ((accepted / total) * 100).toFixed(1) : 0;
+      return {
+        "Vendor Name": row.name || "N/A",
+        "Accepted": accepted,
+        "Rejected": rejected,
+        "Total": total,
+        "Success Rate (%)": successRate
+      };
+    });
+    
+    await downloadExcel(
+      techEvalData,
+      ["Vendor Name", "Accepted", "Rejected", "Total", "Success Rate (%)"],
+      "tech_evaluation_stats",
+      "Tech Evaluation",
+      "Vendor Statistics - Technical Evaluation"
+    );
+  };
+
+  const exportClauseAgreementStats = async () => {
+    if (!filteredLeaderboard || filteredLeaderboard.length === 0) return;
+    
+    const clausesData = filteredLeaderboard
+      .filter((row) => (row.clauses_agreed || 0) > 0)
+      .map((row) => {
+        const responded = row.clauses_responded || row.clauses_agreed || 0;
+        const agreed = row.clauses_agreed || 0;
+        const agreementRate = responded > 0 ? ((agreed / responded) * 100).toFixed(1) : 0;
+        return {
+          "Vendor Name": row.name || "N/A",
+          "Clauses Agreed": agreed,
+          "Total Clauses Responded": responded,
+          "Agreement Rate (%)": agreementRate
+        };
+      });
+    
+    await downloadExcel(
+      clausesData,
+      ["Vendor Name", "Clauses Agreed", "Total Clauses Responded", "Agreement Rate (%)"],
+      "clause_agreement_stats",
+      "Clause Agreement",
+      "Vendor Statistics - Clause Agreement"
+    );
+  };
+
+  const exportQueriesStats = async () => {
+    if (!filteredLeaderboard || filteredLeaderboard.length === 0) return;
+    
+    const queriesData = filteredLeaderboard
+      .filter((row) => (row.queries_raised || 0) > 0)
+      .map((row) => ({
+        "Vendor Name": row.name || "N/A",
+        "Queries Raised": row.queries_raised || 0,
+        "Queries by Vendor": row.queries_by_vendor || 0,
+        "Total Queries": (row.queries_raised || 0) + (row.queries_by_vendor || 0)
+      }));
+    
+    await downloadExcel(
+      queriesData,
+      ["Vendor Name", "Queries Raised", "Queries by Vendor", "Total Queries"],
+      "queries_deviations_stats",
+      "Queries & Deviations",
+      "Vendor Statistics - Queries & Deviations"
+    );
+  };
+
+  const exportFinancialAnalysis = async () => {
+    if (!financialData) return;
+    
+    // Global stats
+    if (financialData.global_stats) {
+      const globalStatsData = [{
+        "Metric": "Total Quotes Submitted",
+        "Value": financialData.global_stats.total_quotes || 0
+      }, {
+        "Metric": "Average Revisions",
+        "Value": financialData.global_stats.avg_revisions || 0
+      }, {
+        "Metric": "Average Price Quoted",
+        "Value": financialData.global_stats.avg_price_quoted || 0
+      }, {
+        "Metric": "Number of Awards/Finalizations",
+        "Value": financialData.global_stats.total_finalizations || 0
+      }];
+      
+      await downloadExcel(
+        globalStatsData,
+        ["Metric", "Value"],
+        "financial_analysis_global",
+        "Global Stats",
+        "Financial Analysis - Global Statistics"
+      );
+    }
+    
+    // Top Buyers
+    if (financialData.top_buyers && financialData.top_buyers.length > 0) {
+      const buyersData = financialData.top_buyers.map(buyer => ({
+        "Buyer Name": buyer.buyer_name || "N/A",
+        "RFQs Created": buyer.rfqs_created || 0,
+        "Quotes Received": buyer.quotes_received || 0,
+        "Awards Given": buyer.awards_given || 0
+      }));
+      
+      await downloadExcel(
+        buyersData,
+        ["Buyer Name", "RFQs Created", "Quotes Received", "Awards Given"],
+        "financial_analysis_top_buyers",
+        "Top Buyers",
+        "Financial Analysis - Top Buyers"
+      );
+    }
+    
+    // Top Products
+    if (financialData.top_products && financialData.top_products.length > 0) {
+      const productsData = financialData.top_products.map(product => ({
+        "Product Name": product.product_name || "N/A",
+        "Total Quotes": product.total_quotes || 0,
+        "Average Price": product.avg_price || 0,
+        "Finalizations": product.finalizations || 0
+      }));
+      
+      await downloadExcel(
+        productsData,
+        ["Product Name", "Total Quotes", "Average Price", "Finalizations"],
+        "financial_analysis_top_products",
+        "Top Products",
+        "Financial Analysis - Top Products"
+      );
+    }
   };
 
   useEffect(() => {
@@ -1494,9 +1875,30 @@ const VendorStatsDashboard = () => {
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                  <h4 className="card-title mb-0 fw-bold">
-                    <i className="fas fa-trophy me-2 text-warning"></i>Vendor Leaderboard
-                  </h4>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <h4 className="card-title mb-0 fw-bold">
+                      <i className="fas fa-trophy me-2 text-warning"></i>Vendor Leaderboard
+                    </h4>
+                    <div className="d-flex gap-2">
+                      <button
+                        className="btn btn-sm btn-success"
+                        onClick={exportOverviewStats}
+                        title="Download Global Stats"
+                      >
+                        <FontAwesomeIcon icon={faFileExcel} className="me-1" />
+                        Export Global Stats
+                      </button>
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={exportLeaderboard}
+                        title="Download Leaderboard"
+                        disabled={!filteredLeaderboard || filteredLeaderboard.length === 0}
+                      >
+                        <FontAwesomeIcon icon={faDownload} className="me-1" />
+                        Export Leaderboard
+                      </button>
+                    </div>
+                  </div>
                   {selectedVendors.length > 3 && (
                     <small className="text-muted d-block">
                       Showing {selectedVendors.length} selected vendors
@@ -2106,9 +2508,20 @@ const VendorStatsDashboard = () => {
           <FilterBar showVariant={true} showBuyer={true} showVendor={true} />
           <div className="card shadow-sm">
             <div className="card-body">
-              <h4 className="card-title mb-4 fw-bold">
-                <i className="fas fa-user-chart me-2 text-primary"></i>Vendor Behavior Analysis
-              </h4>
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h4 className="card-title mb-0 fw-bold">
+                  <i className="fas fa-user-chart me-2 text-primary"></i>Vendor Behavior Analysis
+                </h4>
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={exportBehaviorAnalysis}
+                  title="Download Behavior Analysis"
+                  disabled={!filteredLeaderboard || filteredLeaderboard.length === 0}
+                >
+                  <FontAwesomeIcon icon={faFileExcel} className="me-1" />
+                  Export Data
+                </button>
+              </div>
             <div className="row">
               <div className="col-md-12">
                 <div className="table-responsive">
@@ -2251,9 +2664,20 @@ const VendorStatsDashboard = () => {
           <FilterBar showVariant={true} showBuyer={true} showVendor={true} />
           <div className="card shadow-sm">
             <div className="card-body">
-              <h4 className="card-title mb-4 fw-bold">
-                <i className="fas fa-clipboard-check me-2 text-primary"></i>Technical Evaluation Statistics
-              </h4>
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h4 className="card-title mb-0 fw-bold">
+                  <i className="fas fa-clipboard-check me-2 text-primary"></i>Technical Evaluation Statistics
+                </h4>
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={exportTechEvalStats}
+                  title="Download Tech Evaluation Data"
+                  disabled={!filteredLeaderboard || filteredLeaderboard.length === 0}
+                >
+                  <FontAwesomeIcon icon={faFileExcel} className="me-1" />
+                  Export Data
+                </button>
+              </div>
             <div className="row mb-4">
               <div className="col-md-4">
                 <div className="card border-success">
@@ -2378,9 +2802,20 @@ const VendorStatsDashboard = () => {
           <FilterBar showVariant={true} showBuyer={true} showVendor={true} />
           <div className="card shadow-sm">
             <div className="card-body">
-              <h4 className="card-title mb-4 fw-bold">
-                <i className="fas fa-file-contract me-2 text-primary"></i>Clause Agreement Statistics
-              </h4>
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h4 className="card-title mb-0 fw-bold">
+                  <i className="fas fa-file-contract me-2 text-primary"></i>Clause Agreement Statistics
+                </h4>
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={exportClauseAgreementStats}
+                  title="Download Clause Agreement Data"
+                  disabled={!filteredLeaderboard || filteredLeaderboard.length === 0}
+                >
+                  <FontAwesomeIcon icon={faFileExcel} className="me-1" />
+                  Export Data
+                </button>
+              </div>
             <div className="row mb-4">
               <div className="col-md-12">
                 <div className="card border-info">
@@ -2485,9 +2920,20 @@ const VendorStatsDashboard = () => {
           <FilterBar showVariant={true} showBuyer={true} showVendor={true} />
           <div className="card shadow-sm">
             <div className="card-body">
-              <h4 className="card-title mb-4 fw-bold">
-                <i className="fas fa-question-circle me-2 text-primary"></i>Queries & Deviations Statistics
-              </h4>
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h4 className="card-title mb-0 fw-bold">
+                  <i className="fas fa-question-circle me-2 text-primary"></i>Queries & Deviations Statistics
+                </h4>
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={exportQueriesStats}
+                  title="Download Queries & Deviations Data"
+                  disabled={!filteredLeaderboard || filteredLeaderboard.length === 0}
+                >
+                  <FontAwesomeIcon icon={faFileExcel} className="me-1" />
+                  Export Data
+                </button>
+              </div>
             <div className="row mb-4">
               <div className="col-md-12">
                 <div className="card border-warning">
@@ -2581,6 +3027,18 @@ const VendorStatsDashboard = () => {
       {!financialLoading && activeTab === "financial" && (
         <>
           <FilterBar showVariant={true} showBuyer={true} showVendor={true} />
+          
+          <div className="d-flex justify-content-end mb-3">
+            <button
+              className="btn btn-sm btn-success"
+              onClick={exportFinancialAnalysis}
+              title="Download Financial Analysis Data"
+              disabled={!financialData}
+            >
+              <FontAwesomeIcon icon={faFileExcel} className="me-1" />
+              Export Financial Data
+            </button>
+          </div>
           
           {/* KPI Cards */}
           {financialData?.overall_stats && (
