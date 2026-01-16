@@ -374,6 +374,19 @@ function handleGetSpocList(limit = 10, page = 1) {
   });
 }
 
+/**
+ * Handle bulk vendor upload
+ * @param {FormData} formData - FormData with 'file' field containing Excel file
+ * @returns {Promise} Response with upload results
+ */
+async function handleBulkVendorUpload(formData) {
+  const response = await axiosFormData.post(
+    `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/bulk-vendor-upload`,
+    formData
+  );
+  return response;
+}
+
 export {
   handleGetVendorList,
   handleGetVendorDetails,
@@ -397,5 +410,6 @@ export {
   saveVendorlocations,
   updateVendorlocation,
   handleDeleteVendorLocation,
-  handleSpocLocationMap
+  handleSpocLocationMap,
+  handleBulkVendorUpload
 };
