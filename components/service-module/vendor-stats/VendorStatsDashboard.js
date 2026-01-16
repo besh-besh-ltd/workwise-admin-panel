@@ -2635,7 +2635,7 @@ const VendorStatsDashboard = () => {
                         <th>#</th>
                         <th>Buyer Name</th>
                         <th>Organization</th>
-                        <th>Quotes Sent</th>
+                        <th>RFQs Created</th>
                         <th>Awards Given</th>
                         <th>Total Interactions</th>
                       </tr>
@@ -2646,7 +2646,7 @@ const VendorStatsDashboard = () => {
                           <td>{idx + 1}</td>
                           <td className="fw-semibold">{buyer.buyer_name || "N/A"}</td>
                           <td>{buyer.buyer_organization || "N/A"}</td>
-                          <td><span className="badge bg-info">{buyer.quotes_sent || 0}</span></td>
+                          <td><span className="badge bg-info">{buyer.rfqs_created || buyer.quotes_sent || 0}</span></td>
                           <td><span className="badge bg-success">{buyer.awards_given || 0}</span></td>
                           <td><span className="badge bg-primary">{buyer.total_interactions || 0}</span></td>
                         </tr>
