@@ -116,12 +116,6 @@ const BulkVendorUpload = () => {
     }
   };
 
-  // Calculate success rates
-  const getSuccessRate = (success, total) => {
-    if (!total) return '0.0';
-    return ((success / total) * 100).toFixed(1);
-  };
-
   // Download full report as Excel
   const downloadReport = () => {
     if (!results) return;
@@ -580,8 +574,8 @@ const BulkVendorUpload = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {results.vendors?.map((vendor, index) => (
-                              <tr key={index}>
+                            {results.vendors?.map((vendor) => (
+                              <tr key={vendor.vendorId}>
                                 <td>{vendor.startRow}</td>
                                 <td>{vendor.company_name}</td>
                                 <td><small>{vendor.email}</small></td>
@@ -622,8 +616,8 @@ const BulkVendorUpload = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {results.rows?.map((row, index) => (
-                              <tr key={index}>
+                            {results.rows?.map((row) => (
+                              <tr key={row.vendorId}>
                                 <td>{row.excelRow}</td>
                                 <td>
                                   <span className={`badge badge-${
@@ -677,8 +671,8 @@ const BulkVendorUpload = () => {
                               </tr>
                             </thead>
                             <tbody>
-                              {results.errors.map((error, index) => (
-                                <tr key={index}>
+                              {results.errors.map((error) => (
+                                <tr key={`${error.row}-${error.vendor}-${error.error}`}>
                                   <td>{error.row || '-'}</td>
                                   <td>{error.vendor || '-'}</td>
                                   <td>{error.error}</td>

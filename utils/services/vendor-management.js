@@ -379,18 +379,12 @@ function handleGetSpocList(limit = 10, page = 1) {
  * @param {FormData} formData - FormData with 'file' field containing Excel file
  * @returns {Promise} Response with upload results
  */
-function handleBulkVendorUpload(formData) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const response = await axiosFormData.post(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/bulk-vendor-upload`,
-        formData
-      );
-      resolve(response);
-    } catch (error) {
-      reject(error);
-    }
-  });
+async function handleBulkVendorUpload(formData) {
+  const response = await axiosFormData.post(
+    `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/bulk-vendor-upload`,
+    formData
+  );
+  return response;
 }
 
 export {
