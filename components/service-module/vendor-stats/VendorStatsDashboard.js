@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Doughnut, Line, Bar } from "react-chartjs-2";
 import {
   CategoryScale,
@@ -31,9 +31,11 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { fetchVendorStatsOverview, fetchVendorStatsByVendor, fetchQuotationFinancialAnalysis } from "@/utils/services/vendor-stats";
 import { handleGetVendorList } from "@/utils/services/vendor-management";
+import { vendorList } from "@/utils/services/rfq";
 import { getParentCategories } from "@/utils/services/product-management";
 import { searchAllVariants } from "@/utils/services/product-management";
 import { handleGetBuyerList } from "@/utils/services/buyer-management";
+import Select, { components } from "react-select";
 
 if (typeof window !== "undefined") {
   ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend);
@@ -45,22 +47,25 @@ const VendorStatsDashboard = () => {
     date_to: "",
     source: "",
     category_id: "",
-    product_id: "",
     variant_id: "",
     created_by: "", // buyer filter
   });
   const [activeTab, setActiveTab] = useState("overview");
   const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const [variants, setVariants] = useState([]);
+  const [variantOptions, setVariantOptions] = useState([]);
   const [buyers, setBuyers] = useState([]);
+  const [buyerOptions, setBuyerOptions] = useState([]);
   const [overview, setOverview] = useState(null);
   const [vendorDetail, setVendorDetail] = useState(null);
   const [selectedVendors, setSelectedVendors] = useState([]); // Changed to array for multi-select
   const [vendorDetails, setVendorDetails] = useState({}); // Store details for multiple vendors
   const [vendors, setVendors] = useState([]);
+  const [vendorOptions, setVendorOptions] = useState([]);
   const [vendorSearchTerm, setVendorSearchTerm] = useState("");
-  const [showVendorDropdown, setShowVendorDropdown] = useState(false);
+  const [vendorSearchLoading, setVendorSearchLoading] = useState(false);
+  const vendorSearchTermRef = useRef("");
   const [loading, setLoading] = useState(false);
   const [vendorLoading, setVendorLoading] = useState({}); // Track loading per vendor
   const [financialData, setFinancialData] = useState(null);
@@ -400,17 +405,51 @@ const VendorStatsDashboard = () => {
     }
   };
 
-  const fetchVendors = async () => {
+  // Search-based vendor fetching (like in MapVariantVendorModal)
+  const fetchVendors = async (searchTerm) => {
     try {
-      const res = await handleGetVendorList(50, 1);
-      if (res?.data) {
-        setVendors(res.data);
+      setVendorSearchLoading(true);
+      const vendorsResponse = await vendorList(searchTerm);
+      
+      if (vendorsResponse?.data) {
+        const vendorsList = Array.isArray(vendorsResponse.data) ? vendorsResponse.data : [];
+        setVendors(vendorsList);
+        // Format vendors for Select component (same as modal)
+        const options = vendorsList.map((vendor) => ({
+          label: vendor.organization_name || vendor.name || '-',
+          value: vendor.id,
+          email: vendor.email || "Email Not Available",
+          phone: vendor.mobile || vendor.phone || "Phone Not Available"
+        }));
+        setVendorOptions(options);
+        console.log(`Loaded ${vendorsList.length} vendors for search: "${searchTerm}"`);
+      } else {
+        console.warn("Invalid vendor response:", vendorsResponse);
+        setVendorOptions([]);
       }
     } catch (error) {
-      console.error("Vendor list load error", error);
-      setVendors([]);
+      console.error('Error fetching vendors:', error);
+      setVendorOptions([]);
+    } finally {
+      setVendorSearchLoading(false);
     }
   };
+
+  // Debounced vendor search (only search when 3+ characters, like in modal)
+  useEffect(() => {
+    if (vendorSearchTerm.length < 3) {
+      // Don't clear options - keep previous results to prevent re-render
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      fetchVendors(vendorSearchTerm);
+    }, 1000);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [vendorSearchTerm]);
 
   const fetchVendorStats = async (vendorIds) => {
     if (!vendorIds || vendorIds.length === 0) {
@@ -492,7 +531,7 @@ const VendorStatsDashboard = () => {
   };
 
   const handleResetFilters = () => {
-    setFilters({ date_from: "", date_to: "", source: "", category_id: "", product_id: "", variant_id: "", created_by: "" });
+    setFilters({ date_from: "", date_to: "", source: "", category_id: "", variant_id: "", created_by: "" });
     setSelectedVendors([]);
     setLeaderboardFilters({ source: "", sortBy: "awards_desc", minAwards: "", maxRegrets: "" });
     setVendorSearchTerm("");
@@ -738,8 +777,9 @@ const VendorStatsDashboard = () => {
 
   useEffect(() => {
     fetchOverview();
-    fetchVendors();
+    // Don't fetch vendors on mount - use search-based approach
     fetchCategories();
+    fetchVariants(null); // Load all variants initially
     if (activeTab === "financial") {
       fetchFinancialAnalysis();
     }
@@ -753,108 +793,156 @@ const VendorStatsDashboard = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await getParentCategories();
-      if (res?.data?.status === 1) {
-        setCategories(res.data.data || []);
+      const response = await getParentCategories();
+      
+      // getParentCategories returns response.data directly as array (like in product-management)
+      if (Array.isArray(response?.data)) {
+        const cats = response.data;
+        setCategories(cats);
+        setCategoryOptions(cats.map(cat => ({
+          value: cat.id,
+          label: cat.title || cat.name || cat.category_name || `Category ${cat.id}`
+        })));
+      } else {
+        setCategories([]);
+        setCategoryOptions([]);
       }
     } catch (error) {
       console.error("Category fetch error", error);
+      setCategories([]);
+      setCategoryOptions([]);
     }
   };
 
-  const fetchProductsByCategory = async (categoryId) => {
-    if (!categoryId) {
-      setProducts([]);
-      return;
-    }
+  const fetchVariants = async (categoryId = null) => {
     try {
-      const res = await searchAllVariants(null, "", "", "", null, categoryId, null, null, 1, 100);
-      if (res?.data?.status === 1) {
-        // Extract unique products from variants
-        const productMap = new Map();
-        res.data.data?.forEach((variant) => {
-          if (variant.product_id && !productMap.has(variant.product_id)) {
-            productMap.set(variant.product_id, {
-              id: variant.product_id,
-              name: variant.product_name || variant.name || `Product ${variant.product_id}`,
-            });
-          }
-        });
-        setProducts(Array.from(productMap.values()));
+      console.log("Fetching variants...", categoryId ? `for category ${categoryId}` : "all variants");
+      // Fetch all variants by paginating through all pages
+      let allVariants = [];
+      let page = 1;
+      let hasMore = true;
+      const limit = 1000; // Fetch 1000 per page
+
+      while (hasMore) {
+        const res = await searchAllVariants(null, "", "", "", null, categoryId || null, null, null, page, limit);        
+        // searchAllVariants returns { data: [...], pagination: {...} }
+        const variantsList = res?.data || [];
+        const pagination = res?.pagination || {};
+        const totalCount = pagination.total || 0;
+        
+        if (variantsList.length > 0) {
+          allVariants = [...allVariants, ...variantsList];
+          hasMore = allVariants.length < totalCount && variantsList.length === limit;
+          page++;
+        } else {
+          hasMore = false;
+        }
       }
+
+      // Format variants for Select component
+      const vars = allVariants.map((v) => ({
+        id: v.id,
+        name: v.variant_name || v.variant || v.name || `Variant ${v.id}`,
+        product_name: v.product_name || '',
+      }));
+      setVariants(vars);
+      setVariantOptions(vars.map(v => ({
+        value: v.id,
+        label: v.product_name ? `${v.name} (${v.product_name})` : v.name
+      })));
     } catch (error) {
-      console.error("Product fetch error", error);
-      setProducts([]);
+      console.error("Variant fetch error", error);
+      setVariants([]);
+      setVariantOptions([]);
     }
   };
 
   useEffect(() => {
-    fetchProductsByCategory(filters.category_id);
+    fetchVariants(filters.category_id || null);
   }, [filters.category_id]);
 
   const fetchBuyers = async () => {
     try {
-      const res = await handleGetBuyerList(100, 1, null, null, null, null);
-      if (res?.data?.status === 1) {
-        setBuyers(res.data.data || []);
+      // Fetch all buyers by paginating through all pages
+      let allBuyers = [];
+      let page = 1;
+      let hasMore = true;
+      const limit = 1000;
+
+      while (hasMore) {
+        // Pass empty strings instead of null to avoid URL issues
+        const res = await handleGetBuyerList(limit, page, "", "", "", "");        
+        // Check response structure - could be res.data (array) or res.data.data
+        let buyersList = [];
+        if (Array.isArray(res?.data)) {
+          buyersList = res.data;
+        } else if (Array.isArray(res?.data?.data)) {
+          buyersList = res.data.data;
+        } else if (res?.data?.status === 1 && Array.isArray(res?.data?.data)) {
+          buyersList = res.data.data;
+        }
+        
+        if (buyersList.length > 0) {
+          allBuyers = [...allBuyers, ...buyersList];
+          // Check total count from various possible locations
+          const totalCount = res.total_count || res.data?.total_count || res.data?.total || 0;
+          hasMore = allBuyers.length < totalCount && buyersList.length === limit;
+          page++;
+        } else {
+          hasMore = false;
+        }
       }
+
+      setBuyers(allBuyers);
+      setBuyerOptions(allBuyers.map(buyer => ({
+        value: buyer.id,
+        label: buyer.name || buyer.organization_name || `Buyer ${buyer.id}`
+      })));
     } catch (error) {
       console.error("Buyer fetch error", error);
       setBuyers([]);
+      setBuyerOptions([]);
     }
   };
 
-  const fetchVariantsByProduct = async (productId) => {
-    if (!productId) {
-      setVariants([]);
-      return;
-    }
-    try {
-      const res = await searchAllVariants(null, "", "", "", null, null, null, null, 1, 100);
-      if (res?.data?.status === 1) {
-        const productVariants = (res.data.data || []).filter(
-          (variant) => variant.product_id === parseInt(productId)
-        );
-        setVariants(productVariants.map((v) => ({
-          id: v.id,
-          name: v.variant || v.name || `Variant ${v.id}`,
-        })));
-      }
-    } catch (error) {
-      console.error("Variant fetch error", error);
-      setVariants([]);
-    }
-  };
-
-  useEffect(() => {
-    fetchVariantsByProduct(filters.product_id);
-  }, [filters.product_id]);
 
   useEffect(() => {
     fetchBuyers();
   }, []);
 
-  // Close vendor dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showVendorDropdown && !event.target.closest('.position-relative')) {
-        setShowVendorDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showVendorDropdown]);
+  // Custom Select Option Component for Vendors (shows email/phone)
+  const CustomVendorOption = (props) => (
+    <components.Option {...props}>
+      <div>
+        <strong>{props?.data?.label}</strong>
+        {props?.data?.email && (
+          <>
+            <br />
+            <small>{props?.data?.email}</small>
+            {props?.data?.phone && <small className="ms-2">{props?.data?.phone}</small>}
+          </>
+        )}
+      </div>
+    </components.Option>
+  );
 
-  const filteredVendors = useMemo(() => {
-    if (!vendorSearchTerm) return vendors;
-    const search = vendorSearchTerm.toLowerCase();
-    return vendors.filter(
-      (v) =>
-        v.name?.toLowerCase().includes(search) ||
-        v.organization_name?.toLowerCase().includes(search) ||
-        v.email?.toLowerCase().includes(search)
-    );
-  }, [vendors, vendorSearchTerm]);
+  // Memoize selected vendor value to prevent re-renders
+  const selectedVendorValue = useMemo(() => {
+    return vendorOptions.filter(opt => selectedVendors.includes(String(opt.value)));
+  }, [vendorOptions, selectedVendors]);
+
+  // Memoize handlers to prevent re-renders
+  const handleVendorChange = useCallback((selectedOptions) => {
+    const vendorIds = Array.isArray(selectedOptions) 
+      ? selectedOptions.map(opt => String(opt.value))
+      : [];
+    setSelectedVendors(vendorIds);
+  }, []);
+
+  const handleVendorInputChange = useCallback((newValue) => {
+    vendorSearchTermRef.current = newValue;
+    setVendorSearchTerm(newValue);
+  }, []);
 
   // Vendor Comparison Table Component
   const VendorComparisonTable = ({ vendorIds }) => {
@@ -986,8 +1074,8 @@ const VendorStatsDashboard = () => {
     );
   };
 
-  // Reusable Filter Bar Component
-  const FilterBar = ({ showVariant = false, showBuyer = true, showVendor = false }) => (
+  // Reusable Filter Bar Component - Memoized to prevent re-renders
+  const FilterBar = React.memo(({ showBuyer = true, showVendor = false }) => (
     <div className="card bg-light mb-4 border-0 shadow-sm">
       <div className="card-body p-3">
         <div className="row g-3 align-items-end">
@@ -1035,84 +1123,56 @@ const VendorStatsDashboard = () => {
             <label className="form-label small mb-1 fw-semibold">
               <i className="fas fa-folder me-1 text-primary"></i>Category
             </label>
-            <select
-              className="form-select form-select-sm"
-              name="category_id"
-              value={filters.category_id}
-              onChange={(e) => {
-                handleFilterChange(e);
-                setFilters((prev) => ({ ...prev, product_id: "", variant_id: "" }));
+            <Select
+              options={categoryOptions}
+              value={categoryOptions.find(opt => opt.value === parseInt(filters.category_id)) || null}
+              onChange={(selectedOption) => {
+                const categoryId = selectedOption ? selectedOption.value : "";
+                setFilters((prev) => ({ ...prev, category_id: categoryId, variant_id: "" }));
               }}
-            >
-              <option value="">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.title}
-                </option>
-              ))}
-            </select>
+              placeholder="All Categories"
+              isClearable={true}
+              isSearchable={true}
+              className="basic-select"
+              classNamePrefix="select"
+            />
           </div>
           <div className="col-md-2">
             <label className="form-label small mb-1 fw-semibold">
-              <i className="fas fa-box me-1 text-success"></i>Product
+              <i className="fas fa-tags me-1 text-success"></i>Variant
             </label>
-            <select
-              className="form-select form-select-sm"
-              name="product_id"
-              value={filters.product_id}
-              onChange={(e) => {
-                handleFilterChange(e);
-                setFilters((prev) => ({ ...prev, variant_id: "" }));
+            <Select
+              options={variantOptions}
+              value={variantOptions.find(opt => opt.value === parseInt(filters.variant_id)) || null}
+              onChange={(selectedOption) => {
+                const variantId = selectedOption ? selectedOption.value : "";
+                setFilters((prev) => ({ ...prev, variant_id: variantId }));
               }}
-              disabled={!filters.category_id}
-            >
-              <option value="">All Products</option>
-              {products.map((prod) => (
-                <option key={prod.id} value={prod.id}>
-                  {prod.name}
-                </option>
-              ))}
-            </select>
+              placeholder="All Variants"
+              isClearable={true}
+              isSearchable={true}
+              className="basic-select"
+              classNamePrefix="select"
+            />
           </div>
-          {showVariant && (
-            <div className="col-md-2">
-              <label className="form-label small mb-1 fw-semibold">
-                <i className="fas fa-tags me-1 text-warning"></i>Variant
-              </label>
-              <select
-                className="form-select form-select-sm"
-                name="variant_id"
-                value={filters.variant_id}
-                onChange={handleFilterChange}
-                disabled={!filters.product_id}
-              >
-                <option value="">All Variants</option>
-                {variants.map((variant) => (
-                  <option key={variant.id} value={variant.id}>
-                    {variant.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
           {showBuyer && (
             <div className="col-md-2">
               <label className="form-label small mb-1 fw-semibold">
                 <i className="fas fa-user-tie me-1 text-primary"></i>Buyer
               </label>
-              <select
-                className="form-select form-select-sm"
-                name="created_by"
-                value={filters.created_by}
-                onChange={handleFilterChange}
-              >
-                <option value="">All Buyers</option>
-                {buyers.map((buyer) => (
-                  <option key={buyer.id} value={buyer.id}>
-                    {buyer.name || buyer.organization_name || `Buyer ${buyer.id}`}
-                  </option>
-                ))}
-              </select>
+              <Select
+                options={buyerOptions}
+                value={buyerOptions.find(opt => opt.value === parseInt(filters.created_by)) || null}
+                onChange={(selectedOption) => {
+                  const buyerId = selectedOption ? selectedOption.value : "";
+                  setFilters((prev) => ({ ...prev, created_by: buyerId }));
+                }}
+                placeholder="All Buyers"
+                isClearable={true}
+                isSearchable={true}
+                className="basic-select"
+                classNamePrefix="select"
+              />
             </div>
           )}
           {showVendor && (
@@ -1120,86 +1180,25 @@ const VendorStatsDashboard = () => {
               <label className="form-label small mb-1 fw-semibold">
                 <i className="fas fa-store me-1 text-success"></i>Vendor
               </label>
-              <div className="position-relative">
-                <input
-                  type="text"
-                  className="form-control form-control-sm"
-                  placeholder="Search vendor..."
-                  value={vendorSearchTerm}
-                  onChange={(e) => {
-                    setVendorSearchTerm(e.target.value);
-                    setShowVendorDropdown(true);
-                  }}
-                  onFocus={() => setShowVendorDropdown(true)}
-                />
-                {selectedVendors.length > 0 && (
-                  <div className="mt-2 d-flex flex-wrap gap-1">
-                    {selectedVendors.map((vendorId) => {
-                      const vendor = vendors.find((v) => String(v.id) === String(vendorId));
-                      return vendor ? (
-                        <span key={vendorId} className="badge bg-primary">
-                          {vendor.name || vendor.organization_name}
-                          <button
-                            type="button"
-                            className="btn-close btn-close-white ms-1"
-                            style={{ fontSize: "0.6em" }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedVendors((prev) => prev.filter((id) => id !== vendorId));
-                            }}
-                          ></button>
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                )}
-                {showVendorDropdown && filteredVendors.length > 0 && (
-                  <div
-                    className="position-absolute w-100 bg-white border rounded shadow-lg"
-                    style={{ zIndex: 1000, maxHeight: "300px", overflowY: "auto", top: "100%" }}
-                  >
-                    {filteredVendors.map((vendor) => {
-                      const vendorId = String(vendor.id);
-                      const isSelected = selectedVendors.includes(vendorId);
-                      return (
-                        <div
-                          key={vendor.id}
-                          className="p-2 d-flex align-items-center"
-                          style={{
-                            cursor: "pointer",
-                            backgroundColor: isSelected ? "#e7f3ff" : "white",
-                          }}
-                          onClick={() => {
-                            if (isSelected) {
-                              setSelectedVendors((prev) => prev.filter((id) => id !== vendorId));
-                            } else {
-                              setSelectedVendors((prev) => [...prev, vendorId]);
-                            }
-                          }}
-                          onMouseEnter={(e) => {
-                            e.target.style.backgroundColor = "#f8f9fa";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.backgroundColor = isSelected ? "#e7f3ff" : "white";
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {}}
-                            className="me-2"
-                            style={{ cursor: "pointer" }}
-                          />
-                          <div className="flex-grow-1">
-                            <div className="fw-semibold">{vendor.name || "N/A"}</div>
-                            <small className="text-muted">{vendor.organization_name || vendor.email || ""}</small>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              <Select
+                key="vendor-select"
+                options={vendorOptions}
+                value={selectedVendorValue}
+                onChange={handleVendorChange}
+                onInputChange={handleVendorInputChange}
+                placeholder="Search vendors (min 3 characters)..."
+                isClearable={true}
+                isSearchable={true}
+                isMulti={true}
+                isLoading={vendorSearchLoading}
+                components={{ Option: CustomVendorOption }}
+                className="basic-select"
+                classNamePrefix="select"
+                filterOption={() => true}
+                noOptionsMessage={({ inputValue }) => !inputValue || inputValue.length < 3 ? "Please enter at least 3 letters to search" : "No vendors found"}
+                blurInputOnSelect={false}
+                closeMenuOnSelect={false}
+              />
             </div>
           )}
           <div className="col-md-12 d-flex gap-2 justify-content-end mt-3">
@@ -1230,7 +1229,11 @@ const VendorStatsDashboard = () => {
         </div>
       </div>
     </div>
-  );
+  ), (prevProps, nextProps) => {
+    // Only re-render if props actually change
+    return prevProps.showBuyer === nextProps.showBuyer && 
+           prevProps.showVendor === nextProps.showVendor;
+  });
 
   return (
     <div className="container-fluid">
@@ -1498,7 +1501,7 @@ const VendorStatsDashboard = () => {
               </div>
 
             {/* Enhanced Filter Bar */}
-            <FilterBar showVariant={true} showBuyer={true} showVendor={true} />
+            <FilterBar showBuyer={true} showVendor={true} />
             
             {/* Leaderboard Specific Filters */}
             <div className="card bg-light mb-4 border-0 shadow-sm">
@@ -2557,7 +2560,7 @@ const VendorStatsDashboard = () => {
                   </div>
                 </div>
               </div>
-              {(filters.product_id || filters.category_id) && financialData.overall_stats.avg_unit_price && (
+              {(filters.variant_id || filters.category_id) && financialData.overall_stats.avg_unit_price && (
                 <>
                   <div className="col-md-3 mb-3">
                     <div className="card border-success">
@@ -2581,7 +2584,7 @@ const VendorStatsDashboard = () => {
                   </div>
                 </>
               )}
-              {(!filters.product_id && !filters.category_id) && (
+              {(!filters.variant_id && !filters.category_id) && (
                 <div className="col-md-3 mb-3">
                   <div className="card border-warning">
                     <div className="card-body text-center">
@@ -2595,7 +2598,7 @@ const VendorStatsDashboard = () => {
           )}
 
           {/* Price Range - Only when product/category is selected */}
-          {(filters.product_id || filters.category_id) && financialData?.overall_stats?.min_unit_price && financialData?.overall_stats?.max_unit_price && (
+          {(filters.variant_id || filters.category_id) && financialData?.overall_stats?.min_unit_price && financialData?.overall_stats?.max_unit_price && (
             <div className="row mb-4">
               <div className="col-md-6 mb-3">
                 <div className="card border-secondary">
@@ -2747,7 +2750,7 @@ const VendorStatsDashboard = () => {
           )}
 
           {/* Product Summary - Only when product/category is selected */}
-          {(filters.product_id || filters.category_id) && financialData?.product_summary && Array.isArray(financialData.product_summary) && financialData.product_summary.length > 0 && (
+          {(filters.variant_id || filters.category_id) && financialData?.product_summary && Array.isArray(financialData.product_summary) && financialData.product_summary.length > 0 && (
             <div className="card mt-3 shadow-sm">
               <div className="card-body">
                 <h5 className="card-title mb-3 fw-bold">
@@ -2994,4 +2997,5 @@ const VendorStatsDashboard = () => {
 };
 
 export default VendorStatsDashboard;
+
 
