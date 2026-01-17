@@ -5,9 +5,12 @@ export const fetchVendorStatsOverview = (params = {}) => {
   Object.entries(params).forEach(([key, value]) => {
     // Allow "0" for is_private and subscription_plan filters
     if (value !== undefined && value !== null && value !== "") {
-      // Handle arrays (like vendor_ids) by joining with comma
+      // Handle arrays (like vendor_ids) - send as multiple query params
       if (Array.isArray(value) && value.length > 0) {
-        query.append(key, value.join(','));
+        // For vendor_ids, send each ID as a separate query param
+        value.forEach((item) => {
+          query.append(key, item);
+        });
       } else if (!Array.isArray(value)) {
         query.append(key, value);
       }
@@ -39,9 +42,12 @@ export const fetchQuotationFinancialAnalysis = (params = {}) => {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
-      // Handle arrays (like vendor_ids) by joining with comma
+      // Handle arrays (like vendor_ids) - send as multiple query params
       if (Array.isArray(value) && value.length > 0) {
-        query.append(key, value.join(','));
+        // For vendor_ids, send each ID as a separate query param
+        value.forEach((item) => {
+          query.append(key, item);
+        });
       } else if (!Array.isArray(value)) {
         query.append(key, value);
       }
