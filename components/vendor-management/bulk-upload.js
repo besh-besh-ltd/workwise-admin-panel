@@ -41,7 +41,7 @@ const BulkVendorUpload = () => {
 
   const downloadSampleFile = () => {
     const link = document.createElement('a');
-    link.href = process.env.NEXT_PUBLIC_Bulk_UPLOAD_FILE_PATH;
+    link.href = process.env.NEXT_PUBLIC_BULK_UPLOAD_FORMAT;
     link.download = 'Bulk_Upload_Format.xlsx';
     document.body.appendChild(link);
     link.click();
