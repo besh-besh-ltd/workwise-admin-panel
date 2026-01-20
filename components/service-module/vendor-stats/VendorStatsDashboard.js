@@ -1639,32 +1639,11 @@ const VendorStatsDashboard = () => {
           {/* Leaderboard */}
           <div className="card mb-3 shadow-sm">
             <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center mb-4">
+              <div className="d-flex align-items-start justify-content-between mb-4 flex-wrap gap-2">
                 <div>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <h4 className="card-title mb-0 fw-bold">
-                      <i className="fas fa-trophy me-2 text-warning"></i>Vendor Leaderboard
-                    </h4>
-                    <div className="d-flex gap-2">
-                      <button
-                        className="btn btn-sm btn-success"
-                        onClick={exportOverviewStats}
-                        title="Download Global Stats"
-                      >
-                        <FontAwesomeIcon icon={faFileExcel} className="me-1" />
-                        Export Global Stats
-                      </button>
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={exportLeaderboard}
-                        title="Download Leaderboard"
-                        disabled={!filteredLeaderboard || filteredLeaderboard.length === 0}
-                      >
-                        <FontAwesomeIcon icon={faDownload} className="me-1" />
-                        Export Leaderboard
-                      </button>
-                    </div>
-                  </div>
+                  <h4 className="card-title mb-0 fw-bold">
+                    <i className="fas fa-trophy me-2 text-warning"></i>Vendor Leaderboard
+                  </h4>
                   {selectedVendors.length > 3 && (
                     <small className="text-muted d-block">
                       Showing {selectedVendors.length} selected vendors
@@ -1684,7 +1663,24 @@ const VendorStatsDashboard = () => {
                     </small>
                   )}
                 </div>
-                <div className="d-flex gap-2">
+                <div className="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                  <button
+                    className="btn btn-sm btn-success"
+                    onClick={exportOverviewStats}
+                    title="Download Global Stats"
+                  >
+                    <FontAwesomeIcon icon={faFileExcel} className="me-1" />
+                    Export Global Stats
+                  </button>
+                  <button
+                    className="btn btn-sm btn-primary"
+                    onClick={exportLeaderboard}
+                    title="Download Leaderboard"
+                    disabled={!filteredLeaderboard || filteredLeaderboard.length === 0}
+                  >
+                    <FontAwesomeIcon icon={faDownload} className="me-1" />
+                    Export Leaderboard
+                  </button>
                   {columnFilter.column && (
                     <button
                       className="btn btn-sm btn-outline-danger"
@@ -1929,7 +1925,7 @@ const VendorStatsDashboard = () => {
                             <span>Vendor Name</span>
                             <div className="d-flex align-items-center gap-1">
                               <button
-                                className={`btn btn-sm ${columnFilter.column === "name" ? "btn-primary" : "btn-outline-primary"}`}
+                                className={`btn btn-sm ${columnFilter.column === "name" ? "btn-warning" : "btn-outline-warning"}`}
                                 style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                 onClick={() => handleColumnFilter("name")}
                                 title="Filter by Vendor Name"
@@ -1939,7 +1935,7 @@ const VendorStatsDashboard = () => {
                               </button>
                               {columnFilter.column === "name" && (
                                 <button
-                                  className="btn btn-sm btn-primary"
+                                  className="btn btn-sm btn-warning"
                                   style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                   onClick={(e) => toggleSortDirection(e, "name")}
                                   title="Toggle Sort Direction"
@@ -1959,7 +1955,7 @@ const VendorStatsDashboard = () => {
                             <span>Avg Response Time</span>
                             <div className="d-flex align-items-center gap-1">
                               <button
-                                className={`btn btn-sm ${columnFilter.column === "response" ? "btn-primary" : "btn-outline-primary"}`}
+                                className={`btn btn-sm ${columnFilter.column === "response" ? "btn-warning" : "btn-outline-warning"}`}
                                 style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                 onClick={() => handleColumnFilter("response")}
                                 title="Filter by Response Time"
@@ -1969,7 +1965,7 @@ const VendorStatsDashboard = () => {
                               </button>
                               {columnFilter.column === "response" && (
                                 <button
-                                  className="btn btn-sm btn-primary"
+                                  className="btn btn-sm btn-warning"
                                   style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                   onClick={(e) => toggleSortDirection(e, "response")}
                                   title="Toggle Sort Direction"
@@ -1987,7 +1983,7 @@ const VendorStatsDashboard = () => {
                             <span>Awards</span>
                             <div className="d-flex align-items-center gap-1">
                               <button
-                                className={`btn btn-sm ${columnFilter.column === "awards" ? "btn-primary" : "btn-outline-primary"}`}
+                                className={`btn btn-sm ${columnFilter.column === "awards" ? "btn-warning" : "btn-outline-warning"}`}
                                 style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                 onClick={() => handleColumnFilter("awards")}
                                 title="Filter by Awards"
@@ -1997,7 +1993,7 @@ const VendorStatsDashboard = () => {
                               </button>
                               {columnFilter.column === "awards" && (
                                 <button
-                                  className="btn btn-sm btn-primary"
+                                  className="btn btn-sm btn-warning"
                                   style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                   onClick={(e) => toggleSortDirection(e, "awards")}
                                   title="Toggle Sort Direction"
@@ -2015,7 +2011,7 @@ const VendorStatsDashboard = () => {
                             <span>Regrets</span>
                             <div className="d-flex align-items-center gap-1">
                               <button
-                                className={`btn btn-sm ${columnFilter.column === "regrets" ? "btn-primary" : "btn-outline-primary"}`}
+                                className={`btn btn-sm ${columnFilter.column === "regrets" ? "btn-warning" : "btn-outline-warning"}`}
                                 style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                 onClick={() => handleColumnFilter("regrets")}
                                 title="Filter by Regrets"
@@ -2025,7 +2021,7 @@ const VendorStatsDashboard = () => {
                               </button>
                               {columnFilter.column === "regrets" && (
                                 <button
-                                  className="btn btn-sm btn-primary"
+                                  className="btn btn-sm btn-warning"
                                   style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                   onClick={(e) => toggleSortDirection(e, "regrets")}
                                   title="Toggle Sort Direction"
@@ -2043,7 +2039,7 @@ const VendorStatsDashboard = () => {
                             <span>Tech Eval</span>
                             <div className="d-flex align-items-center gap-1">
                               <button
-                                className={`btn btn-sm ${columnFilter.column === "tech_eval" ? "btn-primary" : "btn-outline-primary"}`}
+                                className={`btn btn-sm ${columnFilter.column === "tech_eval" ? "btn-warning" : "btn-outline-warning"}`}
                                 style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                 onClick={() => handleColumnFilter("tech_eval")}
                                 title="Filter by Tech Eval"
@@ -2053,7 +2049,7 @@ const VendorStatsDashboard = () => {
                               </button>
                               {columnFilter.column === "tech_eval" && (
                                 <button
-                                  className="btn btn-sm btn-primary"
+                                  className="btn btn-sm btn-warning"
                                   style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                   onClick={(e) => toggleSortDirection(e, "tech_eval")}
                                   title="Toggle Sort Direction"
@@ -2071,7 +2067,7 @@ const VendorStatsDashboard = () => {
                             <span>Clauses</span>
                             <div className="d-flex align-items-center gap-1">
                               <button
-                                className={`btn btn-sm ${columnFilter.column === "clauses" ? "btn-primary" : "btn-outline-primary"}`}
+                                className={`btn btn-sm ${columnFilter.column === "clauses" ? "btn-warning" : "btn-outline-warning"}`}
                                 style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                 onClick={() => handleColumnFilter("clauses")}
                                 title="Filter by Clauses"
@@ -2081,7 +2077,7 @@ const VendorStatsDashboard = () => {
                               </button>
                               {columnFilter.column === "clauses" && (
                                 <button
-                                  className="btn btn-sm btn-primary"
+                                  className="btn btn-sm btn-warning"
                                   style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                   onClick={(e) => toggleSortDirection(e, "clauses")}
                                   title="Toggle Sort Direction"
@@ -2099,7 +2095,7 @@ const VendorStatsDashboard = () => {
                             <span>Queries</span>
                             <div className="d-flex align-items-center gap-1">
                               <button
-                                className={`btn btn-sm ${columnFilter.column === "queries" ? "btn-primary" : "btn-outline-primary"}`}
+                                className={`btn btn-sm ${columnFilter.column === "queries" ? "btn-warning" : "btn-outline-warning"}`}
                                 style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                 onClick={() => handleColumnFilter("queries")}
                                 title="Filter by Queries"
@@ -2109,7 +2105,7 @@ const VendorStatsDashboard = () => {
                               </button>
                               {columnFilter.column === "queries" && (
                                 <button
-                                  className="btn btn-sm btn-primary"
+                                  className="btn btn-sm btn-warning"
                                   style={{ fontSize: "0.65rem", padding: "3px 6px", fontWeight: "600" }}
                                   onClick={(e) => toggleSortDirection(e, "queries")}
                                   title="Toggle Sort Direction"
