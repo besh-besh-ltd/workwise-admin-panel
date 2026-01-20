@@ -38,83 +38,14 @@ import { vendorList } from "@/utils/services/rfq";
 import { getParentCategories } from "@/utils/services/product-management";
 import { searchAllVariants } from "@/utils/services/product-management";
 import { handleGetBuyerList } from "@/utils/services/buyer-management";
-import Select, { components } from "react-select";
+import Select from "react-select";
+import VendorSelect from "./VendorSelect";
+import VendorComparisonTable from "./VendorComparisonTable";
+import { formatResponseTime, formatDeliveryPeriod, hasResponseData, getVendorId } from "./utils";
 
 if (typeof window !== "undefined") {
   ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, ChartTooltip, Legend);
 }
-
-// Custom Select Option Component for Vendors (shows email/phone)
-const CustomVendorOption = (props) => (
-  <components.Option {...props}>
-    <div>
-      <strong>{props?.data?.label}</strong>
-      {props?.data?.email && (
-        <>
-          <br />
-          <small>{props?.data?.email}</small>
-          {props?.data?.phone && <small className="ms-2">{props?.data?.phone}</small>}
-        </>
-      )}
-    </div>
-  </components.Option>
-);
-
-// Separate VendorSelect component to prevent focus loss
-const VendorSelect = React.memo(({ 
-  selectedVendors, 
-  onVendorsChange, 
-  vendorOptions, 
-  vendorSearchLoading,
-  onSearchChange
-}) => {
-  const selectedValue = useMemo(() => {
-    return vendorOptions.filter(opt => selectedVendors.includes(String(opt.value)));
-  }, [vendorOptions, selectedVendors]);
-
-  const handleChange = useCallback((selectedOptions) => {
-    const vendorIds = Array.isArray(selectedOptions) 
-      ? selectedOptions.map(opt => String(opt.value))
-      : [];
-    if (onVendorsChange) {
-      onVendorsChange(vendorIds);
-    }
-  }, [onVendorsChange]);
-
-  const handleInputChange = useCallback((newValue) => {
-    if (onSearchChange) {
-      onSearchChange(newValue);
-    }
-  }, [onSearchChange]);
-
-  return (
-    <Select
-      options={vendorOptions}
-      value={selectedValue}
-      onChange={handleChange}
-      onInputChange={handleInputChange}
-      placeholder="Search vendors (min 3 characters)..."
-      isClearable={true}
-      isSearchable={true}
-      isMulti={true}
-      isLoading={vendorSearchLoading}
-      components={{ Option: CustomVendorOption }}
-      className="basic-select"
-      classNamePrefix="select"
-      filterOption={() => true}
-      noOptionsMessage={({ inputValue }) => !inputValue || inputValue.length < 3 ? "Please enter at least 3 letters to search" : "No vendors found"}
-      blurInputOnSelect={false}
-      closeMenuOnSelect={false}
-    />
-  );
-}, (prevProps, nextProps) => {
-  return prevProps.selectedVendors.length === nextProps.selectedVendors.length &&
-         prevProps.selectedVendors.every((id, idx) => id === nextProps.selectedVendors[idx]) &&
-         prevProps.vendorOptions.length === nextProps.vendorOptions.length &&
-         prevProps.vendorSearchLoading === nextProps.vendorSearchLoading;
-});
-
-VendorSelect.displayName = 'VendorSelect';
 
 const VendorStatsDashboard = () => {
   const [filters, setFilters] = useState({
@@ -160,42 +91,6 @@ const VendorStatsDashboard = () => {
     awardRegret: 0, // 0 = bar, 1 = line
   });
 
-  // Check if vendor has actually submitted quotes (has response time data)
-  const hasResponseData = (vendor) => {
-    // If vendor has awards or regrets, they've submitted quotes
-    const hasQuotes = (vendor?.awards || 0) > 0 || (vendor?.regrets || 0) > 0;
-    // If they have response time data (not null and > 0), they've submitted quotes
-    const hasResponseTime = vendor?.avg_response_minutes != null && vendor.avg_response_minutes > 0;
-    return hasQuotes || hasResponseTime;
-  };
-
-  const formatResponseTime = (minutes, vendor = null) => {
-    // If vendor is provided, check if they have actual quote data
-    if (vendor && !hasResponseData(vendor)) {
-      return "N/A";
-    }
-    // If minutes is null, undefined, or 0 and we don't have quote data, show N/A
-    if (!minutes || minutes === 0) {
-      // If vendor has awards/regrets, 0 might be valid (instant response)
-      // Otherwise, it's likely no data
-      if (vendor && ((vendor.awards || 0) > 0 || (vendor.regrets || 0) > 0)) {
-        return "0 min";
-      }
-      return "N/A";
-    }
-    if (minutes < 60) return `${Math.round(minutes)} min`;
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
-    if (hours < 24) return `${hours}h ${mins}m`;
-    const days = Math.floor(hours / 24);
-    const hrs = hours % 24;
-    return `${days}d ${hrs}h`;
-  };
-
-  const formatDeliveryPeriod = (period) => {
-    if (!period || period === 0) return "N/A";
-    return `${period} days`;
-  };
 
   const kpiCards = useMemo(() => {
     if (!overview) return [];
@@ -323,7 +218,7 @@ const VendorStatsDashboard = () => {
     // If more than 3 vendors are selected, show only selected vendors
     if (selectedVendors.length > 3) {
       list = list.filter((row) => 
-        selectedVendors.includes(String(row.vendor_id || row.id || ""))
+        selectedVendors.includes(getVendorId(row))
       );
     }
 
@@ -1347,135 +1242,6 @@ const VendorStatsDashboard = () => {
     setVendorSearchTerm(searchTerm);
   }, []);
 
-  // Vendor Comparison Table Component
-  const VendorComparisonTable = ({ vendorIds }) => {
-    const comparisonData = vendorIds.map((vendorId) => {
-      const detail = vendorDetails[vendorId];
-      const vendor = detail?.vendor;
-      return {
-        vendorId,
-        name: vendor?.name || "N/A",
-        company: vendor?.company_name || "N/A",
-        responseTime: formatResponseTime(detail?.avg_response_minutes || 0, detail),
-        awards: detail?.awards || 0,
-        regrets: detail?.regrets || 0,
-        techEvalAccepted: detail?.tech_eval_accepted || 0,
-        techEvalRejected: detail?.tech_eval_rejected || 0,
-        techEvalTotal: (detail?.tech_eval_accepted || 0) + (detail?.tech_eval_rejected || 0),
-        techEvalSuccessRate: ((detail?.tech_eval_accepted || 0) + (detail?.tech_eval_rejected || 0)) > 0
-          ? (((detail?.tech_eval_accepted || 0) / ((detail?.tech_eval_accepted || 0) + (detail?.tech_eval_rejected || 0))) * 100).toFixed(1)
-          : 0,
-        clausesAgreed: detail?.clauses_agreed || 0,
-        clausesResponded: detail?.clauses_responded || 0,
-        clausesAgreementRate: (detail?.clauses_responded || 0) > 0
-          ? (((detail?.clauses_agreed || 0) / (detail?.clauses_responded || 0)) * 100).toFixed(1)
-          : 0,
-        queriesRaised: detail?.queries_raised || 0,
-        queriesByVendor: detail?.queries_by_vendor || 0,
-        avgDelivery: formatDeliveryPeriod(detail?.avg_delivery_period || 0),
-      };
-    });
-
-    return (
-      <div className="table-responsive">
-        <table className="table table-bordered table-hover align-middle">
-          <thead className="table-light">
-            <tr>
-              <th>Metric</th>
-              {comparisonData.map((data) => (
-                <th key={data.vendorId} className="text-center">
-                  <div className="fw-bold">{data.name}</div>
-                  <small className="text-muted">{data.company}</small>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="fw-semibold">Response Time</td>
-              {comparisonData.map((data) => (
-                <td key={data.vendorId} className="text-center">
-                  <span className="badge bg-info">{data.responseTime}</span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="fw-semibold">Awards</td>
-              {comparisonData.map((data) => (
-                <td key={data.vendorId} className="text-center">
-                  <span className="badge bg-success">{data.awards}</span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="fw-semibold">Regrets</td>
-              {comparisonData.map((data) => (
-                <td key={data.vendorId} className="text-center">
-                  <span className="badge bg-danger">{data.regrets}</span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="fw-semibold">Tech Eval Accepted</td>
-              {comparisonData.map((data) => (
-                <td key={data.vendorId} className="text-center">
-                  <span className="badge bg-success">{data.techEvalAccepted}</span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="fw-semibold">Tech Eval Rejected</td>
-              {comparisonData.map((data) => (
-                <td key={data.vendorId} className="text-center">
-                  <span className="badge bg-danger">{data.techEvalRejected}</span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="fw-semibold">Tech Eval Success Rate</td>
-              {comparisonData.map((data) => (
-                <td key={data.vendorId} className="text-center">
-                  <span className="badge bg-primary">{data.techEvalSuccessRate}%</span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="fw-semibold">Clauses Agreed</td>
-              {comparisonData.map((data) => (
-                <td key={data.vendorId} className="text-center">
-                  <span className="badge bg-info">{data.clausesAgreed}</span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="fw-semibold">Clause Agreement Rate</td>
-              {comparisonData.map((data) => (
-                <td key={data.vendorId} className="text-center">
-                  <span className="badge bg-primary">{data.clausesAgreementRate}%</span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="fw-semibold">Queries Raised</td>
-              {comparisonData.map((data) => (
-                <td key={data.vendorId} className="text-center">
-                  <span className="badge bg-warning">{data.queriesRaised}</span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="fw-semibold">Avg Delivery Period</td>
-              {comparisonData.map((data) => (
-                <td key={data.vendorId} className="text-center">
-                  <span className="badge bg-secondary">{data.avgDelivery}</span>
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    );
-  };
 
   // Reusable Filter Bar Component - Memoized to prevent re-renders
   const FilterBar = React.memo(({ showBuyer = true, showVendor = false }) => (
@@ -2096,7 +1862,7 @@ const VendorStatsDashboard = () => {
                     </button>
                   </div>
                   {Object.keys(vendorDetails).length === selectedVendors.length ? (
-                    <VendorComparisonTable vendorIds={selectedVendors} />
+                    <VendorComparisonTable vendorIds={selectedVendors} vendorDetails={vendorDetails} />
                   ) : (
                     <div className="text-center py-5">
                       <div className="spinner-border text-primary" role="status">
@@ -2377,7 +2143,7 @@ const VendorStatsDashboard = () => {
                         ].filter(Boolean).length;
 
                         return (
-                          <tr key={row.vendor_id}>
+                          <tr key={getVendorId(row) || `row-${idx}`}>
                             {isColumnVisible("#") && <td className="text-muted">{idx + 1}</td>}
                             {isColumnVisible("Vendor Name") && (
                               <td className="fw-semibold">{row.name || "N/A"}</td>
@@ -2443,9 +2209,9 @@ const VendorStatsDashboard = () => {
                             {isColumnVisible("Action") && (
                               <td>
                                 <button
-                                  className={`btn btn-sm ${selectedVendors.includes(String(row.vendor_id || row.id || "")) ? "btn-success" : "btn-primary"}`}
+                                  className={`btn btn-sm ${selectedVendors.includes(getVendorId(row)) ? "btn-success" : "btn-primary"}`}
                                   onClick={() => {
-                                    const vendorId = String(row.vendor_id || row.id || "");
+                                    const vendorId = getVendorId(row);
                                     if (selectedVendors.includes(vendorId)) {
                                       // If already selected, remove from selection
                                       setSelectedVendors((prev) => prev.filter((id) => id !== vendorId));
@@ -2459,10 +2225,10 @@ const VendorStatsDashboard = () => {
                                       fetchVendorStats([vendorId]);
                                     }
                                   }}
-                                  title={selectedVendors.includes(String(row.vendor_id || row.id || "")) ? "Remove from Selection" : "View Details & Add to Selection"}
+                                  title={selectedVendors.includes(getVendorId(row)) ? "Remove from Selection" : "View Details & Add to Selection"}
                                 >
                                   <FontAwesomeIcon icon={faEye} className="me-1" />
-                                  {selectedVendors.includes(String(row.vendor_id || row.id || "")) ? "Selected" : "View Details"}
+                                  {selectedVendors.includes(getVendorId(row)) ? "Selected" : "View Details"}
                                 </button>
                               </td>
                             )}
@@ -2548,7 +2314,7 @@ const VendorStatsDashboard = () => {
                           const techEvalSuccess = techEvalTotal > 0 ? ((row.tech_eval_accepted || 0) / techEvalTotal * 100).toFixed(1) : 0;
                           
                           return (
-                            <tr key={row.vendor_id}>
+                            <tr key={getVendorId(row) || `row-${idx}`}>
                               <td className="fw-semibold">{row.name || "N/A"}</td>
                               <td>
                                 <span className="badge bg-info">
@@ -2574,7 +2340,7 @@ const VendorStatsDashboard = () => {
                                 <button
                                   className="btn btn-sm btn-outline-primary"
                                   onClick={() => {
-                                    const vendorId = String(row.vendor_id || row.id || "");
+                                    const vendorId = getVendorId(row);
                                     setSelectedVendors([vendorId]);
                                     fetchVendorStats([vendorId]);
                                   }}
@@ -2726,7 +2492,7 @@ const VendorStatsDashboard = () => {
                         const total = (row.tech_eval_accepted || 0) + (row.tech_eval_rejected || 0);
                         const successRate = total > 0 ? ((row.tech_eval_accepted || 0) / total * 100).toFixed(1) : 0;
                         return (
-                          <tr key={row.vendor_id}>
+                          <tr key={getVendorId(row) || `row-${idx}`}>
                             <td className="fw-semibold">{row.name || "N/A"}</td>
                             <td><span className="badge bg-success">{row.tech_eval_accepted || 0}</span></td>
                             <td><span className="badge bg-danger">{row.tech_eval_rejected || 0}</span></td>
@@ -2846,7 +2612,7 @@ const VendorStatsDashboard = () => {
                         const agreed = row.clauses_agreed || 0;
                         const agreementRate = responded > 0 ? ((agreed / responded) * 100).toFixed(1) : 0;
                         return (
-                          <tr key={row.vendor_id}>
+                          <tr key={getVendorId(row) || `row-${idx}`}>
                             <td className="fw-semibold">{row.name || "N/A"}</td>
                             <td><span className="badge bg-success">{agreed}</span></td>
                             <td><span className="badge bg-info">{responded}</span></td>
