@@ -376,6 +376,17 @@ const VendorManagement = () => {
               <i className="fa fa-id-badge"></i> SPOC Management
             </button>
           )}
+
+          {(userType === 1 || userType === 5) && (
+            <button
+              type="button"
+              className="btn btn-info"
+              onClick={() => router.push(` /vendor-management/bulk-upload`)}
+            >
+              <i class="fa fa-upload"></i> Bulk vendor upload
+            </button>
+          )}
+
           <button
             type="button"
             className="btn btn-primary"
