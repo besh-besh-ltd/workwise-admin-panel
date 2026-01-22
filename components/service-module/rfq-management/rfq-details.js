@@ -196,12 +196,12 @@ const RFQDetails = () => {
                 uniqueProducts.add(`${product.product_id}-${product.variant}`);
 
                 if (product.quotation_details && product.quotation_details.length > 0) {
-                    totalQuotes += product.quotation_details.length;
+                    totalResponded += product.quotation_details.length;
                     const quotation = product.quotation_details[0];
                     if (quotation.is_regret === 1) {
                         totalRegretted++;
                     } else {
-                        totalResponded++;
+                        totalQuotes++;
                     }
                 } else {
                     totalPending++;
