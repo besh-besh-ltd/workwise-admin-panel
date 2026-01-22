@@ -194,6 +194,20 @@ status: 0
   });
 }
 
+function toggleVendorVerified(id, is_verified) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response = await axiosxdata.put(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/vendor/${id}/toggle-verified`,
+        { is_verified }
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ error });
+    }
+  });
+}
+
 
 export const fetchVendorDocuments = async (page = 1, limit = 10) => {
   const res = await axiosInstance.get(
@@ -398,6 +412,7 @@ export {
   handleDisableVendorProfile,
   handleUpdateVendor,
   handleApproveVendor,
+  toggleVendorVerified,
   rejectList,
   handleUpdateVendorSpoc,
   addNewSpoc,

@@ -296,6 +296,7 @@ const AddVendor = () => {
     spocs: [],
     vendor_access_type: "public",
     buyer_company_ids: [],
+    is_verified: false,
   };
 
   return (
@@ -369,6 +370,32 @@ const AddVendor = () => {
                               <div className="form-error">{msg}</div>
                             )}
                           />
+                        </div>
+                        <div className="col-6 d-flex align-items-center mt-3">
+                          <div className="form-check d-flex align-items-center">
+                            <Field
+                              type="checkbox"
+                              name="is_verified"
+                              id="is_verified"
+                              className="form-check-input"
+                              style={{
+                                width: "22px",
+                                height: "22px",
+                                borderWidth: "2px",
+                              }}
+                            />
+                            <label
+                              className="form-check-label ms-3"
+                              htmlFor="is_verified"
+                              style={{
+                                fontWeight: 700,
+                                color: "#0066CC",
+                                fontSize: "0.95rem",
+                              }}
+                            >
+                              Mark as Verified
+                            </label>
+                          </div>
                         </div>
                         <div className="col-6">
                           <label htmlFor="email">Email</label>
