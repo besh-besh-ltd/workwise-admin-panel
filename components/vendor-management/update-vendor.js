@@ -405,7 +405,7 @@ useEffect(() => {
     cin: editDetails?.companyDetails?.cin || "",
     turn_over: editDetails?.companyDetails?.turnover || "",
     total_employees: editDetails?.companyDetails?.no_of_employess || "",
-    subscription_plan: editDetails?.vendorDetails?.subscription_plan_id || "",
+    subscription: editDetails?.vendorDetails?.subscription_plan_id || "",
     vendor_access_type: editDetails?.vendorAccessType || "public",
     buyer_company_ids: Array.isArray(editDetails?.mappedCompanies)
       ? editDetails.mappedCompanies
@@ -605,7 +605,7 @@ useEffect(() => {
                     selectedStateOption || editDetails?.vendorDetails?.state;
                   values.city =
                     selectedCityOption || editDetails?.vendorDetails?.city;
-                  values.subscription_plan = 
+                  values.subscription = 
                     selectedSubscriptionOption || editDetails?.vendorDetails?.subscription_plan_id;
                   submitHandler(values, resetForm);
                 }}
@@ -1085,11 +1085,11 @@ useEffect(() => {
                             )}
                         </div>
                         <div className="col-6">
-                          <label htmlFor="subscription_plan">Select Subscription ( Empty for Free )</label>
+                          <label htmlFor="subscription">Select Subscription ( Empty for Free )</label>
                           <Field
                             as="select"
                             className="form-control"
-                            name="subscription_plan"
+                            name="subscription"
                             value={selectedSubscriptionOption}
                             onChange={handleSubscriptionChange}
                           >
