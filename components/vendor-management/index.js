@@ -3,6 +3,7 @@ import {
   handleGetVendorList,
   handleDeleteVendorProfile,
   handleApproveVendor,
+  toggleVendorVerified,
   rejectList,
   getAdminsList,
   getSubscriptionList
@@ -144,6 +145,21 @@ const VendorManagement = () => {
         toast.error(txt);
       });
     setTimeout(handleClose(), 10000);
+  };
+
+  const submitToggleVendorVerified = (vendorId, nextIsVerified) => {
+    toggleVendorVerified(vendorId, nextIsVerified)
+      .then((res) => {
+        toast(res.message);
+        getBuyerList();
+      })
+      .catch((error) => {
+        let txt = "";
+        for (let x in error?.error?.response?.data?.errors) {
+          txt = error?.error?.response?.data?.errors[x];
+        }
+        toast.error(txt || "Something went wrong");
+      });
   };
 
   const handleUpdateVendor = (item) => {
@@ -460,6 +476,18 @@ const VendorManagement = () => {
                     </div>
                     <div className="col-md-3 mb-2">
                       <Field
+                        as="select"
+                        name="verified"
+                        className="form-control"
+                        value={values.verified}
+                      >
+                        <option value="">Filter by Verified</option>
+                        <option value="t">Verified</option>
+                        <option value="f">Not Verified</option>
+                      </Field>
+                    </div>
+                    <div className="col-md-3 mb-2">
+                      <Field
                         type="text"
                         name="email"
                         className="form-control"
@@ -614,6 +642,7 @@ const VendorManagement = () => {
                   <th scope="col">Mobile</th>
                   <th scope="col">Organization</th>
                   <th scope="col">Approval Status</th>
+                  <th scope="col">Verified</th>
                   <th scope="col">Created</th>
                   <th scope="col">Updated</th>
                   <th scope="col">Source</th>
@@ -662,6 +691,42 @@ const VendorManagement = () => {
                             )}
                           </div>
                         )}
+                      </td>
+                      <td>
+                        <div className="d-flex flex-column gap-2">
+                          {item.is_verified === 1 ? (
+                            <span
+                              className="badge d-inline-flex align-items-center"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, #0066CC 0%, #0080FF 50%, #0052A3 100%)",
+                                color: "#FFFFFF",
+                                padding: "6px 12px",
+                                borderRadius: "10px",
+                                fontWeight: 700,
+                                fontSize: "0.8rem",
+                                border: "1px solid #0052A3",
+                                width: "fit-content",
+                              }}
+                            >
+                              Verified
+                            </span>
+                          ) : (
+                            <span className="badge bg-secondary">Not Verified</span>
+                          )}
+                          <button
+                            type="button"
+                            className={`btn btn-sm ${item.is_verified === 1 ? "btn-outline-secondary" : "btn-outline-success"}`}
+                            onClick={() =>
+                              submitToggleVendorVerified(
+                                item.id,
+                                item.is_verified === 1 ? 0 : 1
+                              )
+                            }
+                          >
+                            {item.is_verified === 1 ? "Unverify" : "Verify"}
+                          </button>
+                        </div>
                       </td>
                       <td style={{textAlign:'center'}}>
                         {item.created_by_name || 'N/A'} 
