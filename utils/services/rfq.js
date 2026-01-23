@@ -160,17 +160,6 @@ export const downloadQuotesDetails = (id) => {
   });
 };
 
-export const closeRFQ = (id) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/rfq/close-rfq/${id}`);
-      resolve(response);
-    } catch (error) {
-      reject({ message: error });
-    }
-  });
-};
-
 export const sendReminder = (id) => {
   return new Promise(async (resolve, reject) => {
     try {

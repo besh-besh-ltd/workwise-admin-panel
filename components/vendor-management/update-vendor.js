@@ -405,13 +405,16 @@ useEffect(() => {
     cin: editDetails?.companyDetails?.cin || "",
     turn_over: editDetails?.companyDetails?.turnover || "",
     total_employees: editDetails?.companyDetails?.no_of_employess || "",
-    subscription_plan: editDetails?.vendorDetails?.subscription_plan_id || "",
+    subscription: editDetails?.vendorDetails?.subscription_plan_id || "",
     vendor_access_type: editDetails?.vendorAccessType || "public",
     buyer_company_ids: Array.isArray(editDetails?.mappedCompanies)
       ? editDetails.mappedCompanies
           .map((company) => parseInt(company.company_id, 10))
           .filter((item) => !Number.isNaN(item))
       : [],
+    is_verified:
+      editDetails?.companyDetails?.is_verified === 1 ||
+      editDetails?.companyDetails?.is_verified === '1',
   };
   
  
@@ -605,7 +608,7 @@ useEffect(() => {
                     selectedStateOption || editDetails?.vendorDetails?.state;
                   values.city =
                     selectedCityOption || editDetails?.vendorDetails?.city;
-                  values.subscription_plan = 
+                  values.subscription = 
                     selectedSubscriptionOption || editDetails?.vendorDetails?.subscription_plan_id;
                   submitHandler(values, resetForm);
                 }}
@@ -628,6 +631,32 @@ useEffect(() => {
                               <div className="form-error">{msg}</div>
                             )}
                           />
+                        </div>
+                        <div className="col-6 d-flex align-items-center mt-3">
+                          <div className="form-check d-flex align-items-center">
+                            <Field
+                              type="checkbox"
+                              name="is_verified"
+                              id="is_verified"
+                              className="form-check-input"
+                              style={{
+                                width: "22px",
+                                height: "22px",
+                                borderWidth: "2px",
+                              }}
+                            />
+                            <label
+                              className="form-check-label ms-3"
+                              htmlFor="is_verified"
+                              style={{
+                                fontWeight: 700,
+                                color: "#0066CC",
+                                fontSize: "0.95rem",
+                              }}
+                            >
+                              Mark as Verified
+                            </label>
+                          </div>
                         </div>
                         <div className="col-6">
                           <label htmlFor="Organization-Address">Email</label>
@@ -1085,11 +1114,11 @@ useEffect(() => {
                             )}
                         </div>
                         <div className="col-6">
-                          <label htmlFor="subscription_plan">Select Subscription ( Empty for Free )</label>
+                          <label htmlFor="subscription">Select Subscription ( Empty for Free )</label>
                           <Field
                             as="select"
                             className="form-control"
-                            name="subscription_plan"
+                            name="subscription"
                             value={selectedSubscriptionOption}
                             onChange={handleSubscriptionChange}
                           >

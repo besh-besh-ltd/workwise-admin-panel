@@ -1,4 +1,5 @@
 import React from 'react'
+import { Badge } from 'react-bootstrap'
 
 const VendorCard = ({ data }) => {
     const addCommasToNumber = (number) => {
@@ -8,10 +9,58 @@ const VendorCard = ({ data }) => {
 
         let numberString = number.toString();
         let parts = numberString.split(".");
-    
+
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         return parts.join(".");
       };
+
+    // Calculate vendor stats from products
+    const calculateVendorStats = () => {
+        if (!data?.products || data.products.length === 0) {
+            return {
+                totalProducts: 0,
+                quoteSent: 0,
+                totalRegrets: 0,
+                quotePending: 0,
+                totalFinalization: 0
+            };
+        }
+
+        let quoteSent = 0;
+        let totalRegrets = 0;
+        let quotePending = 0;
+        let totalFinalization = 0;
+
+        data.products.forEach(product => {
+            if (product.quotation_details && product.quotation_details.length > 0) {
+                const quotation = product.quotation_details[0];
+                if (quotation.is_regret === 1) {
+                    totalRegrets++;
+                } else if (quotation.unit_price > 0) {
+                    quoteSent++;
+                } else {
+                    quotePending++;
+                }
+            } else {
+                quotePending++;
+            }
+
+            // Check if this vendor is finalized for this product
+            if (product.finalization && product.finalization.vendor_id === data.vendor_id) {
+                totalFinalization++;
+            }
+        });
+
+        return {
+            totalProducts: data.products.length,
+            quoteSent,
+            totalRegrets,
+            quotePending,
+            totalFinalization
+        };
+    };
+
+    const vendorStats = calculateVendorStats();
 
     return (
         <>
@@ -33,6 +82,50 @@ const VendorCard = ({ data }) => {
                         <span className="fw-medium text-muted px-2">{data?.vendor_mobile || "---"}</span>
                     </div>
                 </div>
+                {/* {(data?.is_private || data?.subscription_plan_id === 20) && ( */}
+                {true && (
+                    <div className="mb-2" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                        {/* Left Side Info */}
+                        <div className="d-flex flex-column gap-3">
+                            {data?.is_private  === 1 && (
+                            // {true && (
+                                <Badge bg='success' className="small px-2 py-1 text-uppercase">
+                                    Private vendor
+                                </Badge>
+                            )}
+                            {data?.subscription_plan_id && (
+                            // {true && ( 
+                                <Badge bg='primary' className="small px-2 py-1 text-uppercase">
+                                    Premium Vendor
+                                </Badge>
+                            )}
+                        </div>
+
+                        {/* Right side Info */}
+                        <div className="mt-2" style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr'}}>
+                             <div className="mr-4 mb-2" style={{gridArea:'1/1'}}>
+                                <strong>Requested Products: </strong>
+                                <span className="badge badge-primary ml-2">{vendorStats.totalProducts}</span>
+                            </div>
+                             <div className="mr-4 mb-2" style={{gridArea:'1/2'}}>
+                                <strong>Quotes Submitted: </strong>
+                                <span className="badge badge-success ml-2">{vendorStats.quoteSent}</span>
+                            </div>
+                             <div className="mr-4 mb-2" style={{gridArea:'1/3'}}>
+                                <strong>Declined Request: </strong>
+                                <span className="badge badge-danger ml-2">{vendorStats.totalRegrets}</span>
+                            </div>
+                             <div className="mr-4 mb-2" style={{gridArea:'2/1'}}>
+                                <strong>Pending Responses: </strong>
+                                <span className="badge badge-secondary ml-2">{vendorStats.quotePending}</span>
+                            </div>
+                             <div className="mr-4 mb-2" style={{gridArea:'2/2'}}>
+                                <strong>Finalized Orders: </strong>
+                                <span className="badge badge-info ml-2">{vendorStats.totalFinalization}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Product Details Section */}
                 {data.products &&

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane, faEdit, faEye } from '@fortawesome/free-solid-svg-icons';
@@ -27,7 +27,7 @@ const RFQDetails = () => {
             .split('-')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
-    }
+    }    
 
     const updateAdminStatus = ({ status, comment }) => {
         let payload = {
@@ -44,7 +44,6 @@ const RFQDetails = () => {
                 getRfqById();
             })
             .catch((error) => {
-                console.log(error)
                 toast.error(error.message)
             })
             .finally(() => setLoading(false))
@@ -58,7 +57,7 @@ const RFQDetails = () => {
                 setVendorDetails(res.data[0]?.vendor_details)
             })
             .catch((error) => {
-                console.log(error)
+                console.error(error)
             })
             .finally(() => {
                 setLoading(false)
@@ -108,17 +107,17 @@ const RFQDetails = () => {
         return true;
     };
 
-    // Get product-wise data with variants as separate products
-    const getProductWiseData = () => {
+    // Get product-wise data with variants as separate products (memoized)
+    const productWiseData = useMemo(() => {
         if (!vendorDetails || vendorDetails.length === 0) return [];
-        
+
         const productMap = new Map();
-        
+
         vendorDetails.forEach(vendor => {
             vendor.products?.forEach(product => {
                 // Create unique key with product_id and variant
                 const key = `${product.product_id}-${product.variant}`;
-                
+
                 if (!productMap.has(key)) {
                     productMap.set(key, {
                         product_id: product.product_id,
@@ -129,17 +128,17 @@ const RFQDetails = () => {
                         vendors: []
                     });
                 }
-                
+
                 // Check if vendor has responded (has quotation_details AND is_regret is 0)
                 let hasResponded = false;
                 let isRegretted = false;
-                
+
                 if (product.quotation_details !== null && product.quotation_details.length > 0) {
                     const quotation = product.quotation_details[0];
                     hasResponded = quotation.is_regret === 0;
                     isRegretted = quotation.is_regret === 1;
                 }
-                
+
                 productMap.get(key).vendors.push({
                     vendor_id: vendor.vendor_id,
                     vendor_name: vendor.vendor_name,
@@ -148,14 +147,16 @@ const RFQDetails = () => {
                     vendor_organization: vendor.vendor_organization,
                     has_responded: hasResponded,
                     is_regretted: isRegretted,
+                    is_private: vendor.is_private,
+                    subscription_plan_id: vendor.subscription_plan_id,
                     quotation_details: product.quotation_details,
                     finalization: product.finalization
                 });
             });
         });
-        
+
         return Array.from(productMap.values());
-    };
+    }, [vendorDetails]);
 
     // Calculate statistics for a product
     const calculateProductStats = (vendors) => {
@@ -163,47 +164,60 @@ const RFQDetails = () => {
         const respondedVendors = vendors.filter(v => v.has_responded).length;
         const regrettedVendors = vendors.filter(v => v.is_regretted).length;
         const pendingVendors = vendors.filter(v => !v.has_responded && !v.is_regretted).length;
-        
+        const privateVendors = vendors.filter(v => v.is_private === 1).length;
+        const premiumVendors = vendors.filter(v => v.subscription_plan_id).length;
+        const finalization = vendors.filter(v => v.finalization && v.finalization.vendor_id === v.vendor_id).length;
+
         return {
             totalVendors,
             respondedVendors,
             regrettedVendors,
-            pendingVendors
+            pendingVendors,
+            privateVendors,
+            premiumVendors,
+            finalization
         };
     };
 
-    // Calculate overall statistics
-    const calculateOverallStats = () => {
+    // Calculate overall statistics (memoized)
+    const overallStats = useMemo(() => {
         if (!vendorDetails || vendorDetails.length === 0) return null;
-        
-        let totalVendors = 0;
+
+        const totalVendors = vendorDetails.length;
+        const uniqueProducts = new Set();
+        let totalQuotes = 0;
         let totalResponded = 0;
         let totalRegretted = 0;
         let totalPending = 0;
-        
+
         vendorDetails.forEach(vendor => {
             vendor.products?.forEach(product => {
-                totalVendors++;
-                if (product.quotation_details !== null && product.quotation_details.length > 0) {
+                // Track unique products by product_id and variant
+                uniqueProducts.add(`${product.product_id}-${product.variant}`);
+
+                if (product.quotation_details && product.quotation_details.length > 0) {
+                    totalResponded += product.quotation_details.length;
                     const quotation = product.quotation_details[0];
-                    if (quotation.is_regret === 0) {
-                        totalResponded++;
-                    } else if (quotation.is_regret === 1) {
+                    if (quotation.is_regret === 1) {
                         totalRegretted++;
+                    } else {
+                        totalQuotes++;
                     }
                 } else {
                     totalPending++;
                 }
             });
         });
-        
+
         return {
             totalVendors,
+            totalProducts: uniqueProducts.size,
+            totalQuotes,
             totalResponded,
             totalRegretted,
             totalPending
         };
-    };
+    }, [vendorDetails]);
 
     const handleViewVendor = (vendorId) => {
         router.push(`https://letsworkwise.com/vendor/vendor-profile?id=${vendorId}`);
@@ -214,9 +228,6 @@ const RFQDetails = () => {
             getRfqById();
         }
     }, [router, rfq_id])
-
-    const productWiseData = getProductWiseData();
-    const overallStats = calculateOverallStats();
 
     return (
         <>
@@ -258,8 +269,8 @@ const RFQDetails = () => {
                                         </button>
                                     </div>
                                 </div>
-                                <div className="row border rounded-2 p-2">
-                                    <div className="col-md-5">
+                                <div className="row border rounded-2 p-2" style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr'}}>
+                                    <div className="" style={{gridArea : '1/1'}}>
                                         <div className="mb-2">
                                             <strong>Buyer Name : </strong>
                                             <span className="fw-medium text-muted px-2">{rfqDetails?.contact_name || "---"}</span>
@@ -282,7 +293,7 @@ const RFQDetails = () => {
                                         </div>
                                     </div>
 
-                                    <div className="col-md-3">
+                                    <div className="" style={{gridArea : '1/2'}}>
                                         <div className="mb-2">
                                             <strong>Project Name : </strong>
                                             <span className="fw-medium text-muted px-2">{rfqDetails?.project_name || "---"}</span>
@@ -308,7 +319,7 @@ const RFQDetails = () => {
                                         </div>
                                     </div>
 
-                                    <div className="col-md-4">
+                                    <div className="" style={{gridArea : '1/3'}}>
                                         <div className="mb-2">
                                             <strong>Reverse Auction : </strong>
                                             {rfqDetails?.reverse_auction == 1
@@ -340,6 +351,38 @@ const RFQDetails = () => {
                                             {rfqDetails.admin_service_details ? rfqDetails.admin_service_details[0]?.comment : "---"}
                                         </div>
                                     </div>
+
+                                    <div className="col-12 mt-3" style={{
+                                        gridArea: '2 / 1 / 2 / 4',
+                                        flexDirection: 'row',
+                                        display: 'flex',
+                                        justifyContent: 'space-around',
+                                        }}>
+                                                <div className="mr-4 mb-2">
+                                                    <strong>Products Requested: </strong>
+                                                    <span className="badge badge-primary ml-2">{overallStats.totalProducts}</span>
+                                                </div>
+                                                <div className="mr-4 mb-2">
+                                                    <strong>Vendors Invited: </strong>
+                                                    <span className="badge badge-primary ml-2">{overallStats?.totalVendors}</span>
+                                                </div>
+                                                <div className="mr-4 mb-2">
+                                                    <strong>Quotes Received: </strong>
+                                                    <span className="badge badge-success ml-2">{overallStats?.totalQuotes}</span>
+                                                </div>
+                                                <div className="mr-4 mb-2">
+                                                    <strong>Declined Request: </strong>
+                                                    <span className="badge badge-danger ml-2">{overallStats?.totalRegretted}</span>
+                                                </div>
+                                                <div className="mr-4 mb-2">
+                                                    <strong>Responses Received <span style={{fontWeight:'lighter'}}>(quotes + declined)</span>: </strong>
+                                                    <span className="badge badge-primary ml-2">{overallStats?.totalResponded}</span>
+                                                </div>
+                                                <div className="mr-4 mb-2">
+                                                    <strong>Pending Responses: </strong>
+                                                    <span className="badge badge-secondary ml-2">{overallStats?.totalPending}</span>
+                                                </div>
+                                            </div>
                                 </div>
                             </>
                         }
@@ -403,47 +446,60 @@ const RFQDetails = () => {
                                                                         {product.product_name}{variantText}
                                                                     </h5>
 
-                                                                    <div className="row align-items-center">
+                                                                     <div className="mb-2" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
 
                                                                         {/* PRODUCT SPECS */}
-                                                                        <div className="col-md-8">
-                                                                            <div className="d-flex flex-wrap">
-                                                                                {product.specs && product.specs.map((spec, idx) => (
-                                                                                    <div key={idx} className="mr-4 mb-2">
-                                                                                        <strong>{spec.title}: </strong>
-                                                                                        <span className="text-muted">{spec.value}</span>
+                                                                            <div className="d-flex flex-row gap-4">
+                                                                                {product.specs && product.specs.reduce((acc, spec, idx) => {
+                                                                                    const chunkIndex = Math.floor(idx / 2);
+                                                                                    if (!acc[chunkIndex]) {
+                                                                                        acc[chunkIndex] = [];
+                                                                                    }
+                                                                                    acc[chunkIndex].push(spec);
+                                                                                    return acc;
+                                                                                }, []).map((chunk, chunkIdx) => (
+                                                                                    <div key={chunkIdx} className="d-flex flex-column">
+                                                                                        {chunk.map((spec, idx) => (
+                                                                                            <div key={idx} className="mr-4 mb-2">
+                                                                                                <strong>{spec.title}: </strong>
+                                                                                                <span className="text-muted">{spec.value}</span>
+                                                                                            </div>
+                                                                                        ))}
                                                                                     </div>
                                                                                 ))}
                                                                             </div>
-                                                                        </div>
 
                                                                         {/* VENDOR STATUS STATS */}
-                                                                        <div className="col-md-4">
-                                                                            <div className="d-flex justify-content-between flex-wrap">
-
-                                                                                <div className="mb-2">
-                                                                                    <strong>Total Vendors: </strong>
+                                                                        <div className="mt-2" style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px'}}>
+                                                                                <div className="mr-4">
+                                                                                    <strong>Vendors Invited: </strong>
                                                                                     <span className="badge badge-primary ml-2">{stats.totalVendors}</span>
                                                                                 </div>
-
-                                                                                <div className="mb-2">
-                                                                                    <strong>Responded: </strong>
+                                                                                <div className="">
+                                                                                    <strong>Private Vendors: </strong>
+                                                                                    <span className="badge badge-info ml-2">{stats.privateVendors}</span>
+                                                                                </div>
+                                                                                <div className="">
+                                                                                    <strong>Premium Vendors: </strong>
+                                                                                    <span className="badge badge-primary ml-2">{stats.premiumVendors}</span>
+                                                                                </div>
+                                                                                <div className="">
+                                                                                    <strong>Received Responses: </strong>
                                                                                     <span className="badge badge-success ml-2">{stats.respondedVendors}</span>
                                                                                 </div>
-
-                                                                                <div className="mb-2">
-                                                                                    <strong>Regretted: </strong>
+                                                                                <div className="">
+                                                                                    <strong>Declined Request: </strong>
                                                                                     <span className="badge badge-danger ml-2">{stats.regrettedVendors}</span>
                                                                                 </div>
-
-                                                                                <div className="mb-2" style = {{marginRight: '20px'}}>
-                                                                                    <strong>Pending: </strong>
+                                                                                <div className="" style = {{marginRight: '20px'}}>
+                                                                                    <strong>Pending Responses: </strong>
                                                                                     <span className="badge badge-secondary ml-2">{stats.pendingVendors}</span>
                                                                                 </div>
-
-                                                                            </div>
-                                                                        </div>
-
+                                                                                <div className="">
+                                                                                    <strong>Vendors Finalized: </strong>
+                                                                                    <span className="badge badge-info ml-2">{stats.finalization}</span>
+                                                                                </div>
+                                                                                </div>
                                                                     </div>
                                                                 </div>
 
@@ -458,6 +514,8 @@ const RFQDetails = () => {
                                                                                 <th>Organization</th>
                                                                                 <th>Email</th>
                                                                                 <th>Mobile</th>
+                                                                                <th>Private</th>
+                                                                                <th>Premium</th>
                                                                                 <th>Response Status</th>
                                                                                 <th>Finalization</th>
                                                                                 <th>Action</th>
@@ -473,12 +531,26 @@ const RFQDetails = () => {
                                                                                     <td>{vendor.vendor_email}</td>
                                                                                     <td>{vendor.vendor_mobile}</td>
                                                                                     <td>
+                                                                                        {vendor.is_private === 1 ? (
+                                                                                            <span className="badge badge-info">Yes</span>
+                                                                                        ) : (
+                                                                                            <span className="badge badge-secondary">No</span>
+                                                                                        )}
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        {vendor.subscription_plan_id ? (
+                                                                                            <span className="badge badge-primary">Yes</span>
+                                                                                        ) : (
+                                                                                            <span className="badge badge-secondary">No</span>
+                                                                                        )}
+                                                                                    </td>
+                                                                                    <td>
                                                                                         {vendor.is_regretted ? (
                                                                                             <span className="badge badge-danger">Regretted</span>
                                                                                         ) : vendor.has_responded ? (
                                                                                             <span className="badge badge-success">Responded</span>
                                                                                         ) : (
-                                                                                            <span className="badge badge-warning">Pending</span>
+                                                                                            <span className="badge badge-secondary">Pending</span>
                                                                                         )}
                                                                                     </td>
                                                                                     <td>
@@ -492,7 +564,6 @@ const RFQDetails = () => {
                                                                                         <button 
                                                                                             className="btn btn-sm btn-info"
                                                                                             onClick={() => {
-                                                                                                console.log("Vendor object:", vendor);
                                                                                                 handleViewVendor(vendor.vendor_id);
                                                                                             }}
                                                                                         >
