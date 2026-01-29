@@ -1,8 +1,8 @@
 import axios from "axios";
 import axiosInstance from "../axios";
 
-export const handleLogin = (values) => {
-    let payload = {};
+export const handleLogin = (values: any) => {
+    let payload: any = {};
     payload.username = values.username;
     payload.password = values.password;
     

@@ -78,8 +78,8 @@ function handleDeleteSection(id) {
     }
   });
 }
-function handleApprovePageContent(id, status) {
-  let payload = {};
+function handleApprovePageContent(id: any, status: any) {
+  let payload: any = {};
   payload.status = status;
   return new Promise(async (resolve, reject) => {
     try {

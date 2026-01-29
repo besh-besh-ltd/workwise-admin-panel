@@ -31,36 +31,6 @@ function handleApprovePrivateVendor(payload) {
     });
 }
 
-function handleUpdatePrivateVendor(values, editDataId) {
-    if (values.image == "") {
-        delete values.image;
-    }
-    return new Promise(async (resolve, reject) => {
-        try {
-            let response = await axiosFormData.put(
-                `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/update-vendor/${editDataId}`,
-                values
-            );
-            resolve(response);
-        } catch (error) {
-            reject({ error });
-        }
-    });
-}
-
-function rejectList() {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let response = await axiosInstance.get(
-                `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/reject-reason-dropdown-list`
-            );
-            resolve(response);
-        } catch (error) {
-            reject({ error });
-        }
-    });
-}
-
 function handleBulkBuyerVendorMapping(formData) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -78,7 +48,5 @@ function handleBulkBuyerVendorMapping(formData) {
 export {
     handleGetPrivateVendorList,
     handleApprovePrivateVendor,
-    handleUpdatePrivateVendor,
-    rejectList,
     handleBulkBuyerVendorMapping,
 };

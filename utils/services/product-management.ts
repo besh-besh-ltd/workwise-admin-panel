@@ -50,8 +50,8 @@ export const createCategory = (values) => {
     }
   });
 };
-export const updateCategory = (values, id) => {
-  let payload = {};
+export const updateCategory = (values: any, id: any) => {
+  let payload: any = {};
   payload.title = values.title;
   payload.parent_id = "" + values?.parent_id;
   payload.slug = values?.slug;
@@ -170,17 +170,6 @@ export const getAllProducts = (
   });
 };
 
-export const approvedProductList = () => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/products/approved-product-list`);
-      resolve(response);
-    } catch (error) {
-      reject({ message: error });
-    }
-  });
-};
-
 export const getProductDetailsById = (id) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -221,15 +210,15 @@ export const deleteProduct = (id) => {
   });
 }
 
-export const acceptProduct = (id, status, reject_reason_id = null, rejectReason) => {
+export const acceptProduct = (id: any, status: any, reject_reason_id: any = null, rejectReason?: any) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Changes by Agnij May 03, 2025 [Fixed status type handling and removed logs]
-      
+
       // Create payload with status and optional reject reason
       // Ensure status is sent as a string as expected by the backend
-      const payload = { 
-        status: typeof status === 'number' ? status.toString() : status 
+      const payload: any = {
+        status: typeof status === 'number' ? status.toString() : status
       };
       
       if (reject_reason_id) {
@@ -260,15 +249,15 @@ export const acceptProduct = (id, status, reject_reason_id = null, rejectReason)
   });
 };
 
-export const acceptVariant = (id, status, reject_reason_id = null) => {
+export const acceptVariant = (id: any, status: any, reject_reason_id: any = null) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Changes by Agnij May 03, 2025 [Fixed status type handling and removed logs]
-      
+
       // Create payload with status and optional reject reason
       // Ensure status is sent as a string as expected by the backend
-      const payload = { 
-        status: typeof status === 'number' ? status.toString() : status 
+      const payload: any = {
+        status: typeof status === 'number' ? status.toString() : status
       };
       
       if (reject_reason_id) {
@@ -538,14 +527,14 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
             data: dataArray,
             pagination: {
               total: dataArray.length,
-              page: parseInt(page),
-              limit: parseInt(limit),
+              page: Number(page),
+              limit: Number(limit),
               pages: Math.ceil(dataArray.length / limit)
             }
           };
         } else {
           // Try to extract array from a nested field
-          let variantsArray = null;
+          let variantsArray: any[] | null = null;
           
           if (response.data.variants && Array.isArray(response.data.variants)) {
             variantsArray = response.data.variants;
@@ -582,14 +571,14 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
         const totalItems = Array.isArray(response.data.data) ? response.data.data.length : 0;
         response.data.pagination = {
           total: totalItems,
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: Number(page),
+          limit: Number(limit),
           pages: Math.ceil(totalItems / limit)
         };
       }
       
       // Extract product details directly from response if possible
-      let productDetails = null;
+      let productDetails: any = null;
       
       // Try to find product details in the response
       if (response.data.product) {
@@ -599,7 +588,7 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
       } else {
         // If not found, fetch product details separately
         try {
-          const productResponse = await getProductDetailsById(productId);
+          const productResponse: any = await getProductDetailsById(productId);
           if (productResponse?.data?.data) {
             productDetails = productResponse.data.data;
           }
@@ -672,8 +661,8 @@ export const getProductVariants = (productId, page = 1, limit = 10) => {
           data: [],
           pagination: {
             total: 0,
-            page: parseInt(page),
-            limit: parseInt(limit),
+            page: Number(page),
+            limit: Number(limit),
             pages: 0
           },
           message: `Error loading variants: ${error.message || 'Unknown error'}`
@@ -764,12 +753,12 @@ export const searchAllVariants = (id, searchTerm, startDate, endDate, vendorId, 
         queryParams.set('is_approve', approvalStatus);
       }
       // Add pagination parameters
-      if (page) queryParams.set('page', page);
-      if (limit) queryParams.set('limit', limit);
+      if (page) queryParams.set('page', String(page));
+      if (limit) queryParams.set('limit', String(limit));
 
       // Add include_details (if still needed, check backend) and cache busting
-      queryParams.set('include_details', 'true'); 
-      queryParams.set('_t', timestamp);
+      queryParams.set('include_details', 'true');
+      queryParams.set('_t', String(timestamp));
 
       const queryString = queryParams.toString();
       
@@ -842,8 +831,8 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
       const timestamp = Date.now();
       
       // Parse pagination parameters to ensure they're valid
-      const pageNum = parseInt(page) || 1;
-      const limitNum = parseInt(limit) || 10;
+      const pageNum = Number(page) || 1;
+      const limitNum = Number(limit) || 10;
       
       // Build query params
       let queryParams = '';
@@ -906,9 +895,9 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
               data: response.data,
               pagination: {
                 total: response.data.length,
-                page: parseInt(page) || 1,
-                limit: parseInt(limit) || 10,
-                pages: Math.ceil(response.data.length / (parseInt(limit) || 10))
+                page: Number(page) || 1,
+                limit: Number(limit) || 10,
+                pages: Math.ceil(response.data.length / (Number(limit) || 10))
               }
             }
           });
@@ -957,8 +946,8 @@ export const getVariantMappings = (id = null, searchTerm, startDate, endDate, ve
           data: [],
           pagination: {
             total: 0,
-            page: parseInt(page) || 1,
-            limit: parseInt(limit) || 10,
+            page: Number(page) || 1,
+            limit: Number(limit) || 10,
             pages: 1 // Ensure at least 1 page for UI
           }
         }

@@ -27,33 +27,6 @@ const handleAddFaq = (values) => {
     }
   });
 };
-const handleAddBanner = (values) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosFormData.post(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/create-banner`,
-        values
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-};
-
-const handleUpdateBanner = (id, values) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosFormData.post(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/update-banner/${id}`,
-        values
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-};
 
 const handleDeleteBanner = (id) => {
   return new Promise(async (resolve, reject) => {
@@ -68,18 +41,6 @@ const handleDeleteBanner = (id) => {
   });
 };
 
-const handleGetBanner = (id) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosFormData.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/banner-detail/${id}`
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-};
 const handleGetFaq = (id) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -119,19 +80,6 @@ const handleDeleteFaq = (id) => {
   });
 };
 
-const getPageList = () => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/cms/page-list`
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-};
-
 function handleGetVendorDetails(id) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -144,19 +92,7 @@ function handleGetVendorDetails(id) {
     }
   });
 }
-function handleAddVendor(values) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosFormData.post(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/create-vendor`,
-        values
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-}
+
 function handleUpdateVendor(values, editData) {
   if (values.image == "") {
     delete values.image;
@@ -185,28 +121,11 @@ function handleDeleteVendorProfile(id) {
     }
   });
 }
-function handleDisableVendorProfile(id) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosFormData.put(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/block-vendor/${id}`
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-}
+
 export {
-  handleAddBanner,
-  getPageList,
   handleGetVendorDetails,
-  handleAddVendor,
   handleDeleteVendorProfile,
-  handleDisableVendorProfile,
   handleUpdateVendor,
-  handleGetBanner,
-  handleUpdateBanner,
   handleDeleteBanner,
   handleGetFaqList,
   handleAddFaq,

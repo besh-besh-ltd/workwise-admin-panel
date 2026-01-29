@@ -14,7 +14,7 @@ export const paymentHistoryAPI = (
       let response;
       let url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/subscription/payment-list?page=${page}&limit=${limit}`;
 
-      const queryParams = [];
+      const queryParams: string[] = [];
 
       if (start_date) {
         queryParams.push(`start_date=${start_date}`);

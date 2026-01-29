@@ -76,47 +76,6 @@ const getPageList = () => {
   });
 };
 
-function handleGetVendorDetails(id) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/vendor-details/${id}`
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-}
-function handleAddVendor(values) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosFormData.post(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/create-vendor`,
-        values
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-}
-function handleUpdateVendor(values, editData) {
-  if (values.image == "") {
-    delete values.image;
-  }
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosFormData.put(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/update-vendor/${editData.id}`,
-        values
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-}
 function handleDeleteVendorProfile(id) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -129,27 +88,12 @@ function handleDeleteVendorProfile(id) {
     }
   });
 }
-function handleDisableVendorProfile(id) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response = await axiosFormData.put(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/block-vendor/${id}`
-      );
-      resolve(response);
-    } catch (error) {
-      reject({ error });
-    }
-  });
-}
+
 export {
   handleGetBannerList,
   handleAddBanner,
   getPageList,
-  handleGetVendorDetails,
-  handleAddVendor,
   handleDeleteVendorProfile,
-  handleDisableVendorProfile,
-  handleUpdateVendor,
   handleGetBanner,
   handleUpdateBanner,
   handleDeleteBanner

@@ -1,15 +1,16 @@
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig } from "axios";
 import config from "./config";
-const axiosxdata = axios.create({
+
+const axiosFormData = axios.create({
   baseURL: config.api,
   headers: {
-    "Content-Type": "application/x-www-form-urlencoded",
-    appVersion: "1.0",
-  },
+    "Content-Type": "multipart/form-data",
+    appVersion: "1.0"
+  }
 });
 
-axiosxdata.interceptors.request.use(
-  (config) => {
+axiosFormData.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem("token");
     if (token != null) {
       config.headers.Authorization = "Bearer " + token;
@@ -21,7 +22,7 @@ axiosxdata.interceptors.request.use(
   }
 );
 
-axiosxdata.interceptors.response.use(
+axiosFormData.interceptors.response.use(
   function (response) {
     return response.data;
   },
@@ -35,4 +36,4 @@ axiosxdata.interceptors.response.use(
   }
 );
 
-export default axiosxdata;
+export default axiosFormData;

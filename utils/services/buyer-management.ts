@@ -2,21 +2,6 @@ import axiosInstance from "../axios/index";
 import axiosFormData from "../axios/form-data";
 import axiosxdata from "../axios/xxx-form-data";
 
-
-export const AddBuyerOnPortalByAdmin = (values) => {
-	return new Promise(async (resolve, reject) => {
-		try {
-			let response = await axiosInstance.post(
-				`${process.env.NEXT_PUBLIC_API_WEB_URL}/users/user-registration`,
-				values
-			);
-			resolve(response);
-		} catch (error) {
-			reject({ message: error });
-		}
-	});
-};
-
 export const RegisterCompanyByAdmin = (values) => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -54,8 +39,8 @@ function generateRandomPassword() {
 };
 
 // mukul 07-06-2025 , function is not in use, cross check and remove
-function handleApproveBuyer(id, status) {
-  let payload = {};
+function handleApproveBuyer(id: any, status: any) {
+  let payload: any = {};
   payload.status = status;
   return new Promise(async (resolve, reject) => {
     try {

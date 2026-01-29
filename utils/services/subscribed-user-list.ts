@@ -16,7 +16,7 @@ export const getSubscribedUserList = (
       let response;
       let url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/subscription/all-subscriber-list?page=${page}&limit=${limit}`;
 
-      const queryParams = [];
+      const queryParams: string[] = [];
 
       if (id) {
         queryParams.push(`id=${id}`);

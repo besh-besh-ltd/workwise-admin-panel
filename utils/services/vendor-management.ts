@@ -165,8 +165,8 @@ function handleAddVendor(values) {
     }
   });
 }
-function handleApproveVendor(id, status) {
-  let payload = {};
+function handleApproveVendor(id: any, status: any) {
+  let payload: any = {};
 
   if (typeof status === 'number' && status === 1) {
     // Approve scenario
@@ -370,24 +370,6 @@ function handleGetBuyerCompanyDropdown(search = "", limit = 100) {
   });
 }
 
-function handleGetSpocList(limit = 10, page = 1) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const cacheBuster = Date.now();
-      const url = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/spoc-list?limit=${limit}&page=${page}&cb=${cacheBuster}`;
-
-      // Fetch paginated SPOCs
-      const response = await axiosInstance.get(url);
-
-      // Return full axios response so caller can access response.data
-      resolve(response);
-    } catch (error) {
-      console.error('Error in handleGetSpocList:', error);
-      reject(error);
-    }
-  });
-}
-
 /**
  * Handle bulk vendor upload
  * @param {FormData} formData - FormData with 'file' field containing Excel file
@@ -419,7 +401,6 @@ export {
   getSubscriptionList,
   handleDeleteSpoc,
   getAdminsList,
-  handleGetSpocList,
   handleGetBuyerCompanyDropdown,
   getVendorlocations,
   saveVendorlocations,
