@@ -973,7 +973,7 @@ export const deleteVariantVendorMapping = (mappingId) => {
   });
 };
 
-export const getVariantMappingById = (id = null) => {
+export const getVariantMappingById = (id) => {
   return new Promise(async (resolve, reject) => {
     if(!id) reject("Id is required")
     try {
