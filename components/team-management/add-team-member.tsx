@@ -175,8 +175,8 @@ const AddTeamMember: React.FC = () => {
                                   label="Member Name"
                                   isRequired={true}
                                   name="name"
-                                  touched={touched}
-                                  errors={errors}
+                                  touched={touched as any}
+                                  errors={errors as any}
                                 />
                               </div>
                             </div>
@@ -187,8 +187,8 @@ const AddTeamMember: React.FC = () => {
                                   label="Email"
                                   isRequired={false}
                                   name="email"
-                                  touched={touched}
-                                  errors={errors}
+                                  touched={touched as any}
+                                  errors={errors as any}
                                 />
                               </div>
                             </div>
@@ -220,8 +220,8 @@ const AddTeamMember: React.FC = () => {
                                     name="mobile"
                                     placeholder="Enter mobile number"
                                     type="text"
-                                    touched={touched}
-                                    errors={errors}
+                                    touched={touched as any}
+                                    errors={errors as any}
                                   />
                                 </div>
                               </div>
@@ -233,8 +233,8 @@ const AddTeamMember: React.FC = () => {
                                   label="Member Role"
                                   isRequired={true}
                                   name="role"
-                                  touched={touched}
-                                  errors={errors}
+                                  touched={touched as any}
+                                  errors={errors as any}
                                 />
                               </div>
                             </div>
@@ -255,8 +255,8 @@ const AddTeamMember: React.FC = () => {
                                     { label: "Inactive", value: "0" },
                                   ]}
                                   name="status"
-                                  touched={touched}
-                                  errors={errors}
+                                  touched={touched as any}
+                                  errors={errors as any}
                                 />
                               </div>
                             </div>
@@ -276,8 +276,8 @@ const AddTeamMember: React.FC = () => {
                                   { label: "About Us Page", value: "2" },
                                 ]}
                                 name="page_id"
-                                touched={touched}
-                                errors={errors}
+                                touched={touched as any}
+                                errors={errors as any}
                               />
                             </div>
 
@@ -299,8 +299,8 @@ const AddTeamMember: React.FC = () => {
                                   label="LinkedIn URL"
                                   isRequired={true}
                                   name="linkedin"
-                                  touched={touched}
-                                  errors={errors}
+                                  touched={touched as any}
+                                  errors={errors as any}
                                 />
                               </div>
                             </div>
@@ -311,8 +311,8 @@ const AddTeamMember: React.FC = () => {
                                   label="Facebook URL"
                                   isRequired={false}
                                   name="facebook"
-                                  touched={touched}
-                                  errors={errors}
+                                  touched={touched as any}
+                                  errors={errors as any}
                                 />
                               </div>
                             </div>
@@ -323,8 +323,8 @@ const AddTeamMember: React.FC = () => {
                                   label="Twitter URL"
                                   isRequired={false}
                                   name="twitter"
-                                  touched={touched}
-                                  errors={errors}
+                                  touched={touched as any}
+                                  errors={errors as any}
                                 />
                               </div>
                             </div>
@@ -335,8 +335,8 @@ const AddTeamMember: React.FC = () => {
                                   label="Whatsapp"
                                   isRequired={false}
                                   name="whatsapp"
-                                  touched={touched}
-                                  errors={errors}
+                                  touched={touched as any}
+                                  errors={errors as any}
                                 />
                               </div>
                             </div>

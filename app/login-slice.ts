@@ -1,6 +1,10 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-const initialState = {
+interface LoginState {
+  token: string;
+}
+
+const initialState: LoginState = {
   token: ""
 };
 
@@ -8,11 +12,11 @@ export const loginSlice = createSlice({
   name: "login",
   initialState,
   reducers: {
-    saveToken: (state, action) => {
+    saveToken: (state, action: PayloadAction<string>) => {
       state.token = action.payload;
       localStorage.setItem("token", action.payload);
     },
-    removeToken: (state, action) => {
+    removeToken: (state) => {
       state.token = "";
       localStorage.removeItem("token");
     }
