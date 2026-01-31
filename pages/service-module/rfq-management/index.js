@@ -1,4 +1,4 @@
-import RFQManagement from '@/components/service-module/rfq-management/index.js'
+import RFQManagement from '@/components/service-module/rfq-management'
 import React from 'react'
 
 const RFQManagementPage = () => {

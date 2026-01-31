@@ -1,7 +1,7 @@
 import axiosInstance from "@/utils/axios";
 import axiosFormData from "@/utils/axios/form-data";
 
-export const vendorApproveList = (values) => {
+export const vendorApproveList = () => {
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/users/vendorapprove-list`);
@@ -12,7 +12,7 @@ export const vendorApproveList = (values) => {
   });
 };
 
-export const categoryList = (values) => {
+export const categoryList = () => {
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/products/category-list`);

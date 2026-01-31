@@ -1,5 +1,5 @@
 import React from "react";
-import UserManagementPage from "@/components/user-maagement";
+import UserManagementPage from "@/components/user-management";
 const UserManagement = () => {
   return (
     <div>

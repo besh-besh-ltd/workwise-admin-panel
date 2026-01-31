@@ -103,12 +103,12 @@ export const getAllProducts = (
   vendorApprove, 
   vendorId, 
   isFeatured, 
-  addedBy = null, 
-  categoryId = null, 
-  dateFrom = null,
-  dateTo = null,
-  approvalStatus = null,
-  onlyAddedByAdmin = false
+  addedBy, 
+  categoryId, 
+  dateFrom,
+  dateTo,
+  approvalStatus,
+  onlyAddedByAdmin
 ) => {
   return new Promise(async (resolve, reject) => {
     try {
