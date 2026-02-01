@@ -1,27 +1,38 @@
 import { getSubAdminDetails } from '@/utils/services/subadmin-management';
 import Link from 'next/link'
-import { useRouter } from 'next/router';
+import { useRouter, NextRouter } from 'next/router';
 import React, { useEffect, useState } from 'react'
 import img1 from "../../public/assets/images/products.png";
 import Image from 'next/image';
 
-const SubAdminDetails = () => {
-    const router = useRouter();
-    const [subAdminData, setSubAdminData] = useState(null);
+interface SubAdminData {
+    id: number;
+    name: string;
+    mobile: string;
+    email: string;
+    image_url: string | null;
+}
 
-    const handleSubadminData = () => {
-        getSubAdminDetails(router?.query?.id)
-            .then((res) => {
+const SubAdminDetails: React.FC = () => {
+    const router: NextRouter = useRouter();
+    const [subAdminData, setSubAdminData] = useState<SubAdminData[] | null>(null);
+
+    const handleSubadminData = (): void => {
+        getSubAdminDetails(router?.query?.id as string)
+            .then((res: { data: SubAdminData[] }) => {
                 setSubAdminData(res.data)
             })
-            .catch((err) => console.log("err", err));
+            .catch((err: unknown) => console.log("err", err));
     }
+
     useEffect(() => { console.log(subAdminData, "subAdminData *") }, [subAdminData])
+
     useEffect(() => {
         if (router?.query?.id) {
             handleSubadminData();
         }
     }, [router])
+
     return (
         <>
             <div className="content-header">
@@ -41,7 +52,7 @@ const SubAdminDetails = () => {
                     <div className="card">
                         <div className="card-body">
                             <div className="d-flex">
-                                <div class="text-center mr-5">
+                                <div className="text-center mr-5">
                                     {subAdminData && subAdminData.length > 0 && subAdminData[0].image_url !== null ? (
                                         <Image
                                             width={80}
