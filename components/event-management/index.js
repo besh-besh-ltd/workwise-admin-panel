@@ -758,7 +758,12 @@ const EventManagement = () => {
                   type="date"
                   className="form-control"
                   value={eventForm.startDate}
-                  onChange={(e) => handleEventFormChange("startDate", e.target.value)}
+                  onChange={(e) => {
+                    handleEventFormChange("startDate", e.target.value);
+                    if (eventForm.endDate && e.target.value > eventForm.endDate) {
+                      handleEventFormChange("endDate", "");
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -771,6 +776,8 @@ const EventManagement = () => {
                   type="date"
                   className="form-control"
                   value={eventForm.endDate}
+                  disabled={!eventForm.startDate}
+                  min={eventForm.startDate}
                   onChange={(e) => handleEventFormChange("endDate", e.target.value)}
                 />
               </div>
