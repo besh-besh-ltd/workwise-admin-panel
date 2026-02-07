@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAuthCookie, removeAuthCookie } from "@/utils/cookies";
 
 const axiosInstance = axios.create({
   headers: {
@@ -9,7 +10,7 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = getAuthCookie();
     if (token != null) {
       config.headers.Authorization = "Bearer " + token;
     }
@@ -25,8 +26,13 @@ axiosInstance.interceptors.response.use(
     return response.data;
   },
   function (error) {
-    // Do not auto-clear token on 401; let calling pages decide.
-    // This avoids unintended logouts when a single protected endpoint returns 401.
+    if (error.response?.status === 401) {
+      removeAuthCookie();
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("access");
+        window.location.href = "/login";
+      }
+    }
     return Promise.reject(error);
   }
 );

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import { getAuthCookie } from "@/utils/cookies";
 
 export { AuthGuard };
 
@@ -10,8 +11,8 @@ function AuthGuard({ children }) {
   let initialToken = null;
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.localStorage) {
-      let token = localStorage.getStorage("token");
+    if (typeof window !== "undefined") {
+      let token = getAuthCookie();
       initialToken = token;
     }
 

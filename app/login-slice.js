@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { setAuthCookie, removeAuthCookie } from "@/utils/cookies";
 
 const initialState = {
   token: ""
@@ -10,11 +11,11 @@ export const loginSlice = createSlice({
   reducers: {
     saveToken: (state, action) => {
       state.token = action.payload;
-      localStorage.setItem("token", action.payload);
+      setAuthCookie(action.payload);
     },
-    removeToken: (state, action) => {
+    removeToken: (state) => {
       state.token = "";
-      localStorage.removeItem("token");
+      removeAuthCookie();
     }
   }
 });

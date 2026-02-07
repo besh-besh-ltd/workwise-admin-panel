@@ -3,11 +3,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear, faUser, faBell } from "@fortawesome/free-solid-svg-icons";
-import { useDispatch } from "react-redux";
-import { removeToken, saveToken } from "@/app/login-slice";
+import { removeAuthCookie } from "@/utils/cookies";
 const Header = (props) => {
-  const dispatch = useDispatch();
-  const route = useRouter();
+  const router = useRouter();
   const [dropdown, setDropdown] = useState(0);
   const [routeName, setrouteName] = useState("");
   const handlePageNotation = (name) => {
@@ -15,7 +13,7 @@ const Header = (props) => {
   };
   useEffect(() => {
     setrouteName(localStorage.getItem("pageName"));
-  }, [route.pathname]);
+  }, [router.pathname]);
   const handleDropDown = (N) => {
     if (dropdown == N) {
       setDropdown(0);
@@ -144,8 +142,9 @@ const Header = (props) => {
               <h3
                 className="dropdown-item-title"
                 onClick={() => {
-                  dispatch(removeToken());
-                  route.push("/");
+                  removeAuthCookie();
+                  localStorage.removeItem("access");
+                  router.push("/login");
                 }}
               >
                 Logout

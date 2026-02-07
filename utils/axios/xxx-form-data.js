@@ -1,5 +1,7 @@
 import axios from "axios";
 import config from "./config";
+import { getAuthCookie, removeAuthCookie } from "@/utils/cookies";
+
 const axiosxdata = axios.create({
   baseURL: config.api,
   headers: {
@@ -10,7 +12,7 @@ const axiosxdata = axios.create({
 
 axiosxdata.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = getAuthCookie();
     if (token != null) {
       config.headers.Authorization = "Bearer " + token;
     }
@@ -26,10 +28,12 @@ axiosxdata.interceptors.response.use(
     return response.data;
   },
   function (error) {
-    if (error.response.status === 401) {
-      localStorage.removeItem("token");
-    } else if (error.response.data.status === 401) {
-      localStorage.removeItem("token");
+    if (error.response?.status === 401 || error.response?.data?.status === 401) {
+      removeAuthCookie();
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("access");
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

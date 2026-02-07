@@ -5,23 +5,21 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { handleLogin } from "@/utils/services/login";
 import { ToastContainer, toast } from "react-toastify";
-import { useDispatch, useSelector } from "react-redux";
-import { saveToken } from "@/app/login-slice";
+import { setAuthCookie } from "@/utils/cookies";
+
 const Login = () => {
-  const route = useRouter();
-  const dispatch = useDispatch();
+  const router = useRouter();
+  const { returnUrl } = router.query;
+
   const loginHandler = (values) => {
-    // onClick={() => {
-    //   localStorage.setItem("isLogin", true);
-    //   route.push("/");
-    //   location.reload();
-    // }}
     handleLogin(values)
       .then((res) => {
         toast(res.data.message);
-        dispatch(saveToken(res.data.token));
+        setAuthCookie(res.data.token);
         localStorage.setItem("access", JSON.stringify(res?.data?.user_access));
-        route.push("/");
+        // Redirect to returnUrl or dashboard
+        const redirectTo = returnUrl || "/";
+        router.push(redirectTo);
       })
       .catch((err) => console.log("err", err));
   };
