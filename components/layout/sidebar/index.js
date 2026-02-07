@@ -135,7 +135,16 @@ const Sidebar = () => {
       <div className={"main-sidebar sidebar-dark-primary elevation-4 show"}>
         <Link href="#" className="brand-link d-flex justify-content-center">
         {/* Fixing the LCP */}
-          <Image src={logo} alt="Logo-1" priority/>
+          <Image
+            src={logo}
+            alt="Work-wise logo"
+            priority
+            style={{
+              width: isCollapsed ? "40px" : "150px",
+              height: "auto",
+              transition: "width 0.3s ease-in-out",
+            }}
+          />
         </Link>
         <div className="sidebar" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 57px)" }}>
           <nav className="mt-2" style={{ flex: 1, overflowY: "auto" }}>
