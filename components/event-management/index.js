@@ -16,6 +16,7 @@ import {
 } from "@/utils/services/cms-management";
 import { Editor } from "@tinymce/tinymce-react";
 import parse from "html-react-parser";
+import { formatDate } from "@/components/service-module/vendor-stats/utils";
 
 // Default marquee settings
 const defaultMarqueeSettings = {
@@ -129,8 +130,16 @@ const EventManagement = () => {
   };
 
   // Event handlers
-  const handleEventFormChange = (field, value) => {
-    setEventForm((prev) => ({ ...prev, [field]: value }));
+  const handleEventFormChange = (e) => {
+    const { name, value } = e.target;
+    setEventForm((prev) => {
+      const updated = { ...prev, [name]: value };
+      // Clear endDate if startDate is changed to after current endDate
+      if (name === "startDate" && prev.endDate && value > prev.endDate) {
+        updated.endDate = "";
+      }
+      return updated;
+    });
   };
 
   const handleImageChange = (e) => {
@@ -182,8 +191,15 @@ const EventManagement = () => {
   };
 
   const saveEvent = async () => {
-    if (!eventForm.title || !eventForm.startDate || !eventForm.endDate || !eventForm.city || !eventForm.venue) {
+    if (!eventForm.title || !eventForm.startDate || !eventForm.endDate || !eventForm.city || !eventForm.venue || !eventForm.role || !eventForm.description) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Image is required: for new events, image must be uploaded; for existing events, must have existing image or new upload
+    const hasImage = eventForm.image || (selectedEvent && eventForm.imagePreview);
+    if (!hasImage) {
+      toast.error("Please upload an event image");
       return;
     }
 
@@ -195,12 +211,8 @@ const EventManagement = () => {
       formData.append("end_date", eventForm.endDate);
       formData.append("city", eventForm.city);
       formData.append("venue", eventForm.venue);
-      if (eventForm.role) {
-        formData.append("role", eventForm.role);
-      }
-      if (eventForm.description) {
-        formData.append("description", eventForm.description);
-      }
+      formData.append("role", eventForm.role);
+      formData.append("description", eventForm.description);
       if (eventForm.image) {
         formData.append("image", eventForm.image);
       }
@@ -339,10 +351,10 @@ const EventManagement = () => {
   };
 
   useEffect(() => {
-    if (router.query.tab) {
-      setActiveTab(router.query.tab);
-    }
-  }, [router.query.tab]);
+  if (router?.isReady && router?.query?.tab) {
+    setActiveTab(router.query.tab);
+  }
+}, [router?.isReady, router?.query?.tab]);
 
   // Load marquee on mount
   useEffect(() => {
@@ -659,21 +671,9 @@ const EventManagement = () => {
                               </td>
                               <td className="font-weight-medium">{event.title}</td>
                               <td>
-                                <div>
-                                  {new Date(event.startDate).toLocaleDateString("en-GB", {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                  })}
-                                </div>
+                                <div>{formatDate(event.startDate)}</div>
                                 <small className="text-muted">to</small>
-                                <div>
-                                  {new Date(event.endDate).toLocaleDateString("en-GB", {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                  })}
-                                </div>
+                                <div>{formatDate(event.endDate)}</div>
                               </td>
                               <td>{event.city}</td>
                               <td>{event.venue}</td>
@@ -742,9 +742,10 @@ const EventManagement = () => {
                 <label>Title *</label>
                 <input
                   type="text"
+                  name="title"
                   className="form-control"
                   value={eventForm.title}
-                  onChange={(e) => handleEventFormChange("title", e.target.value)}
+                  onChange={handleEventFormChange}
                   placeholder="Enter event title"
                 />
               </div>
@@ -756,14 +757,10 @@ const EventManagement = () => {
                 <label>Start Date *</label>
                 <input
                   type="date"
+                  name="startDate"
                   className="form-control"
                   value={eventForm.startDate}
-                  onChange={(e) => {
-                    handleEventFormChange("startDate", e.target.value);
-                    if (eventForm.endDate && e.target.value > eventForm.endDate) {
-                      handleEventFormChange("endDate", "");
-                    }
-                  }}
+                  onChange={handleEventFormChange}
                 />
               </div>
             </div>
@@ -774,11 +771,12 @@ const EventManagement = () => {
                 <label>End Date *</label>
                 <input
                   type="date"
+                  name="endDate"
                   className="form-control"
                   value={eventForm.endDate}
                   disabled={!eventForm.startDate}
                   min={eventForm.startDate}
-                  onChange={(e) => handleEventFormChange("endDate", e.target.value)}
+                  onChange={handleEventFormChange}
                 />
               </div>
             </div>
@@ -789,9 +787,10 @@ const EventManagement = () => {
                 <label>City *</label>
                 <input
                   type="text"
+                  name="city"
                   className="form-control"
                   value={eventForm.city}
-                  onChange={(e) => handleEventFormChange("city", e.target.value)}
+                  onChange={handleEventFormChange}
                   placeholder="Enter city"
                 />
               </div>
@@ -803,9 +802,10 @@ const EventManagement = () => {
                 <label>Venue *</label>
                 <input
                   type="text"
+                  name="venue"
                   className="form-control"
                   value={eventForm.venue}
-                  onChange={(e) => handleEventFormChange("venue", e.target.value)}
+                  onChange={handleEventFormChange}
                   placeholder="Enter venue name"
                 />
               </div>
@@ -814,11 +814,12 @@ const EventManagement = () => {
             {/* Role */}
             <div className="col-12">
               <div className="form-group">
-                <label>Role</label>
+                <label>Role *</label>
                 <select
+                  name="role"
                   className="form-control"
                   value={eventForm.role}
-                  onChange={(e) => handleEventFormChange("role", e.target.value)}
+                  onChange={handleEventFormChange}
                 >
                   {roleOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -832,12 +833,13 @@ const EventManagement = () => {
             {/* Description */}
             <div className="col-12">
               <div className="form-group">
-                <label>Description</label>
+                <label>Description *</label>
                 <textarea
+                  name="description"
                   className="form-control"
                   rows={3}
                   value={eventForm.description}
-                  onChange={(e) => handleEventFormChange("description", e.target.value)}
+                  onChange={handleEventFormChange}
                   placeholder="Enter event description"
                 />
               </div>
@@ -846,7 +848,7 @@ const EventManagement = () => {
             {/* Image Upload */}
             <div className="col-12">
               <div className="form-group">
-                <label>Event Image</label>
+                <label>Event Image *</label>
                 <div className="d-flex align-items-start">
                   <div className="flex-grow-1 mr-3">
                     <input

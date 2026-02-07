@@ -48,6 +48,15 @@ export const formatResponseTime = (minutes, vendor = null) => {
   return `${days}d ${hrs}h`;
 };
 
+export const formatDate = (date, locale = "en-GB") => {
+  if (!date) return "-";
+  return new Date(date).toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
 /**
  * Format delivery period in days
  * @param {number} period - Delivery period in days
