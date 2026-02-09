@@ -126,6 +126,13 @@
         "active": false
       },
       {
+        "title": "Event Management",
+        "link": "/event-management",
+        "class": "",
+        "icon": "",
+        "active": false
+      },
+      {
         "title": "Testimonial Management",
         "link": "/testimonial-management",
         "class": "",
