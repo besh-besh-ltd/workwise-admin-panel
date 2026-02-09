@@ -10,6 +10,7 @@ interface MenuItem {
   class?: string;
   active?: boolean;
   children: ChildMenuItem[];
+  icon: string;
 }
 
 interface ChildMenuItem {
@@ -17,6 +18,7 @@ interface ChildMenuItem {
   link?: string;
   class?: string;
   active?: boolean;
+  icon: string;
 }
 
 interface UserAccess {
@@ -27,6 +29,26 @@ const Sidebar: React.FC = () => {
   const [showMenu, setShowMenu] = useState<MenuItem[]>(sideMenu as MenuItem[]);
   const [filteredMenuData, setFilteredMenuData] = useState<MenuItem[]>([]);
   const [userAccess, setUserAccess] = useState<UserAccess[] | string>([]);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+   useEffect(() => {
+    const savedCollapsed = localStorage.getItem("sidebarCollapsed");
+    if (savedCollapsed === "true") {
+      setIsCollapsed(true);
+      document.body.classList.add("sidebar-mini", "sidebar-collapse");
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    const newCollapsed = !isCollapsed;
+    setIsCollapsed(newCollapsed);
+    localStorage.setItem("sidebarCollapsed", newCollapsed.toString());
+    if (newCollapsed) {
+      document.body.classList.add("sidebar-mini", "sidebar-collapse");
+    } else {
+      document.body.classList.remove("sidebar-mini", "sidebar-collapse");
+    }
+  };
 
   useEffect(() => {
     const accessFromStorage = localStorage.getItem("access");
@@ -129,10 +151,20 @@ const Sidebar: React.FC = () => {
     <>
       <div className={"main-sidebar sidebar-dark-primary elevation-4 show"}>
         <Link href="#" className="brand-link d-flex justify-content-center">
-          <Image src={logo} alt="Logo-1" priority />
+        {/* Fixing the LCP */}
+          <Image
+            src={logo}
+            alt="Work-wise logo"
+            priority
+            style={{
+              width: isCollapsed ? "40px" : "150px",
+              height: "auto",
+              transition: "width 0.3s ease-in-out",
+            }}
+          />
         </Link>
-        <div className="sidebar">
-          <nav className="mt-2">
+        <div className="sidebar" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 57px)" }}>
+          <nav className="mt-2" style={{ flex: 1, overflowY: "auto" }}>
             <ul
               className="nav nav-pills nav-sidebar flex-column"
               data-widget="treeview"
@@ -156,10 +188,14 @@ const Sidebar: React.FC = () => {
                           e.preventDefault();
                         }
                       }}
+                      title={item.title}
                     >
-                      <i className="nav-icon"></i>
+                      <i className={`${item.icon || "fa fa-circle"} nav-icon`}></i>
                       <p>
-                        <i className="nav-icon"></i> {truncate(item.title, 20)}
+                        {truncate(item.title, 20)}
+                        {item.children && item.children.length > 0 && (
+                          <i className="fa fa-angle-left right"></i>
+                        )}
                       </p>
                     </Link>
                   </li>
@@ -178,8 +214,9 @@ const Sidebar: React.FC = () => {
                             handleActiveMenu(i, cIndex);
                             handlePageNotation(childrenItem.title, i, cIndex);
                           }}
+                          title={childrenItem.title}
                         >
-                          <i className="fa fa-check nav-icon"></i>
+                          <i className={`${childrenItem.icon || "fa fa-circle"} nav-icon`}></i>
                           <p>{truncate(childrenItem.title, 20)}</p>
                         </Link>
                       </li>
@@ -188,6 +225,24 @@ const Sidebar: React.FC = () => {
               ))}
             </ul>
           </nav>
+          <div style={{ padding: "10px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+            <button
+              onClick={toggleSidebar}
+              className="btn btn-outline-light btn-block"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: isCollapsed ? "center" : "flex-start",
+                gap: "8px",
+                padding: "8px 12px",
+                fontSize: "14px",
+              }}
+              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              <i className={`fa fa-angle-double-${isCollapsed ? "right" : "left"}`}></i>
+              {!isCollapsed && <span>Collapse</span>}
+            </button>
+          </div>
         </div>
       </div>
       <div className={"menu-overlay"}></div>
