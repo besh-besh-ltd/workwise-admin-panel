@@ -1,8 +1,19 @@
-import React, { useState, useEffect, ChangeEvent } from "react";
+import React, { useState, useEffect } from "react";
 import ReactPaginate from "react-paginate";
-import { Button, Spinner, Card, InputGroup, Form, Collapse } from "react-bootstrap";
-import { getContactUsPage, updateCommunicationRemark } from "@/utils/services/contact-us";
+import {
+  Button,
+  Spinner,
+  Card,
+  InputGroup,
+  Form,
+  Collapse,
+} from "react-bootstrap";
+import {
+  getContactUsPage,
+  updateCommunicationRemark,
+} from "@/utils/services/contact-us";
 import { toast } from "react-toastify";
+import { Avatar, DateDisplay, FileAttachments } from "@/components/shared";
 
 interface ContactItem {
   id: number;
@@ -18,101 +29,30 @@ interface ContactItem {
   attachments?: any[];
 }
 
-// Avatar Component
-const Avatar = ({ name, size = 32, className = "" }) => (
-  <div
-    className={`rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 ${className}`}
-    style={{ width: size, height: size }}
-  >
-    <span className={`fw-bold ${size <= 32 ? "small" : ""}`}>
-      {name?.charAt(0)?.toUpperCase() || "?"}
-    </span>
-  </div>
-);
-
-// Date Display Component
-const DateDisplay = ({ date }) => {
-  let displayText = "--";
-  if (date) {
-    const d = new Date(date);
-    if (!isNaN(d.getTime())) {
-      displayText = d.toLocaleDateString("en-IN", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-    }
-  }
-  return (
-    <div className="d-flex align-items-center text-muted small">
-      <i className="fa fa-calendar me-2 text-primary" style={{ width: 14 }}></i>
-      <span>
-        {displayText}
-      </span>
-    </div>
-  );
-};
-
-// Attachment Section Component
-const AttachmentSection = ({ attachments }) => {
-  if (!attachments || attachments.length === 0) return null;
-
-  const getFileIcon = (filename) => {
-    const ext = filename?.split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'pdf':
-        return { icon: 'fa-file-pdf-o', color: '#dc3545' };
-      case 'doc':
-      case 'docx':
-        return { icon: 'fa-file-word-o', color: '#2b579a' };
-      case 'xls':
-      case 'xlsx':
-        return { icon: 'fa-file-excel-o', color: '#1d6f42' };
-      case 'png':
-      case 'jpg':
-      case 'jpeg':
-      case 'gif':
-        return { icon: 'fa-file-image-o', color: '#17a2b8' };
-      default:
-        return { icon: 'fa-file-o', color: '#6c757d' };
-    }
-  };
-
-  return (
-    <div className="mt-3">
-      <label className="text-uppercase small fw-semibold text-muted mb-2 d-block">
-        <i className="fa fa-paperclip me-1"></i>
-        Attachments ({attachments.length})
-      </label>
-      <div className="d-flex flex-wrap gap-2">
-        {attachments.map((file) => {
-          const { icon, color } = getFileIcon(file.file_name);
-          return (
-            <a
-              key={file.id}
-              href={file.file_path}
-              target="_blank"
-              rel="noopener noreferrer"
-              download
-              className="d-flex align-items-center gap-2 bg-white border rounded px-2 py-1 text-decoration-none text-dark small"
-              style={{ maxWidth: '200px' }}
-              title={file.file_name}
-            >
-              <i className={`fa ${icon}`} style={{ color, fontSize: '16px' }}></i>
-              <span className="text-truncate" style={{ maxWidth: '120px' }}>
-                {file.file_name}
-              </span>
-              <i className="fa fa-download text-muted" style={{ fontSize: '12px' }}></i>
-            </a>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
 // Remark Section Component
-const RemarkSection = ({ item, isEditing, tempRemark, isRemoving, onEdit, onSave, onCancel, onRemarkChange }) => {
+type RemarkSectionProps = {
+  item: any;
+  isEditing: boolean;
+  tempRemark: string;
+  isRemoving: boolean;
+  onEdit: () => void;
+  onSave: (remove: boolean) => void;
+  onCancel: () => void;
+  onRemarkChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => void;
+};
+
+const RemarkSection: React.FC<RemarkSectionProps> = ({
+  item,
+  isEditing,
+  tempRemark,
+  isRemoving,
+  onEdit,
+  onSave,
+  onCancel,
+  onRemarkChange,
+}) => {
   if (isEditing) {
     return (
       <div className="d-flex flex-column gap-2">
@@ -182,7 +122,33 @@ const RemarkSection = ({ item, isEditing, tempRemark, isRemoving, onEdit, onSave
 };
 
 // Message Card Component
-const MessageCard = ({ item, isEditing, isExpanded, tempRemark, isRemoving, onToggleExpand, onEditRemark, onSaveRemark, onCancelEdit, onRemarkChange }) => (
+interface MessageCardProps {
+  item: ContactItem;
+  isEditing: boolean;
+  isExpanded: boolean;
+  tempRemark: string;
+  isRemoving: boolean;
+  onToggleExpand: () => void;
+  onEditRemark: (item: ContactItem) => void;
+  onSaveRemark: (item: ContactItem, remove: boolean) => void;
+  onCancelEdit: () => void;
+  onRemarkChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => void;
+}
+
+const MessageCard: React.FC<MessageCardProps> = ({
+  item,
+  isEditing,
+  isExpanded,
+  tempRemark,
+  isRemoving,
+  onToggleExpand,
+  onEditRemark,
+  onSaveRemark,
+  onCancelEdit,
+  onRemarkChange,
+}) => (
   <Card className="mb-3 shadow-sm border-0">
     <Card.Body className="p-0">
       {/* Card Header - Name & Date */}
@@ -206,7 +172,10 @@ const MessageCard = ({ item, isEditing, isExpanded, tempRemark, isRemoving, onTo
                   Email
                 </label>
                 <div className="d-flex align-items-center text-dark small">
-                  <i className="fa fa-envelope me-2 text-primary" style={{ width: 14 }}></i>
+                  <i
+                    className="fa fa-envelope me-2 text-primary"
+                    style={{ width: 14 }}
+                  ></i>
                   <span className="text-truncate">{item.email}</span>
                 </div>
               </div>
@@ -217,7 +186,10 @@ const MessageCard = ({ item, isEditing, isExpanded, tempRemark, isRemoving, onTo
                   Phone
                 </label>
                 <div className="d-flex align-items-center text-dark small">
-                  <i className="fa fa-phone me-2 text-primary" style={{ width: 14 }}></i>
+                  <i
+                    className="fa fa-phone me-2 text-primary"
+                    style={{ width: 14 }}
+                  ></i>
                   <span>{item.phone}</span>
                 </div>
               </div>
@@ -250,23 +222,31 @@ const MessageCard = ({ item, isEditing, isExpanded, tempRemark, isRemoving, onTo
                 onClick={onToggleExpand}
                 aria-expanded={isExpanded}
               >
-                <i className={`fa fa-chevron-${isExpanded ? "up" : "down"} me-1`}></i>
+                <i
+                  className={`fa fa-chevron-${isExpanded ? "up" : "down"} me-1`}
+                ></i>
                 {isExpanded ? "Hide Message" : "View Message"}
               </Button>
             </div>
 
             {/* Collapsible Message Section */}
-            <Collapse in={isExpanded}>
-              <div className="mt-2">
-                <div className="bg-light border rounded p-3">
-                  <p className="mb-0 text-dark" style={{ whiteSpace: "pre-wrap" }}>
-                    {item.comment}
-                  </p>
+            <Collapse
+              in={isExpanded}
+              children={
+                <div className="mt-2">
+                  <div className="bg-light border rounded p-3">
+                    <p
+                      className="mb-0 text-dark"
+                      style={{ whiteSpace: "pre-wrap" }}
+                    >
+                      {item.comment}
+                    </p>
+                  </div>
+                  {/* Attachments Section */}
+                  <FileAttachments attachments={item.attachments} />
                 </div>
-                {/* Attachments Section */}
-                <AttachmentSection attachments={item.attachments} />
-              </div>
-            </Collapse>
+              }
+            />
           </div>
         </div>
 
@@ -294,7 +274,7 @@ const MessageCard = ({ item, isEditing, isExpanded, tempRemark, isRemoving, onTo
 );
 
 // Loading State Component
-const LoadingState = () => (
+const LoadingState: React.FC = () => (
   <div className="text-center py-5">
     <Spinner animation="border" variant="primary" />
     <p className="mt-2 text-muted mb-0">Loading messages...</p>
@@ -302,7 +282,7 @@ const LoadingState = () => (
 );
 
 // Empty State Component
-const EmptyState = () => (
+const EmptyState: React.FC = () => (
   <Card className="border-0 shadow-sm">
     <Card.Body className="text-center py-5">
       <i className="fa fa-inbox fa-3x text-muted mb-3 d-block"></i>
@@ -312,7 +292,23 @@ const EmptyState = () => (
 );
 
 // Pagination Component
-const PaginationSection = ({ page, totalPageCount, goToPage, onPageChange, onGoToPageChange, onGoToPage }) => (
+interface PaginationSectionProps {
+  page: number;
+  totalPageCount: number;
+  goToPage: string;
+  onPageChange: (event: { selected: number }) => void;
+  onGoToPageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onGoToPage: () => void;
+}
+
+const PaginationSection: React.FC<PaginationSectionProps> = ({
+  page,
+  totalPageCount,
+  goToPage,
+  onPageChange,
+  onGoToPageChange,
+  onGoToPage,
+}) => (
   <Card className="border-0 shadow-sm">
     <Card.Body className="py-3">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -355,7 +351,7 @@ const PaginationSection = ({ page, totalPageCount, goToPage, onPageChange, onGoT
 // Main Component
 // ============================================
 
-const Message = () => {
+const Message: React.FC = () => {
   const [contactData, setContactData] = useState([]);
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(1);
@@ -384,16 +380,18 @@ const Message = () => {
     setTempRemark("");
   };
 
-  const saveRemark = (item: ContactItem, remove: boolean = false): void => {
+  const saveRemark = async (
+    item: ContactItem,
+    remove: boolean = false,
+  ): Promise<void> => {
     const remarkToSave = remove ? null : tempRemark.trim();
 
-    updateCommunicationRemark(item.id, remarkToSave)
-      .then(() => {
-        toast.success("Comment updated successfully");
-      })
-      .catch(() => {
-        toast.error("Error updating comment");
-      });
+    try {
+      await updateCommunicationRemark(item.id, remarkToSave);
+      toast.success("Comment updated successfully");
+    } catch (error) {
+      toast.error("Error updating comment");
+    }
 
     item.remark = remarkToSave;
     setEditRow(null);
@@ -407,21 +405,24 @@ const Message = () => {
     setIsRemoving(value === "--");
   };
 
-  const getContactUs = () => {
+  const getContactUs = async () => {
     setIsLoading(true);
     setContactData([]);
-    getContactUsPage(page, limit)
-      .then((res : any) => {
-        setTotalPages(res.count || 0);
-        setContactData(res.data.map((item: Omit<ContactItem, 'isChecked'>) => ({ ...item, isChecked: false })));
-      })
-      .catch((err) => {
-        console.log(err);
-        toast.error("Failed to load messages");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    try {
+      const res: any = await getContactUsPage(page, limit);
+      setTotalPages(res.count || 0);
+      setContactData(
+        res.data.map((item: Omit<ContactItem, "isChecked">) => ({
+          ...item,
+          isChecked: false,
+        })),
+      );
+    } catch (err) {
+      console.log(err);
+      toast.error("Failed to load messages");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
