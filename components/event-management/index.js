@@ -16,7 +16,7 @@ import {
 } from "@/utils/services/cms-management";
 import { Editor } from "@tinymce/tinymce-react";
 import parse from "html-react-parser";
-import { formatDate } from "@/components/service-module/vendor-stats/utils";
+import { formatDate } from "@/utils/dateUtils";
 
 // Default marquee settings
 const defaultMarqueeSettings = {
