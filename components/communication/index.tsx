@@ -352,14 +352,14 @@ const PaginationSection: React.FC<PaginationSectionProps> = ({
 // ============================================
 
 const Message: React.FC = () => {
-  const [contactData, setContactData] = useState([]);
+  const [contactData, setContactData] = useState<ContactItem[]>([]);
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const [expandedCard, setExpandedCard] = useState(null);
-  const [editRow, setEditRow] = useState(null);
+  const [editRow, setEditRow] = useState<number | null>(null);
   const [tempRemark, setTempRemark] = useState("");
   const [isRemoving, setIsRemoving] = useState(false);
   const [goToPage, setGoToPage] = useState("");
