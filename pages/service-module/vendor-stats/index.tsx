@@ -6,7 +6,7 @@ const VendorStatsDashboard = dynamic(
   { ssr: false }
 );
 
-const VendorStatsPage = () => {
+const VendorStatsPage: React.FC = () => {
   return (
     <div>
       <VendorStatsDashboard />
@@ -15,4 +15,3 @@ const VendorStatsPage = () => {
 };
 
 export default VendorStatsPage;
-

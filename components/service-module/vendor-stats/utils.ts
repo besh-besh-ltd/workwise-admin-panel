@@ -2,12 +2,21 @@
  * Utility functions for vendor stats
  */
 
+interface Vendor {
+  awards?: number;
+  regrets?: number;
+  avg_response_minutes?: number | null;
+}
+
+interface VendorRow {
+  vendor_id?: string | number;
+  id?: string | number;
+}
+
 /**
  * Check if vendor has actually submitted quotes (has response time data)
- * @param {Object} vendor - Vendor object
- * @returns {boolean} - True if vendor has submitted quotes
  */
-export const hasResponseData = (vendor) => {
+export const hasResponseData = (vendor: Vendor | null | undefined): boolean => {
   if (!vendor) return false;
   // If vendor has awards or regrets, they've submitted quotes
   const hasQuotes = (vendor?.awards || 0) > 0 || (vendor?.regrets || 0) > 0;
@@ -18,16 +27,16 @@ export const hasResponseData = (vendor) => {
 
 /**
  * Format response time in minutes to human-readable string
- * @param {number} minutes - Response time in minutes
- * @param {Object} vendor - Vendor object (optional)
- * @returns {string} - Formatted response time
  */
-export const formatResponseTime = (minutes, vendor = null) => {
+export const formatResponseTime = (
+  minutes: number | null | undefined,
+  vendor: Vendor | null = null
+): string => {
   // If vendor is provided, check if they have actual quote data
   if (vendor && !hasResponseData(vendor)) {
     return "N/A";
   }
-  
+
   // Handle null, undefined, or 0 minutes
   if (minutes == null || minutes === 0) {
     // If vendor has awards/regrets, 0 is valid (instant response) - show "0 min"
@@ -37,7 +46,7 @@ export const formatResponseTime = (minutes, vendor = null) => {
     }
     return "N/A";
   }
-  
+
   // Format positive minutes
   if (minutes < 60) return `${Math.round(minutes)} min`;
   const hours = Math.floor(minutes / 60);
@@ -50,23 +59,18 @@ export const formatResponseTime = (minutes, vendor = null) => {
 
 /**
  * Format delivery period in days
- * @param {number} period - Delivery period in days
- * @returns {string} - Formatted delivery period
  */
-export const formatDeliveryPeriod = (period) => {
+export const formatDeliveryPeriod = (period: number | null | undefined): string => {
   if (!period || period === 0) return "N/A";
   return `${period} days`;
 };
 
 /**
  * Get vendor ID from row object, ensuring it's always a string
- * @param {Object} row - Row object with vendor_id or id
- * @returns {string} - Vendor ID as string
  */
-export const getVendorId = (row) => {
+export const getVendorId = (row: VendorRow | null | undefined): string => {
   if (!row) return "";
   // Always use vendor_id if available, fallback to id
   const id = row.vendor_id ?? row.id;
   return String(id || "");
 };
-
