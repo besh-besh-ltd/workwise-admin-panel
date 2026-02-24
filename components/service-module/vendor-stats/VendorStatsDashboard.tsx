@@ -976,6 +976,8 @@ const VendorStatsDashboard: React.FC = () => {
               name="date_to"
               value={filters.date_to}
               onChange={handleFilterChange}
+              disabled={!filters.date_from}
+              min={filters.date_from}
             />
           </div>
           <div className="col-md-2">
