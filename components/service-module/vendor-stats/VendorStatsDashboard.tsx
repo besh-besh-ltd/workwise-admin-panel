@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback, useRef, ChangeEvent } from "react";
-import { OverlayTrigger, Tooltip } from "react-bootstrap";
+import React, { useEffect, useMemo, useState, useCallback, ChangeEvent } from "react";
 import { Doughnut, Line, Bar } from "react-chartjs-2";
 import {
   CategoryScale,
@@ -11,39 +10,21 @@ import {
   Tooltip as ChartTooltip,
   Legend,
   Chart as ChartJS,
-  ChartData,
   ChartOptions,
 } from "chart.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
-  faFilter,
-  faSort,
-  faSortUp,
-  faSortDown,
-  faTrophy,
-  faBan,
-  faClipboardCheck,
-  faFileContract,
-  faQuestionCircle,
-  faTimes,
   faEye,
-  faPlus,
   faChartPie,
   faChartBar,
   faChartLine,
-  faFileExcel,
-  faDownload
 } from "@fortawesome/free-solid-svg-icons";
 import { fetchVendorStatsOverview, fetchVendorStatsByVendor, fetchQuotationFinancialAnalysis } from "@/utils/services/vendor-stats";
-import { handleGetVendorList } from "@/utils/services/vendor-management";
-import { vendorList } from "@/utils/services/rfq";
 import { getParentCategories } from "@/utils/services/product-management";
 import { searchAllVariants } from "@/utils/services/product-management";
 import { handleGetBuyerList } from "@/utils/services/buyer-management";
 import Select, { SingleValue } from "react-select";
 import VendorSelect from "./VendorSelect";
-import VendorComparisonTable from "./VendorComparisonTable";
 import { formatResponseTime, formatDeliveryPeriod, hasResponseData, getVendorId } from "./utils";
 
 // Type definitions
@@ -246,15 +227,6 @@ interface Buyer {
   organization_name?: string;
 }
 
-interface Vendor {
-  id: string | number;
-  name?: string;
-  organization_name?: string;
-  email?: string;
-  mobile?: string;
-  phone?: string;
-}
-
 interface FilterBarProps {
   showBuyer?: boolean;
   showVendor?: boolean;
@@ -277,24 +249,22 @@ const VendorStatsDashboard: React.FC = () => {
     subscription_plan: "",
   });
   const [activeTab, setActiveTab] = useState<string>("overview");
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [, setCategories] = useState<Category[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
-  const [variants, setVariants] = useState<Variant[]>([]);
+  const [, setVariants] = useState<Variant[]>([]);
   const [variantOptions, setVariantOptions] = useState<SelectOption[]>([]);
-  const [buyers, setBuyers] = useState<Buyer[]>([]);
+  const [, setBuyers] = useState<Buyer[]>([]);
   const [buyerOptions, setBuyerOptions] = useState<SelectOption[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [vendorDetail, setVendorDetail] = useState<VendorDetail | null>(null);
   const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
-  const [vendorDetails, setVendorDetails] = useState<VendorDetails>({});
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [vendorOptions, setVendorOptions] = useState<SelectOption[]>([]);
-  const [vendorSearchTerm, setVendorSearchTerm] = useState<string>("");
-  const [vendorSearchLoading, setVendorSearchLoading] = useState<boolean>(false);
-  const vendorSearchTermRef = useRef<string>("");
+  const [, setVendorDetails] = useState<VendorDetails>({});
+  const [vendorOptions] = useState<SelectOption[]>([]);
+  const [, setVendorSearchTerm] = useState<string>("");
+  const [vendorSearchLoading] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [vendorLoading, setVendorLoading] = useState<VendorLoading>({});
-  const [financialData, setFinancialData] = useState<FinancialData | null>(null);
+  const [, setVendorLoading] = useState<VendorLoading>({});
+  const [, setFinancialData] = useState<FinancialData | null>(null);
   const [financialLoading, setFinancialLoading] = useState<boolean>(false);
   const [leaderboardFilters, setLeaderboardFilters] = useState<LeaderboardFilters>({
     source: "",
@@ -302,7 +272,7 @@ const VendorStatsDashboard: React.FC = () => {
     minAwards: "",
     maxRegrets: "",
   });
-  const [columnFilter, setColumnFilter] = useState<ColumnFilter>({ column: null, direction: null });
+  const [columnFilter] = useState<ColumnFilter>({ column: null, direction: null });
   const [chartViews, setChartViews] = useState<ChartViews>({
     sourceDistribution: 0,
     responseTime: 0,
@@ -381,48 +351,6 @@ const VendorStatsDashboard: React.FC = () => {
       },
     ];
   }, [overview]);
-
-  const handleColumnFilter = (column: string): void => {
-    if (columnFilter.column === column) {
-      setColumnFilter({ column: null, direction: null });
-      setLeaderboardFilters((prev) => ({ ...prev, sortBy: "awards_desc" }));
-    } else {
-      setColumnFilter({ column, direction: "asc" });
-      setLeaderboardFilters((prev) => ({ ...prev, sortBy: `${column}_asc` }));
-    }
-  };
-
-  const toggleSortDirection = (e: React.MouseEvent, column: string): void => {
-    e.stopPropagation();
-    if (columnFilter.column === column) {
-      const newDirection = columnFilter.direction === "asc" ? "desc" : "asc";
-      setColumnFilter({ column, direction: newDirection });
-      setLeaderboardFilters((prev) => ({ ...prev, sortBy: `${column}_${newDirection}` }));
-    }
-  };
-
-  const getColumnSortIcon = (column: string): IconDefinition => {
-    if (columnFilter.column !== column) return faSort;
-    return columnFilter.direction === "asc" ? faSortUp : faSortDown;
-  };
-
-  const isColumnVisible = (columnName: string): boolean => {
-    if (["#", "Vendor Name", "Company", "Source", "Action"].includes(columnName)) {
-      return true;
-    }
-    if (!columnFilter.column) {
-      return true;
-    }
-    const columnMap: Record<string, string> = {
-      "response": "Avg Response Time",
-      "awards": "Awards",
-      "regrets": "Regrets",
-      "tech_eval": "Tech Eval",
-      "clauses": "Clauses",
-      "queries": "Queries",
-    };
-    return columnMap[columnFilter.column] === columnName;
-  };
 
   const filteredLeaderboard = useMemo<LeaderboardRow[]>(() => {
     if (!overview || !overview.leaderboard) return [];
@@ -578,48 +506,6 @@ const VendorStatsDashboard: React.FC = () => {
     }
   };
 
-  const fetchVendors = async (searchTerm: string): Promise<void> => {
-    try {
-      setVendorSearchLoading(true);
-      const vendorsResponse = await vendorList(searchTerm);
-
-      if ((vendorsResponse as any)?.data) {
-        const vendorsList = Array.isArray((vendorsResponse as any).data) ? (vendorsResponse as any).data : [];
-        setVendors(vendorsList);
-        const options = vendorsList.map((vendor: Vendor) => ({
-          label: vendor.organization_name || vendor.name || '-',
-          value: vendor.id,
-          email: vendor.email || "Email Not Available",
-          phone: vendor.mobile || vendor.phone || "Phone Not Available"
-        }));
-        setVendorOptions(options);
-        console.log(`Loaded ${vendorsList.length} vendors for search: "${searchTerm}"`);
-      } else {
-        console.warn("Invalid vendor response:", vendorsResponse);
-        setVendorOptions([]);
-      }
-    } catch (error) {
-      console.error('Error fetching vendors:', error);
-      setVendorOptions([]);
-    } finally {
-      setVendorSearchLoading(false);
-    }
-  };
-
-  const vendorSearchCallbackRef = useRef<NodeJS.Timeout | null>(null);
-
-  const triggerVendorSearch = useCallback((searchTerm: string): (() => void) | undefined => {
-    if (searchTerm.length < 3) {
-      return;
-    }
-
-    const handler = setTimeout(() => {
-      fetchVendors(searchTerm);
-    }, 1000);
-
-    return () => clearTimeout(handler);
-  }, []);
-
   const fetchVendorStats = async (vendorIds: string[]): Promise<void> => {
     if (!vendorIds || vendorIds.length === 0) {
       setVendorDetails({});
@@ -705,368 +591,6 @@ const VendorStatsDashboard: React.FC = () => {
     setTimeout(() => {
       fetchOverview();
     }, 100);
-  };
-
-  // Excel Export Functions
-  const generateExcelFile = async (data: Record<string, any>[], headers: string[], sheetName: string, title: string | null = null): Promise<ArrayBuffer> => {
-    try {
-      let XLSX_USE: any;
-      try {
-        const xlsxModule = await import("xlsx-js-style");
-        XLSX_USE = xlsxModule;
-
-        if (!XLSX_USE.utils) {
-          throw new Error("xlsx-js-style loaded but utils not found");
-        }
-      } catch (e) {
-        console.warn("xlsx-js-style failed, trying xlsx:", e);
-        try {
-          const xlsxModule = await import("xlsx");
-          XLSX_USE = xlsxModule;
-
-          if (!XLSX_USE.utils) {
-            throw new Error("xlsx loaded but utils not found");
-          }
-        } catch (e2) {
-          console.error("Both Excel libraries failed:", e2);
-          throw new Error("Excel library not available. Please install xlsx-js-style package.");
-        }
-      }
-
-      const worksheetData: any[][] = [];
-
-      if (title) {
-        worksheetData.push([title]);
-        worksheetData.push([]);
-      }
-
-      worksheetData.push(headers);
-
-      data.forEach((row) => {
-        const rowData = headers.map((header) => {
-          const value = row[header] ?? "";
-          return value === null || value === undefined ? "" : value;
-        });
-        worksheetData.push(rowData);
-      });
-
-      const ws = XLSX_USE.utils.aoa_to_sheet(worksheetData);
-      const range = XLSX_USE.utils.decode_range(ws["!ref"]);
-
-      const hasStyleSupport = XLSX_USE.write && typeof XLSX_USE.write === 'function' && XLSX_USE.utils;
-      if (hasStyleSupport) {
-        for (let col = range.s.c; col <= range.e.c; col++) {
-          const cellAddress = XLSX_USE.utils.encode_cell({ r: title ? 2 : 0, c: col });
-          if (!ws[cellAddress]) ws[cellAddress] = {};
-          if (!ws[cellAddress].s) ws[cellAddress].s = {};
-          ws[cellAddress].s = {
-            font: { bold: true, sz: 12 },
-            fill: { fgColor: { rgb: "DDDDDD" } },
-            alignment: { horizontal: "center", vertical: "center" },
-            border: {
-              top: { style: "thin" },
-              bottom: { style: "thin" },
-              left: { style: "thin" },
-              right: { style: "thin" }
-            }
-          };
-        }
-
-        if (title) {
-          const titleCell = XLSX_USE.utils.encode_cell({ r: 0, c: 0 });
-          if (!ws[titleCell]) ws[titleCell] = { v: title };
-          if (!ws[titleCell].s) ws[titleCell].s = {};
-          ws[titleCell].s = {
-            font: { bold: true, sz: 16 },
-            alignment: { horizontal: "left", vertical: "center" }
-          };
-          if (!ws["!merges"]) ws["!merges"] = [];
-          ws["!merges"].push({
-            s: { r: 0, c: 0 },
-            e: { r: 0, c: range.e.c }
-          });
-        }
-
-        for (let row = (title ? 3 : 1); row <= range.e.r; row++) {
-          for (let col = range.s.c; col <= range.e.c; col++) {
-            const cellAddress = XLSX_USE.utils.encode_cell({ r: row, c: col });
-            if (!ws[cellAddress]) ws[cellAddress] = {};
-            if (!ws[cellAddress].s) ws[cellAddress].s = {};
-            ws[cellAddress].s = {
-              alignment: { horizontal: "center", vertical: "center" },
-              border: {
-                top: { style: "thin" },
-                bottom: { style: "thin" },
-                left: { style: "thin" },
-                right: { style: "thin" }
-              }
-            };
-          }
-        }
-
-        ws["!cols"] = headers.map(() => ({ width: 20 }));
-      }
-
-      const wb = XLSX_USE.utils.book_new();
-      XLSX_USE.utils.book_append_sheet(wb, ws, sheetName);
-
-      const excelBuffer = XLSX_USE.write(wb, { bookType: "xlsx", type: "array" });
-      return excelBuffer;
-    } catch (error) {
-      console.error("Error generating Excel file:", error);
-      throw error;
-    }
-  };
-
-  const downloadExcel = async (data: Record<string, any>[], headers: string[], filename: string, sheetName: string, title: string | null = null): Promise<void> => {
-    try {
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        throw new Error("No data to export");
-      }
-
-      if (!headers || !Array.isArray(headers) || headers.length === 0) {
-        throw new Error("No headers provided");
-      }
-
-      const excelBuffer = await generateExcelFile(data, headers, sheetName, title);
-
-      if (!excelBuffer || excelBuffer.byteLength === 0) {
-        throw new Error("Generated Excel buffer is empty");
-      }
-
-      const blob = new Blob([excelBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-    } catch (error: any) {
-      console.error("Error downloading Excel:", error);
-      const errorMessage = error?.message || "Unknown error occurred";
-      alert(`Failed to download Excel file: ${errorMessage}. Please check the console for details.`);
-    }
-  };
-
-  const exportOverviewStats = async (): Promise<void> => {
-    if (!overview) return;
-
-    const globalData = [{
-      "Total Vendors": overview.total_vendors || 0,
-      "Active Vendors": overview.active_vendors || 0,
-      "Deactivated Vendors": overview.deactivated_vendors || 0,
-      "Avg Response Time": formatResponseTime(overview.avg_response_minutes, overview),
-      "Total Awards": overview.total_awards || 0,
-      "Total Regrets": overview.total_regrets || 0,
-      "Avg Delivery Period": formatDeliveryPeriod(overview.avg_delivery_period),
-      "Tech Eval Accepted": overview.total_tech_eval_accepted || 0,
-      "Tech Eval Rejected": overview.total_tech_eval_rejected || 0,
-      "Clauses Agreed": overview.total_clauses_agreed || 0,
-      "Queries Raised": overview.total_queries_raised || 0
-    }];
-
-    await downloadExcel(
-      globalData,
-      ["Total Vendors", "Active Vendors", "Deactivated Vendors", "Avg Response Time", "Total Awards", "Total Regrets", "Avg Delivery Period", "Tech Eval Accepted", "Tech Eval Rejected", "Clauses Agreed", "Queries Raised"],
-      "vendor_stats_overview_global",
-      "Global Stats",
-      "Vendor Statistics - Global Overview"
-    );
-  };
-
-  const exportLeaderboard = async (): Promise<void> => {
-    if (!filteredLeaderboard || filteredLeaderboard.length === 0) return;
-
-    const leaderboardData = filteredLeaderboard.map((row, index) => ({
-      "#": index + 1,
-      "Vendor Name": row.name || "N/A",
-      "Company": row.company_name || "N/A",
-      "Source": row.source === "admin" ? "Admin Added" : row.source === "self" ? "Self Registration" : row.source === "buyer" ? "Private Vendor" : row.source || "Unknown",
-      "Avg Response Time": formatResponseTime(row.avg_response_minutes, row),
-      "Awards": row.awards || 0,
-      "Regrets": row.regrets || 0,
-      "Tech Eval Accepted": row.tech_eval_accepted || 0,
-      "Tech Eval Rejected": row.tech_eval_rejected || 0,
-      "Clauses Agreed": row.clauses_agreed || 0,
-      "Queries Raised": row.queries_raised || 0
-    }));
-
-    await downloadExcel(
-      leaderboardData,
-      ["#", "Vendor Name", "Company", "Source", "Avg Response Time", "Awards", "Regrets", "Tech Eval Accepted", "Tech Eval Rejected", "Clauses Agreed", "Queries Raised"],
-      "vendor_stats_leaderboard",
-      "Leaderboard",
-      "Vendor Statistics - Leaderboard"
-    );
-  };
-
-  const exportBehaviorAnalysis = async (): Promise<void> => {
-    if (!filteredLeaderboard || filteredLeaderboard.length === 0) return;
-
-    const behaviorData = filteredLeaderboard.map((row) => {
-      const totalRFQs = (row.awards || 0) + (row.regrets || 0);
-      const awardRate = totalRFQs > 0 ? ((row.awards || 0) / totalRFQs * 100).toFixed(1) : "0";
-      const regretRate = totalRFQs > 0 ? ((row.regrets || 0) / totalRFQs * 100).toFixed(1) : "0";
-      const techEvalTotal = (row.tech_eval_accepted || 0) + (row.tech_eval_rejected || 0);
-      const techEvalSuccess = techEvalTotal > 0 ? ((row.tech_eval_accepted || 0) / techEvalTotal * 100).toFixed(1) : "0";
-
-      return {
-        "Vendor Name": row.name || "N/A",
-        "Response Rate": formatResponseTime(row.avg_response_minutes, row),
-        "Award Rate (%)": awardRate,
-        "Regret Rate (%)": regretRate,
-        "Tech Eval Success (%)": techEvalSuccess,
-        "Clause Agreement": row.clauses_agreed || 0,
-        "Query Frequency": row.queries_raised || 0
-      };
-    });
-
-    await downloadExcel(
-      behaviorData,
-      ["Vendor Name", "Response Rate", "Award Rate (%)", "Regret Rate (%)", "Tech Eval Success (%)", "Clause Agreement", "Query Frequency"],
-      "vendor_behavior_analysis",
-      "Behavior Analysis",
-      "Vendor Statistics - Behavior Analysis"
-    );
-  };
-
-  const exportTechEvalStats = async (): Promise<void> => {
-    if (!filteredLeaderboard || filteredLeaderboard.length === 0) return;
-
-    const techEvalData = filteredLeaderboard.map((row) => {
-      const accepted = row.tech_eval_accepted || 0;
-      const rejected = row.tech_eval_rejected || 0;
-      const total = accepted + rejected;
-      const successRate = total > 0 ? ((accepted / total) * 100).toFixed(1) : "0";
-      return {
-        "Vendor Name": row.name || "N/A",
-        "Accepted": accepted,
-        "Rejected": rejected,
-        "Total": total,
-        "Success Rate (%)": successRate
-      };
-    });
-
-    await downloadExcel(
-      techEvalData,
-      ["Vendor Name", "Accepted", "Rejected", "Total", "Success Rate (%)"],
-      "tech_evaluation_stats",
-      "Tech Evaluation",
-      "Vendor Statistics - Technical Evaluation"
-    );
-  };
-
-  const exportClauseAgreementStats = async (): Promise<void> => {
-    if (!filteredLeaderboard || filteredLeaderboard.length === 0) return;
-
-    const clausesData = filteredLeaderboard
-      .filter((row) => (row.clauses_agreed || 0) > 0)
-      .map((row) => {
-        const responded = row.clauses_responded || row.clauses_agreed || 0;
-        const agreed = row.clauses_agreed || 0;
-        const agreementRate = responded > 0 ? ((agreed / responded) * 100).toFixed(1) : "0";
-        return {
-          "Vendor Name": row.name || "N/A",
-          "Clauses Agreed": agreed,
-          "Total Clauses Responded": responded,
-          "Agreement Rate (%)": agreementRate
-        };
-      });
-
-    await downloadExcel(
-      clausesData,
-      ["Vendor Name", "Clauses Agreed", "Total Clauses Responded", "Agreement Rate (%)"],
-      "clause_agreement_stats",
-      "Clause Agreement",
-      "Vendor Statistics - Clause Agreement"
-    );
-  };
-
-  const exportQueriesStats = async (): Promise<void> => {
-    if (!filteredLeaderboard || filteredLeaderboard.length === 0) return;
-
-    const queriesData = filteredLeaderboard
-      .filter((row) => (row.queries_raised || 0) > 0)
-      .map((row) => ({
-        "Vendor Name": row.name || "N/A",
-        "Queries Raised": row.queries_raised || 0,
-        "Queries by Vendor": row.queries_by_vendor || 0,
-        "Total Queries": (row.queries_raised || 0) + (row.queries_by_vendor || 0)
-      }));
-
-    await downloadExcel(
-      queriesData,
-      ["Vendor Name", "Queries Raised", "Queries by Vendor", "Total Queries"],
-      "queries_deviations_stats",
-      "Queries & Deviations",
-      "Vendor Statistics - Queries & Deviations"
-    );
-  };
-
-  const exportFinancialAnalysis = async (): Promise<void> => {
-    if (!financialData) return;
-
-    if (financialData.global_stats) {
-      const globalStatsData = [{
-        "Metric": "Total Quotes Submitted",
-        "Value": financialData.global_stats.total_quotes || 0
-      }, {
-        "Metric": "Average Revisions",
-        "Value": financialData.global_stats.avg_revisions || 0
-      }, {
-        "Metric": "Average Price Quoted",
-        "Value": financialData.global_stats.avg_price_quoted || 0
-      }, {
-        "Metric": "Number of Awards/Finalizations",
-        "Value": financialData.global_stats.total_finalizations || 0
-      }];
-
-      await downloadExcel(
-        globalStatsData,
-        ["Metric", "Value"],
-        "financial_analysis_global",
-        "Global Stats",
-        "Financial Analysis - Global Statistics"
-      );
-    }
-
-    if (financialData.top_buyers && financialData.top_buyers.length > 0) {
-      const buyersData = financialData.top_buyers.map(buyer => ({
-        "Buyer Name": buyer.buyer_name || "N/A",
-        "RFQs Created": buyer.rfqs_created || 0,
-        "Quotes Received": buyer.quotes_sent || 0,
-        "Awards Given": buyer.awards_given || 0
-      }));
-
-      await downloadExcel(
-        buyersData,
-        ["Buyer Name", "RFQs Created", "Quotes Received", "Awards Given"],
-        "financial_analysis_top_buyers",
-        "Top Buyers",
-        "Financial Analysis - Top Buyers"
-      );
-    }
-
-    if (financialData.top_products && financialData.top_products.length > 0) {
-      const productsData = financialData.top_products.map(product => ({
-        "Product Name": product.product_name || "N/A",
-        "Total Quotes": 0,
-        "Average Price": 0,
-        "Finalizations": product.finalizations_count || 0
-      }));
-
-      await downloadExcel(
-        productsData,
-        ["Product Name", "Total Quotes", "Average Price", "Finalizations"],
-        "financial_analysis_top_products",
-        "Top Products",
-        "Financial Analysis - Top Products"
-      );
-    }
   };
 
   useEffect(() => {
@@ -1323,30 +847,6 @@ const VendorStatsDashboard: React.FC = () => {
     };
   }, [overview]);
 
-  const vendorTimelineData = useMemo(() => {
-    const labels = vendorDetail?.timeline?.map((item) => item.bucket_date) || [];
-    return {
-      labels,
-      datasets: [
-        {
-          label: "Quotes",
-          data: vendorDetail?.timeline?.map((item) => item.quotes_count || 0) || [],
-          backgroundColor: "rgba(78, 121, 167, 0.5)",
-        },
-        {
-          label: "Awards",
-          data: vendorDetail?.timeline?.map((item) => item.awards_count || 0) || [],
-          backgroundColor: "rgba(89, 161, 79, 0.5)",
-        },
-        {
-          label: "Regrets",
-          data: vendorDetail?.timeline?.map((item) => item.regrets_count || 0) || [],
-          backgroundColor: "rgba(225, 87, 89, 0.5)",
-        },
-      ],
-    };
-  }, [vendorDetail]);
-
   useEffect(() => {
     fetchOverview();
     fetchCategories();
@@ -1441,10 +941,6 @@ const VendorStatsDashboard: React.FC = () => {
   }, []);
 
 
-  const selectedVendorValue = useMemo(() => {
-    return vendorOptions.filter(opt => selectedVendors.includes(String(opt.value)));
-  }, [vendorOptions, selectedVendors]);
-
   const handleVendorsChange = useCallback((vendorIds: string[]): void => {
     setSelectedVendors(vendorIds);
   }, []);
@@ -1480,6 +976,8 @@ const VendorStatsDashboard: React.FC = () => {
               name="date_to"
               value={filters.date_to}
               onChange={handleFilterChange}
+              disabled={!filters.date_from}
+              min={filters.date_from}
             />
           </div>
           <div className="col-md-2">
