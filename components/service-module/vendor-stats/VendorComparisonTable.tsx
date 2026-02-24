@@ -1,8 +1,58 @@
 import React from "react";
 import { formatResponseTime, formatDeliveryPeriod } from "./utils";
 
-const VendorComparisonTable = ({ vendorIds, vendorDetails }) => {
-  const comparisonData = vendorIds.map((vendorId) => {
+interface VendorInfo {
+  name?: string;
+  company_name?: string;
+}
+
+interface VendorDetail {
+  vendor?: VendorInfo;
+  avg_response_minutes?: number;
+  awards?: number;
+  regrets?: number;
+  tech_eval_accepted?: number;
+  tech_eval_rejected?: number;
+  clauses_agreed?: number;
+  clauses_responded?: number;
+  queries_raised?: number;
+  queries_by_vendor?: number;
+  avg_delivery_period?: number;
+}
+
+interface VendorDetails {
+  [vendorId: string]: VendorDetail;
+}
+
+interface VendorComparisonTableProps {
+  vendorIds: string[];
+  vendorDetails: VendorDetails;
+}
+
+interface ComparisonData {
+  vendorId: string;
+  name: string;
+  company: string;
+  responseTime: string;
+  awards: number;
+  regrets: number;
+  techEvalAccepted: number;
+  techEvalRejected: number;
+  techEvalTotal: number;
+  techEvalSuccessRate: string | number;
+  clausesAgreed: number;
+  clausesResponded: number;
+  clausesAgreementRate: string | number;
+  queriesRaised: number;
+  queriesByVendor: number;
+  avgDelivery: string;
+}
+
+const VendorComparisonTable: React.FC<VendorComparisonTableProps> = ({
+  vendorIds,
+  vendorDetails,
+}) => {
+  const comparisonData: ComparisonData[] = vendorIds.map((vendorId) => {
     const detail = vendorDetails[vendorId];
     const vendor = detail?.vendor;
     return {
@@ -14,15 +64,26 @@ const VendorComparisonTable = ({ vendorIds, vendorDetails }) => {
       regrets: detail?.regrets || 0,
       techEvalAccepted: detail?.tech_eval_accepted || 0,
       techEvalRejected: detail?.tech_eval_rejected || 0,
-      techEvalTotal: (detail?.tech_eval_accepted || 0) + (detail?.tech_eval_rejected || 0),
-      techEvalSuccessRate: ((detail?.tech_eval_accepted || 0) + (detail?.tech_eval_rejected || 0)) > 0
-        ? (((detail?.tech_eval_accepted || 0) / ((detail?.tech_eval_accepted || 0) + (detail?.tech_eval_rejected || 0))) * 100).toFixed(1)
-        : 0,
+      techEvalTotal:
+        (detail?.tech_eval_accepted || 0) + (detail?.tech_eval_rejected || 0),
+      techEvalSuccessRate:
+        (detail?.tech_eval_accepted || 0) + (detail?.tech_eval_rejected || 0) > 0
+          ? (
+              ((detail?.tech_eval_accepted || 0) /
+                ((detail?.tech_eval_accepted || 0) +
+                  (detail?.tech_eval_rejected || 0))) *
+              100
+            ).toFixed(1)
+          : 0,
       clausesAgreed: detail?.clauses_agreed || 0,
       clausesResponded: detail?.clauses_responded || 0,
-      clausesAgreementRate: (detail?.clauses_responded || 0) > 0
-        ? (((detail?.clauses_agreed || 0) / (detail?.clauses_responded || 0)) * 100).toFixed(1)
-        : 0,
+      clausesAgreementRate:
+        (detail?.clauses_responded || 0) > 0
+          ? (
+              ((detail?.clauses_agreed || 0) / (detail?.clauses_responded || 0)) *
+              100
+            ).toFixed(1)
+          : 0,
       queriesRaised: detail?.queries_raised || 0,
       queriesByVendor: detail?.queries_by_vendor || 0,
       avgDelivery: formatDeliveryPeriod(detail?.avg_delivery_period || 0),
@@ -131,4 +192,3 @@ const VendorComparisonTable = ({ vendorIds, vendorDetails }) => {
 };
 
 export default VendorComparisonTable;
-

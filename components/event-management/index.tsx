@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ChangeEvent } from "react";
 import { useRouter } from "next/router";
 import { ToastContainer, toast } from "react-toastify";
 import Modal from "react-bootstrap/Modal";
@@ -18,8 +18,64 @@ import { Editor } from "@tinymce/tinymce-react";
 import parse from "html-react-parser";
 import { formatDate } from "@/utils/dateUtils";
 
+// Type definitions
+interface MarqueeSettings {
+  text: string;
+  direction: string;
+  speed: number;
+  isVisible: boolean;
+  backgroundColor: string;
+}
+
+interface Event {
+  id: string | number;
+  title: string;
+  startDate: string;
+  endDate: string;
+  city: string;
+  venue: string;
+  role: string;
+  description: string;
+  imageUrl: string | null;
+}
+
+interface EventForm {
+  title: string;
+  startDate: string;
+  endDate: string;
+  city: string;
+  venue: string;
+  role: string;
+  description: string;
+  image: File | null;
+  imagePreview: string | null;
+}
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+interface MarqueePayload {
+  text: string;
+  direction: string;
+  speed: number;
+  is_visible: boolean;
+  background_color: string;
+}
+
+interface ApiError {
+  error?: {
+    response?: {
+      data?: {
+        message?: string;
+      };
+    };
+  };
+}
+
 // Default marquee settings
-const defaultMarqueeSettings = {
+const defaultMarqueeSettings: MarqueeSettings = {
   text: "<p>Welcome to our platform! Check out the latest updates and events.</p>",
   direction: "left",
   speed: 50,
@@ -28,15 +84,15 @@ const defaultMarqueeSettings = {
 };
 
 // Direction options
-const directionOptions = [
+const directionOptions: SelectOption[] = [
   { value: "left", label: "Left to Right" },
   { value: "right", label: "Right to Left" },
-//   { value: "up", label: "Bottom to Top" }, // Commented out as per current implementation
-//   { value: "down", label: "Top to Bottom" },    
+  //   { value: "up", label: "Bottom to Top" }, // Commented out as per current implementation
+  //   { value: "down", label: "Top to Bottom" },
 ];
 
 // Role options
-const roleOptions = [
+const roleOptions: SelectOption[] = [
   { value: "", label: "Select Role" },
   { value: "Speaker", label: "Speaker" },
   { value: "Organizer", label: "Organizer" },
@@ -48,26 +104,29 @@ const roleOptions = [
   { value: "Other", label: "Other" },
 ];
 
-const EventManagement = () => {
+const EventManagement: React.FC = () => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState(router.query.tab || "marquee");
+  const [activeTab, setActiveTab] = useState<string>(
+    (router.query.tab as string) || "marquee"
+  );
 
   // Marquee state
-  const [marqueeSettings, setMarqueeSettings] = useState(defaultMarqueeSettings);
-  const [marqueeId, setMarqueeId] = useState(null);
-  const [isSavingMarquee, setIsSavingMarquee] = useState(false);
-  const [isLoadingMarquee, setIsLoadingMarquee] = useState(false);
+  const [marqueeSettings, setMarqueeSettings] =
+    useState<MarqueeSettings>(defaultMarqueeSettings);
+  const [marqueeId, setMarqueeId] = useState<string | number | null>(null);
+  const [isSavingMarquee, setIsSavingMarquee] = useState<boolean>(false);
+  const [isLoadingMarquee, setIsLoadingMarquee] = useState<boolean>(false);
 
   // Event state
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
-  const [showEventModal, setShowEventModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [eventForm, setEventForm] = useState({
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [isLoadingEvents, setIsLoadingEvents] = useState<boolean>(false);
+  const [showEventModal, setShowEventModal] = useState<boolean>(false);
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [eventForm, setEventForm] = useState<EventForm>({
     title: "",
     startDate: "",
     endDate: "",
@@ -80,7 +139,7 @@ const EventManagement = () => {
   });
 
   // Handle tab change
-  const handleTabChange = (tab) => {
+  const handleTabChange = (tab: string): void => {
     setActiveTab(tab);
     router.push(
       { pathname: router.pathname, query: { ...router.query, tab } },
@@ -90,14 +149,17 @@ const EventManagement = () => {
   };
 
   // Marquee handlers
-  const handleMarqueeChange = (field, value) => {
+  const handleMarqueeChange = (
+    field: keyof MarqueeSettings,
+    value: string | number | boolean
+  ): void => {
     setMarqueeSettings((prev) => ({ ...prev, [field]: value }));
   };
 
-  const saveMarqueeSettings = async () => {
+  const saveMarqueeSettings = async (): Promise<void> => {
     setIsSavingMarquee(true);
     try {
-      const payload = {
+      const payload: MarqueePayload = {
         text: marqueeSettings.text,
         direction: marqueeSettings.direction,
         speed: marqueeSettings.speed,
@@ -118,19 +180,24 @@ const EventManagement = () => {
         toast.success("Marquee settings created successfully!");
       }
     } catch (error) {
-      const errorMsg = error?.error?.response?.data?.message || "Failed to save marquee settings";
+      const apiError = error as ApiError;
+      const errorMsg =
+        apiError?.error?.response?.data?.message ||
+        "Failed to save marquee settings";
       toast.error(errorMsg);
     } finally {
       setIsSavingMarquee(false);
     }
   };
 
-  const resetMarqueeSettings = () => {
+  const resetMarqueeSettings = (): void => {
     setMarqueeSettings(defaultMarqueeSettings);
   };
 
   // Event handlers
-  const handleEventFormChange = (e) => {
+  const handleEventFormChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ): void => {
     const { name, value } = e.target;
     setEventForm((prev) => {
       const updated = { ...prev, [name]: value };
@@ -142,8 +209,8 @@ const EventManagement = () => {
     });
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
     if (file) {
       setEventForm((prev) => ({
         ...prev,
@@ -153,7 +220,7 @@ const EventManagement = () => {
     }
   };
 
-  const openAddEventModal = () => {
+  const openAddEventModal = (): void => {
     setSelectedEvent(null);
     setEventForm({
       title: "",
@@ -169,7 +236,7 @@ const EventManagement = () => {
     setShowEventModal(true);
   };
 
-  const openEditEventModal = (event) => {
+  const openEditEventModal = (event: Event): void => {
     setSelectedEvent(event);
     setEventForm({
       title: event.title,
@@ -185,13 +252,21 @@ const EventManagement = () => {
     setShowEventModal(true);
   };
 
-  const openDeleteModal = (event) => {
+  const openDeleteModal = (event: Event): void => {
     setSelectedEvent(event);
     setShowDeleteModal(true);
   };
 
-  const saveEvent = async () => {
-    if (!eventForm.title || !eventForm.startDate || !eventForm.endDate || !eventForm.city || !eventForm.venue || !eventForm.role || !eventForm.description) {
+  const saveEvent = async (): Promise<void> => {
+    if (
+      !eventForm.title ||
+      !eventForm.startDate ||
+      !eventForm.endDate ||
+      !eventForm.city ||
+      !eventForm.venue ||
+      !eventForm.role ||
+      !eventForm.description
+    ) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -229,31 +304,34 @@ const EventManagement = () => {
       setShowEventModal(false);
       fetchEvents();
     } catch (error) {
-      const errorMsg = error?.error?.response?.data?.message || "Failed to save event";
+      const apiError = error as ApiError;
+      const errorMsg =
+        apiError?.error?.response?.data?.message || "Failed to save event";
       toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteEvent = async () => {
+  const deleteEvent = async (): Promise<void> => {
     setLoading(true);
     try {
-      await handleDeleteEvent(selectedEvent.id);
+      await handleDeleteEvent(selectedEvent!.id);
       toast.success("Event deleted successfully!");
       setShowDeleteModal(false);
       fetchEvents();
     } catch (error) {
-      const errorMsg = error?.error?.response?.data?.message || "Failed to delete event";
+      const apiError = error as ApiError;
+      const errorMsg =
+        apiError?.error?.response?.data?.message || "Failed to delete event";
       toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-
   // Get animation duration based on speed (inverse relationship)
-  const getAnimationDuration = () => {
+  const getAnimationDuration = (): string => {
     return `${Math.max(2.5, (105 - marqueeSettings.speed) * 0.5)}s`;
   };
 
@@ -301,7 +379,7 @@ const EventManagement = () => {
   `;
 
   // Fetch marquee settings
-  const fetchMarquee = async () => {
+  const fetchMarquee = async (): Promise<void> => {
     setIsLoadingMarquee(true);
     try {
       const response = await handleGetMarquee();
@@ -313,7 +391,8 @@ const EventManagement = () => {
           direction: data.direction || defaultMarqueeSettings.direction,
           speed: data.speed || defaultMarqueeSettings.speed,
           isVisible: data.is_visible ?? defaultMarqueeSettings.isVisible,
-          backgroundColor: data.background_color || defaultMarqueeSettings.backgroundColor,
+          backgroundColor:
+            data.background_color || defaultMarqueeSettings.backgroundColor,
         });
       }
     } catch (error) {
@@ -324,22 +403,34 @@ const EventManagement = () => {
   };
 
   // Fetch events list
-  const fetchEvents = async () => {
+  const fetchEvents = async (): Promise<void> => {
     setIsLoadingEvents(true);
     try {
-      const response = await handleGetEventList(page);
+      const response = await handleGetEventList(page) as any;
       if (response.data) {
-        const eventsList = response.data.map((event) => ({
-          id: event.id,
-          title: event.title,
-          startDate: event.start_date,
-          endDate: event.end_date,
-          city: event.city,
-          venue: event.venue,
-          role: event.role,
-          description: event.description,
-          imageUrl: event.image_url,
-        }));
+        const eventsList: Event[] = response.data.map(
+          (event: {
+            id: string | number;
+            title: string;
+            start_date: string;
+            end_date: string;
+            city: string;
+            venue: string;
+            role: string;
+            description: string;
+            image_url: string | null;
+          }) => ({
+            id: event.id,
+            title: event.title,
+            startDate: event.start_date,
+            endDate: event.end_date,
+            city: event.city,
+            venue: event.venue,
+            role: event.role,
+            description: event.description,
+            imageUrl: event.image_url,
+          })
+        );
         setEvents(eventsList);
         setTotalPages(response.total_count || 1);
       }
@@ -351,10 +442,10 @@ const EventManagement = () => {
   };
 
   useEffect(() => {
-  if (router?.isReady && router?.query?.tab) {
-    setActiveTab(router.query.tab);
-  }
-}, [router?.isReady, router?.query?.tab]);
+    if (router?.isReady && router?.query?.tab) {
+      setActiveTab(router.query.tab as string);
+    }
+  }, [router?.isReady, router?.query?.tab]);
 
   // Load marquee on mount
   useEffect(() => {
@@ -422,129 +513,150 @@ const EventManagement = () => {
                         {isLoadingMarquee ? (
                           <div className="text-center py-5">
                             <i className="fa fa-spinner fa-spin fa-2x text-primary"></i>
-                            <p className="text-muted mt-2 mb-0">Loading settings...</p>
+                            <p className="text-muted mt-2 mb-0">
+                              Loading settings...
+                            </p>
                           </div>
                         ) : (
                           <>
-                        {/* Text */}
-                        <div className="form-group">
-                          <label>Marquee Text *</label>
-                          <Editor
-                            apiKey={process.env.NEXT_PUBLIC_TINY_MCE_API_KEY}
-                            value={marqueeSettings.text}
-                            onEditorChange={(newValue) =>
-                              handleMarqueeChange("text", newValue)
-                            }
-                            init={{
-                              height: 200,
-                              menubar: false,
-                              plugins: ["link", "lists", "code"],
-                              toolbar:
-                                "bold italic underline strikethrough | forecolor backcolor | " +
-                                "fontfamily fontsize | link | removeformat | code",
-                              content_style:
-                                "body { font-family: 'Source Sans Pro', sans-serif; font-size: 16px; }",
-                              placeholder: "Enter marquee text...",
-                            }}
-                          />
-                        </div>
+                            {/* Text */}
+                            <div className="form-group">
+                              <label>Marquee Text *</label>
+                              <Editor
+                                apiKey={process.env.NEXT_PUBLIC_TINY_MCE_API_KEY}
+                                value={marqueeSettings.text}
+                                onEditorChange={(newValue: string) =>
+                                  handleMarqueeChange("text", newValue)
+                                }
+                                init={{
+                                  height: 200,
+                                  menubar: false,
+                                  plugins: ["link", "lists", "code"],
+                                  toolbar:
+                                    "bold italic underline strikethrough | forecolor backcolor | " +
+                                    "fontfamily fontsize | link | removeformat | code",
+                                  content_style:
+                                    "body { font-family: 'Source Sans Pro', sans-serif; font-size: 16px; }",
+                                  placeholder: "Enter marquee text...",
+                                }}
+                              />
+                            </div>
 
-                        {/* Background Color */}
-                        <div className="form-group">
-                          <label>Background Color</label>
-                          <div className="d-flex align-items-center">
-                            <input
-                              type="color"
-                              className="form-control form-control-color"
-                              value={marqueeSettings.backgroundColor}
-                              onChange={(e) =>
-                                handleMarqueeChange("backgroundColor", e.target.value)
-                              }
-                              style={{ width: "50px", height: "38px", padding: "2px" }}
-                            />
-                            <input
-                              type="text"
-                              className="form-control ml-2"
-                              value={marqueeSettings.backgroundColor}
-                              onChange={(e) =>
-                                handleMarqueeChange("backgroundColor", e.target.value)
-                              }
-                              placeholder="#000080"
-                            />
-                          </div>
-                        </div>
+                            {/* Background Color */}
+                            <div className="form-group">
+                              <label>Background Color</label>
+                              <div className="d-flex align-items-center">
+                                <input
+                                  type="color"
+                                  className="form-control form-control-color"
+                                  value={marqueeSettings.backgroundColor}
+                                  onChange={(e) =>
+                                    handleMarqueeChange(
+                                      "backgroundColor",
+                                      e.target.value
+                                    )
+                                  }
+                                  style={{
+                                    width: "50px",
+                                    height: "38px",
+                                    padding: "2px",
+                                  }}
+                                />
+                                <input
+                                  type="text"
+                                  className="form-control ml-2"
+                                  value={marqueeSettings.backgroundColor}
+                                  onChange={(e) =>
+                                    handleMarqueeChange(
+                                      "backgroundColor",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="#000080"
+                                />
+                              </div>
+                            </div>
 
-                        {/* Direction */}
-                        <div className="form-group">
-                          <label>Direction</label>
-                          <select
-                            className="form-control"
-                            value={marqueeSettings.direction}
-                            onChange={(e) =>
-                              handleMarqueeChange("direction", e.target.value)
-                            }
-                          >
-                            {directionOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                            {/* Direction */}
+                            <div className="form-group">
+                              <label>Direction</label>
+                              <select
+                                className="form-control"
+                                value={marqueeSettings.direction}
+                                onChange={(e) =>
+                                  handleMarqueeChange("direction", e.target.value)
+                                }
+                              >
+                                {directionOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
 
-                        {/* Speed */}
-                        <div className="form-group">
-                          <label>Speed: {marqueeSettings.speed}%</label>
-                          <input
-                            type="range"
-                            className="form-control-range"
-                            min="10"
-                            max="100"
-                            value={marqueeSettings.speed}
-                            onChange={(e) =>
-                              handleMarqueeChange("speed", parseInt(e.target.value))
-                            }
-                          />
-                          <div className="d-flex justify-content-between">
-                            <small className="text-muted">Slow</small>
-                            <small className="text-muted">Fast</small>
-                          </div>
-                        </div>
+                            {/* Speed */}
+                            <div className="form-group">
+                              <label>Speed: {marqueeSettings.speed}%</label>
+                              <input
+                                type="range"
+                                className="form-control-range"
+                                min="10"
+                                max="100"
+                                value={marqueeSettings.speed}
+                                onChange={(e) =>
+                                  handleMarqueeChange(
+                                    "speed",
+                                    parseInt(e.target.value)
+                                  )
+                                }
+                              />
+                              <div className="d-flex justify-content-between">
+                                <small className="text-muted">Slow</small>
+                                <small className="text-muted">Fast</small>
+                              </div>
+                            </div>
 
-                        {/* Show/Hide Toggle */}
-                        <div className="form-group">
-                          <div className="custom-control custom-switch">
-                            <input
-                              type="checkbox"
-                              className="custom-control-input"
-                              id="marqueeVisibility"
-                              checked={marqueeSettings.isVisible}
-                              onChange={(e) =>
-                                handleMarqueeChange("isVisible", e.target.checked)
-                              }
-                            />
-                            <label className="custom-control-label" htmlFor="marqueeVisibility">
-                              {marqueeSettings.isVisible ? "Visible" : "Hidden"}
-                            </label>
-                          </div>
-                        </div>
+                            {/* Show/Hide Toggle */}
+                            <div className="form-group">
+                              <div className="custom-control custom-switch">
+                                <input
+                                  type="checkbox"
+                                  className="custom-control-input"
+                                  id="marqueeVisibility"
+                                  checked={marqueeSettings.isVisible}
+                                  onChange={(e) =>
+                                    handleMarqueeChange(
+                                      "isVisible",
+                                      e.target.checked
+                                    )
+                                  }
+                                />
+                                <label
+                                  className="custom-control-label"
+                                  htmlFor="marqueeVisibility"
+                                >
+                                  {marqueeSettings.isVisible ? "Visible" : "Hidden"}
+                                </label>
+                              </div>
+                            </div>
 
-                        {/* Action Buttons */}
-                        <div className="d-flex mt-4">
-                          <button
-                            className="btn btn-success mr-2"
-                            onClick={saveMarqueeSettings}
-                            disabled={isSavingMarquee}
-                          >
-                            {isSavingMarquee ? "Saving..." : "Save Settings"}
-                          </button>
-                          <button
-                            className="btn btn-outline-secondary"
-                            onClick={resetMarqueeSettings}
-                          >
-                            Reset
-                          </button>
-                        </div>
+                            {/* Action Buttons */}
+                            <div className="d-flex mt-4">
+                              <button
+                                className="btn btn-success mr-2"
+                                onClick={saveMarqueeSettings}
+                                disabled={isSavingMarquee}
+                              >
+                                {isSavingMarquee ? "Saving..." : "Save Settings"}
+                              </button>
+                              <button
+                                className="btn btn-outline-secondary"
+                                onClick={resetMarqueeSettings}
+                              >
+                                Reset
+                              </button>
+                            </div>
                           </>
                         )}
                       </div>
@@ -566,7 +678,11 @@ const EventManagement = () => {
                                 padding: "12px 0",
                                 overflow: "hidden",
                                 position: "relative",
-                                minHeight: marqueeSettings.direction === "up" || marqueeSettings.direction === "down" ? "100px" : "40px",
+                                minHeight:
+                                  marqueeSettings.direction === "up" ||
+                                  marqueeSettings.direction === "down"
+                                    ? "100px"
+                                    : "40px",
                                 width: "100%",
                                 display: "flex",
                                 alignItems: "center",
@@ -577,8 +693,14 @@ const EventManagement = () => {
                                 key={`${marqueeSettings.text}-${marqueeSettings.direction}-${marqueeSettings.speed}`}
                                 style={{
                                   position: "absolute",
-                                  right: marqueeSettings.direction === "left" ? "0" : undefined,
-                                  left: marqueeSettings.direction === "right" ? "0" : undefined,
+                                  right:
+                                    marqueeSettings.direction === "left"
+                                      ? "0"
+                                      : undefined,
+                                  left:
+                                    marqueeSettings.direction === "right"
+                                      ? "0"
+                                      : undefined,
                                   animation: `marquee-${marqueeSettings.direction} ${getAnimationDuration()} linear infinite`,
                                   whiteSpace: "nowrap",
                                   lineHeight: "1.4",
@@ -595,7 +717,8 @@ const EventManagement = () => {
                           )}
                         </div>
                         <small className="text-muted mt-2 d-block">
-                          This is a preview of how the marquee will appear on the website.
+                          This is a preview of how the marquee will appear on the
+                          website.
                         </small>
                       </div>
                     </div>
@@ -636,14 +759,18 @@ const EventManagement = () => {
                           <tr>
                             <td colSpan={7} className="text-center py-5">
                               <i className="fa fa-spinner fa-spin fa-2x text-primary"></i>
-                              <p className="text-muted mt-2 mb-0">Loading events...</p>
+                              <p className="text-muted mt-2 mb-0">
+                                Loading events...
+                              </p>
                             </td>
                           </tr>
                         ) : events.length === 0 ? (
                           <tr>
                             <td colSpan={7} className="text-center py-5">
                               <i className="fa fa-calendar-o fa-3x mb-3 d-block text-muted"></i>
-                              <p className="text-muted mb-0">No events found. Click "Add Event" to create one.</p>
+                              <p className="text-muted mb-0">
+                                No events found. Click "Add Event" to create one.
+                              </p>
                             </td>
                           </tr>
                         ) : (
@@ -730,9 +857,15 @@ const EventManagement = () => {
       </section>
 
       {/* Add/Edit Event Modal */}
-      <Modal show={showEventModal} onHide={() => setShowEventModal(false)} size="lg">
+      <Modal
+        show={showEventModal}
+        onHide={() => setShowEventModal(false)}
+        size="lg"
+      >
         <Modal.Header closeButton>
-          <Modal.Title>{selectedEvent ? "Edit Event" : "Add New Event"}</Modal.Title>
+          <Modal.Title>
+            {selectedEvent ? "Edit Event" : "Add New Event"}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <div className="row">

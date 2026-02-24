@@ -1,5 +1,6 @@
 import EventManagementpage from "@/components/event-management";
-const EventManagement = () => {
+
+const EventManagement: React.FC = () => {
   return (
     <div>
       <EventManagementpage />

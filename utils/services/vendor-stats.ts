@@ -1,22 +1,26 @@
+import { AxiosPromise } from "axios";
 import axiosInstance from "@/utils/axios";
 
-export const fetchVendorStatsOverview = (params = {}) => {
+type ParamValue = string | number | boolean | string[] | number[] | null | undefined;
+
+interface QueryParams {
+  [key: string]: ParamValue;
+}
+
+export const fetchVendorStatsOverview = (params: QueryParams = {}): AxiosPromise => {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
-    // Allow "0" for is_private and subscription_plan filters
+    // Values like "0" and 0 are valid and pass the check below
     if (value !== undefined && value !== null && value !== "") {
       // Handle arrays (like vendor_ids) - send as multiple query params
       if (Array.isArray(value) && value.length > 0) {
         // For vendor_ids, send each ID as a separate query param
-        value.forEach((item) => {
-          query.append(key, item);
+        (value as (string | number)[]).forEach((item) => {
+          query.append(key, String(item));
         });
       } else if (!Array.isArray(value)) {
-        query.append(key, value);
+        query.append(key, String(value));
       }
-    } else if ((key === 'is_private' || key === 'subscription_plan') && (value === '0' || value === 0)) {
-      // Explicitly allow "0" for these filters
-      query.append(key, value);
     }
   });
 
@@ -25,11 +29,14 @@ export const fetchVendorStatsOverview = (params = {}) => {
   );
 };
 
-export const fetchVendorStatsByVendor = (vendorId, params = {}) => {
+export const fetchVendorStatsByVendor = (
+  vendorId: string | number,
+  params: QueryParams = {}
+): AxiosPromise => {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
-      query.append(key, value);
+      query.append(key, String(value));
     }
   });
 
@@ -38,18 +45,18 @@ export const fetchVendorStatsByVendor = (vendorId, params = {}) => {
   );
 };
 
-export const fetchQuotationFinancialAnalysis = (params = {}) => {
+export const fetchQuotationFinancialAnalysis = (params: QueryParams = {}): AxiosPromise => {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
       // Handle arrays (like vendor_ids) - send as multiple query params
       if (Array.isArray(value) && value.length > 0) {
         // For vendor_ids, send each ID as a separate query param
-        value.forEach((item) => {
-          query.append(key, item);
+        (value as (string | number)[]).forEach((item) => {
+          query.append(key, String(item));
         });
       } else if (!Array.isArray(value)) {
-        query.append(key, value);
+        query.append(key, String(value));
       }
     }
   });
@@ -58,4 +65,3 @@ export const fetchQuotationFinancialAnalysis = (params = {}) => {
     `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/vendor/stats/quotation/financial${query.toString() ? `?${query.toString()}` : ""}`
   );
 };
-
