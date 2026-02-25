@@ -3,7 +3,7 @@
     "title": "Dashboard",
     "link": "/",
     "class": "",
-    "icon": "",
+    "icon": "fa fa-home",
     "active": true,
     "children": []
   },
@@ -11,28 +11,28 @@
     "title": "User Management",
     "link": "",
     "class": "",
-    "icon": "",
+    "icon": "fa fa-users",
     "active": false,
     "children": [
       {
         "title": "Buyer Management",
         "link": "/buyer-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-user",
         "active": false
       },
       {
         "title": "Vendor Management",
         "link": "/vendor-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-user",
         "active": false
       },
       {
         "title": "Private Vendor Management",
         "link": "/private-vendor-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-user",
         "active": false
       }
     ]
@@ -41,21 +41,21 @@
     "title": "Product",
     "link": "",
     "class": "",
-    "icon": "",
+    "icon": "fa fa-cube",
     "active": false,
     "children": [
       {
         "title": "Product Management",
         "link": "/product-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-dropbox",
         "active": false
       },
       {
         "title": "Category Management",
         "link": "/category-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-inbox",
         "active": false
       }
     ]
@@ -64,21 +64,28 @@
     "title": "Service Module",
     "link": "",
     "class": "",
-    "icon": "",
+    "icon": "fa fa-cogs",
     "active": false,
     "children": [
       {
         "title": "RFQ Management",
         "link": "/service-module/rfq-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-wrench",
+        "active": false
+      },
+       {
+        "title": "Vendor Stats",
+        "link": "/service-module/vendor-stats",
+        "class": "",
+        "icon": "fa fa-wrench",
         "active": false
       },
        {
         "title": "Client Dashboard",
         "link": "/service-module/client-dashboard",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-wrench",
         "active": false
       }
     ]
@@ -87,33 +94,40 @@
     "title": "CMS",
     "link": "",
     "class": "",
-    "icon": "",
+    "icon": "fa fa-code",
     "active": false,
     "children": [
       {
         "title": "Banner Management",
         "link": "/banner-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-image",
         "active": false
       },
       {
         "title": "Page Management",
         "link": "/page-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-file",
         "active": false
       },
       {
         "title": "Media Management",
         "link": "/media-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-play",
         "active": false
       },
       {
         "title": "Team Management",
         "link": "/team-management",
+        "class": "",
+        "icon": "fa fa-sitemap",
+        "active": false
+      },
+      {
+        "title": "Event Management",
+        "link": "/event-management",
         "class": "",
         "icon": "",
         "active": false
@@ -122,40 +136,40 @@
         "title": "Testimonial Management",
         "link": "/testimonial-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-quote-left",
         "active": false
       },
       {
         "title": "Blog Management",
         "link": "/blog-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-film",
         "active": false
       },
       {
         "title": "FAQ Management",
         "link": "/faq-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-question-circle",
         "active": false
       },
       {
         "title": "Client Management",
         "link": "/client-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-building",
         "active": false
       },{
         "title":"Location-Management",
         "link":"/location-management",
         "class":"",
-        "icon":"",
+        "icon":"fa fa-street-view",
          "active":false
        },{
         "title" : "Product Desc Mang..",
         "link"  : "/product-description-management",
         "class" : "",
-        "icon"  : "",
+        "icon"  : "fa fa-align-left",
         "active":false
 
        }
@@ -165,42 +179,42 @@
     "title": "Price and Subscription Management",
     "link": "",
     "class": "",
-    "icon": "",
+    "icon": "fa fa-btc",
     "active": false,
     "children": [
       {
         "title": "Price Management",
         "link": "/pricing-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-credit-card",
         "active": false
       },
       {
         "title": "List of Subscribed User",
         "link": "/subscribed-user-list",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-list-ul",
         "active": false
       },
       {
         "title": "Payment History",
         "link": "/payment-history",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-history",
         "active": false
       },
       {
         "title": "Coupon Management",
         "link": "/coupon-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-tags",
         "active": false
       },
       {
         "title": "Offer Management",
         "link": "/offer-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-gift",
         "active": false
       }
     ]
@@ -209,28 +223,28 @@
     "title": "User Access and Restriction",
     "link": "",
     "class": "",
-    "icon": "",
+    "icon": "fa fa-lock",
     "active": false,
     "children": [
       {
         "title": "Subadmin Management",
         "link": "/subadmin-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-user-secret",
         "active": false
       },
       {
         "title": "Data Team Management",
         "link": "/data-team-management",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-database",
         "active": false
       },
       {
         "title": "Roles and Permissions",
         "link": "/role-permission",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-key",
         "active": false
       }
     ]
@@ -239,7 +253,7 @@
     "title" : "Public-User-Management",
     "link"  : "/public-user-management",
     "class" : "",
-    "icon"  : "",
+    "icon"  : "fa fa-globe",
     "active": false,
     "children": []
 
@@ -248,23 +262,23 @@
     "title": "Notification",
     "link": "",
     "class": "",
-    "icon": "",
+    "icon": "fa fa-bell",
     "active": false,
     "children": [
       {
         "title": "System Notification",
         "link": "/system-notification",
         "class": "",
-        "icon": "",
+        "icon": "fa fa-envelope",
         "active": false
       }
     ]
   },
   {
-    "title": "Communication",
+    "title": "Contact Leads",
     "link": "/message",
     "class": "",
-    "icon": "",
+    "icon": "fa fa-comments",
     "active": false,
     "children": []
   },
@@ -272,7 +286,7 @@
    "title":"Demo Book Details",
    "link":"/demobooking",
    "class":"",
-   "icon":"",
+   "icon":"fa fa-phone",
     "active":false,
     "children":[]
   }
