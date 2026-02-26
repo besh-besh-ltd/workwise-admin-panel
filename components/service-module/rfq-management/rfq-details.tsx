@@ -182,7 +182,11 @@ const RFQDetails: React.FC = () => {
 
         try {
             const response : any = await getVendorsForReminder(rfq_id as string);
-            setVendors(response.data || []);
+            setVendors((response.data || []).map((vendor: any) => ({
+                vendor_id: vendor.user_id,
+                vendor_name: vendor.vendor_name,
+                remainingProducts: vendor.remainingProducts
+            })));
         } catch (err) {
             toast.error("Failed to fetch vendors for reminder");
         } finally {
