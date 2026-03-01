@@ -272,7 +272,7 @@ const UpdateVendor: React.FC = () => {
 
   const fetchLocations = async (): Promise<void> => {
     getVendorlocations(company_id!)
-      .then((res: any) => setLocations(res?.data))
+      .then((res: any) => setLocations(Array.isArray(res?.data) ? res.data : []))
       .catch((error: any) => {
         console.error('Error fetching locations:', error);
         setLocations([]);
@@ -405,12 +405,14 @@ const UpdateVendor: React.FC = () => {
   const getSubscriptionListData = (): void => {
     handleGetSubscriptionList("3")
       .then((res: any) => {
-        const formattedData = res.data.map((obj: any) => ({
-          label: `${obj.plan_name} (${getSubscriptionDuration[parseInt(obj.duration).toString()] ||
-            obj.duration + " Months"
-            })`,
-          value: obj.id.toString(),
-        }));
+        const formattedData = Array.isArray(res?.data)
+          ? res.data.map((obj: any) => ({
+              label: `${obj.plan_name} (${getSubscriptionDuration[parseInt(obj.duration).toString()] ||
+                obj.duration + " Months"
+                })`,
+              value: obj.id.toString(),
+            }))
+          : [];
         setSubscriptionList(formattedData);
       })
       .catch((error: any) => {
@@ -422,7 +424,7 @@ const UpdateVendor: React.FC = () => {
     if (selectedCountryOption) {
       handleGetStates(selectedCountryOption)
         .then((res: any) => {
-          setStates(res.data.data);
+          setStates(Array.isArray(res?.data?.data) ? res.data.data : []);
         })
         .catch((err: any) => console.log("Error fetching states:", err));
     } else {
@@ -434,7 +436,7 @@ const UpdateVendor: React.FC = () => {
     fetchCountryCodes();
     getCountries()
       .then((res: any) => {
-        setCountryList(res.data);
+        setCountryList(Array.isArray(res?.data) ? res.data : []);
       })
       .catch((err: any) => console.error("Error fetching countries:", err));
   }, []);
@@ -487,7 +489,7 @@ const UpdateVendor: React.FC = () => {
 
       handleGetStates(selectedCountry)
         .then((res: any) => {
-          setStates(res.data.data);
+          setStates(Array.isArray(res?.data?.data) ? res.data.data : []);
           setIsCityDisabled(true);
           setSelectedStateOption("");
           setSelectedCityOption("");
@@ -510,7 +512,7 @@ const UpdateVendor: React.FC = () => {
       setIsCityDisabled(false);
       handleGetCities(stateId)
         .then((res: any) => {
-          setCities(res.data.data);
+          setCities(Array.isArray(res?.data?.data) ? res.data.data : []);
         })
         .catch((err: any) => console.log("err", err));
     } else {
@@ -599,7 +601,7 @@ const UpdateVendor: React.FC = () => {
     if (detailsData?.vendorDetails?.state && detailsData?.vendorDetails?.state != null && detailsData?.vendorDetails?.state != 'null') {
       handleGetCities(detailsData?.vendorDetails?.state)
         .then((res: any) => {
-          setCities(res.data.data);
+          setCities(Array.isArray(res?.data?.data) ? res.data.data : []);
         })
         .catch((err: any) => console.log("err", err));
     }
@@ -625,7 +627,7 @@ const UpdateVendor: React.FC = () => {
         const detailsData = editDetails as EditDetails;
         handleGetCities(detailsData?.vendorDetails?.state || '')
           .then((res: any) => {
-            setCities(res.data.data);
+            setCities(Array.isArray(res?.data?.data) ? res.data.data : []);
           })
           .catch((err: any) => console.log("err", err));
         setOpenAddSpoc(false);
@@ -1225,7 +1227,7 @@ const UpdateVendor: React.FC = () => {
                             }}
                           >
                             <option value="">Select an option</option>
-                            {(editDetails as EditDetails).spocDetails!.length > 0
+                            {(editDetails as EditDetails).spocDetails && (editDetails as EditDetails).spocDetails!.length > 0
                               ? (editDetails as EditDetails).spocDetails!.map((option) => (
                                 <option
                                   key={option.id}
