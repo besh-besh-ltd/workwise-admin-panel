@@ -21,7 +21,6 @@ import {
 } from "@/utils/services/vendor-management";
 import { ToastContainer, toast } from "react-toastify";
 import { useRouter } from "next/router";
-import img1 from "../../public/assets/images/products.png";
 import SpocAddModal from "../modal/spoc-add-modal";
 import VendorVariantMappingModal from "../modal/VendorVariantMappingModal";
 import { getApprovedProductsByVendor, deleteVariantVendorMapping } from "@/utils/services/product-management";
@@ -238,7 +237,7 @@ const UpdateVendor: React.FC = () => {
   const openSpocModal = (locationId: number): void => {
     setSelectedLocationId(locationId);
 
-    const location = locations.find((l) => l.id === locationId);
+    const location = (locations ?? []).find((l) => l.id === locationId);
     const mappedSpocs = location?.spocs?.map((s) => s.spoc_id) || [];
     setDefaultSelectedSpocs(mappedSpocs);
     setShowModal(true);
@@ -382,7 +381,7 @@ const UpdateVendor: React.FC = () => {
     const { countryCode: cc, ...updatedValues } = {
       ...values,
       mobile: fullMobile,
-      locations: [...locations],
+      locations: [...(locations ?? [])],
     } as any;
 
     updatedValues.vendor_access_type = values.vendor_access_type;
@@ -479,7 +478,7 @@ const UpdateVendor: React.FC = () => {
   const fetchCountryCodes = (): void => {
     getCountryCodes()
       .then((response: any) => {
-        if (response?.data) {
+        if (Array.isArray(response?.data)) {
           setCountryCode(response.data);
         } else {
           setCountryCode([]);
@@ -620,7 +619,7 @@ const UpdateVendor: React.FC = () => {
 
   const extractedCountryCode = (editDetails as EditDetails)?.vendorDetails?.mobile?.match(/^\+?\d+/)?.[0] || "+91";
 
-  const selectedCountry = countryCode.find(
+  const selectedCountry = (countryCode ?? []).find(
     (item) => item.phone_code === extractedCountryCode
   );
 
@@ -688,7 +687,7 @@ const UpdateVendor: React.FC = () => {
 
   const handleDeleteLocation = (locationId: number | string): void => {
     if (window.confirm("Are you sure you want to delete this location?")) {
-      setLocations(locations.filter(loc => loc.id !== locationId));
+      setLocations((locations ?? []).filter(loc => loc.id !== locationId));
       handleDeleteVendorLocation(locationId as number)
         .then((res: any) => {
           toast(res.message, { position: "top-right" });
@@ -838,7 +837,7 @@ const UpdateVendor: React.FC = () => {
                                 {selectedCountry?.phone_code})
                               </option>{" "}
                               {/* Default selected */}
-                              {countryCode.map((item) => (
+                              {(countryCode ?? []).map((item) => (
                                 <option key={item.id} value={item.phone_code}>
                                   {item.country_code} ({item.phone_code})
                                 </option>
@@ -886,13 +885,11 @@ const UpdateVendor: React.FC = () => {
                             isMulti
                             name="buyer_company_ids"
                             options={buyerCompanyOptions}
-                            value={buyerCompanyOptions.filter((option) =>
-                              values.buyer_company_ids?.includes(option.value)
+                            value={(buyerCompanyOptions ?? []).filter((option) =>
+                              (values.buyer_company_ids ?? []).includes(option.value)
                             )}
                             onChange={(selectedOptions: MultiValue<BuyerCompanyOption>) => {
-                              const ids = selectedOptions
-                                ? selectedOptions.map((opt) => opt.value)
-                                : [];
+                              const ids = (selectedOptions ?? []).map((opt) => opt.value);
                               setFieldValue("buyer_company_ids", ids);
                             }}
                             onBlur={() =>
@@ -900,7 +897,7 @@ const UpdateVendor: React.FC = () => {
                             }
                             placeholder="Select Buyer Companies"
                             isClearable
-                            isLoading={buyerCompanyOptions.length === 0}
+                            isLoading={(buyerCompanyOptions ?? []).length === 0}
                             noOptionsMessage={() => "No buyer companies found"}
                           />
                           {errors.buyer_company_ids &&
@@ -951,7 +948,7 @@ const UpdateVendor: React.FC = () => {
                                   height={30}
                                   src={
                                     (editDetails as EditDetails)?.companyDetails?.logo == null
-                                      ? img1
+                                      ? "/assets/images/products.png"
                                       : (editDetails as EditDetails)?.companyDetails?.logo!
                                   }
                                   unoptimized
@@ -1003,7 +1000,7 @@ const UpdateVendor: React.FC = () => {
                                     : []
                                 }
                                 onChange={(selectedOptions: MultiValue<BusinessOption>) => {
-                                  const vals = selectedOptions
+                                  const vals = (selectedOptions ?? [])
                                     .map((opt) => opt.value)
                                     .join(",");
                                   form.setFieldValue("nature_business", vals);
@@ -1201,7 +1198,7 @@ const UpdateVendor: React.FC = () => {
               >
                 {({ values, handleChange, handleSubmit }) => (
                   <Form onSubmit={handleSubmit}>
-                    {(editDetails as EditDetails).spocDetails &&
+                    {Array.isArray((editDetails as EditDetails)?.spocDetails) &&
                       (editDetails as EditDetails).spocDetails!.length > 0 ? (
                       <div className="row form-common-row mb-4">
                         <div className="form-group">
@@ -1238,8 +1235,8 @@ const UpdateVendor: React.FC = () => {
                             }}
                           >
                             <option value="">Select an option</option>
-                            {(editDetails as EditDetails).spocDetails && (editDetails as EditDetails).spocDetails!.length > 0
-                              ? (editDetails as EditDetails).spocDetails!.map((option) => (
+                            {Array.isArray((editDetails as EditDetails)?.spocDetails) && (editDetails as EditDetails).spocDetails!.length > 0
+                              ? ((editDetails as EditDetails).spocDetails ?? []).map((option) => (
                                 <option
                                   key={option.id}
                                   value={JSON.stringify(option)}
@@ -1324,7 +1321,7 @@ const UpdateVendor: React.FC = () => {
                                 setSpocCountryCode(newCountryCode);
                               }}
                             >
-                              {countryCode.map((item) => (
+                              {(countryCode ?? []).map((item) => (
                                 <option key={item.id} value={item.phone_code}>
                                   {item.country_code} ({item.phone_code})
                                 </option>
@@ -1397,7 +1394,7 @@ const UpdateVendor: React.FC = () => {
               </button>
             </div>
             <div className="card-body">
-              {vendorProducts && vendorProducts.length > 0 ? (
+              {Array.isArray(vendorProducts) && vendorProducts.length > 0 ? (
                 <div className="table-responsive">
                   <table className="table table-bordered">
                     <thead>
@@ -1516,7 +1513,7 @@ const UpdateVendor: React.FC = () => {
           </button>
         </div>
         <div className="card-body">
-          {locations && locations.length > 0 ? (
+          {Array.isArray(locations) && locations.length > 0 ? (
             <div className="table-responsive">
               <table className="table table-bordered">
                 <thead>
@@ -1539,7 +1536,7 @@ const UpdateVendor: React.FC = () => {
                       <td>{location.city_name}</td>
                       <td>{location.address || "-"}</td>
                       <td>{location.postal_code || "-"}</td>
-                      <td>{location?.spocs?.map((spoc) => spoc.spoc_name).join(", ") || "-"}</td>
+                      <td>{(location?.spocs ?? []).map((spoc) => spoc.spoc_name).join(", ") || "-"}</td>
 
                       <td>
                         <button
