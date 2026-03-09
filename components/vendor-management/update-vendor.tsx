@@ -1126,9 +1126,7 @@ const UpdateVendor: React.FC = () => {
                                 setFieldValue("ptr_track", files);
                               }}
                             />
-                            {Array.isArray((editDetails as EditDetails)?.files) &&
-                              (editDetails as EditDetails).files!.length > 0 &&
-                              (editDetails as EditDetails)?.files!.map(
+                            {((editDetails as EditDetails)?.files ?? []).map(
                                 (data, idx) =>
                                   data.doc_type == "ptr" && (
                                     <span key={idx}>
