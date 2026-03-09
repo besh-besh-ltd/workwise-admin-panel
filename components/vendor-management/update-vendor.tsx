@@ -265,11 +265,6 @@ const UpdateVendor: React.FC = () => {
     }
   }, [editDetails]);
 
-  useEffect(() => {
-    if (typeof editDetails === 'string' || !editDetails?.companyDetails?.id) return;
-    setCompanyId(editDetails.companyDetails.id);
-  }, [(editDetails as EditDetails)?.companyDetails?.id]);
-
   const fetchLocations = async (): Promise<void> => {
     getVendorlocations(company_id!)
       .then((res: any) => setLocations(Array.isArray(res?.data) ? res.data : []))
@@ -280,10 +275,26 @@ const UpdateVendor: React.FC = () => {
   };
 
   useEffect(() => {
-    if (company_id) {
-      fetchLocations();
-    }
-  }, [company_id, refreshToggle]);
+  if (typeof editDetails === 'string' || !editDetails?.companyDetails?.id) return;
+  
+  const id = editDetails.companyDetails.id;
+  setCompanyId(id); // still set it if needed elsewhere
+
+  // Use the id directly — don't rely on state update
+  getVendorlocations(id)
+    .then((res: any) => {
+      const data = Array.isArray(res?.data) ? res.data : [];
+      setLocations(data.map((loc: LocationItem) => ({
+        ...loc,
+        spocs: Array.isArray(loc.spocs) ? loc.spocs : []
+      })));
+    })
+    .catch((error: any) => {
+      console.error('Error fetching locations:', error);
+      setLocations([]);
+    });
+
+}, [(editDetails as EditDetails)?.companyDetails?.id, refreshToggle]);
 
   const router = useRouter();
   const id = router.query.id as string | undefined;
@@ -1118,8 +1129,8 @@ const UpdateVendor: React.FC = () => {
                                 setFieldValue("ptr_track", files);
                               }}
                             />
-                            {(editDetails as EditDetails)?.files &&
-                              (editDetails as EditDetails)?.files!.length != 0 &&
+                            {Array.isArray((editDetails as EditDetails)?.files) &&
+                              (editDetails as EditDetails).files!.length > 0 &&
                               (editDetails as EditDetails)?.files!.map(
                                 (data, idx) =>
                                   data.doc_type == "ptr" && (
