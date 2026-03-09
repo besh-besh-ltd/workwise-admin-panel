@@ -289,5 +289,13 @@
    "icon":"fa fa-phone",
     "active":false,
     "children":[]
+  },
+  {
+   "title":"Feedback",
+   "link":"/feedback",
+   "class":"",
+   "icon":"fa fa-comment",
+    "active":false,
+    "children":[]
   }
 ]
