@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2017",
     "lib": [
       "dom",
       "dom.iterable",
@@ -25,7 +25,7 @@
         "name": "next"
       }
     ],
-    "allowJs": true,
+    "allowJs": false,
     "strict": false,
     "strictNullChecks": true
   },
