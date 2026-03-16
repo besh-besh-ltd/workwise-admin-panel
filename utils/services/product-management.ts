@@ -222,8 +222,10 @@ export const acceptProduct = (id: any, status: any, reject_reason_id: any = null
       };
       
       if (reject_reason_id) {
+        // Backend expects reject_reason_id as a string, so convert if it's a number
+        const reasonIdStr = typeof reject_reason_id === 'number' ? reject_reason_id.toString() : reject_reason_id;
         // Ensure reject_reason_id is included correctly
-        payload.reject_reason_id = reject_reason_id;
+        payload.reject_reason_id = reasonIdStr;
       }
 
       if(rejectReason) {
