@@ -158,25 +158,35 @@ interface TopBuyer {
   buyer_name?: string;
   buyer_organization?: string;
   rfqs_created?: number;
-  quotes_sent?: number;
   awards_given?: number;
   total_interactions?: number;
+}
+
+interface FinancialTopProduct {
+  product_id?: string | number;
+  product_name?: string;
+  quotes_count?: number;
+  finalizations_count?: number;
+  avg_price?: number;
 }
 
 interface VendorLeaderboardItem {
   vendor_id?: string | number;
   vendor_name?: string;
   company_name?: string;
+  source?: string;
   total_quotes_submitted?: number;
   avg_revisions?: number;
+  quotes_with_price?: number;
   avg_unit_price?: number;
   total_finalizations?: number;
+  buyer_count?: number;
   top_buyers?: TopBuyer[];
-  top_products?: TopProduct[];
+  top_products?: FinancialTopProduct[];
 }
 
 interface ProductSummaryItem {
-  product_variant_id?: string | number;
+  product_id?: string | number;
   product_name?: string;
   variant_name?: string;
   quote_count?: number;
@@ -196,16 +206,9 @@ interface OverallStats {
 
 interface FinancialData {
   overall_stats?: OverallStats;
-  global_stats?: {
-    total_quotes?: number;
-    avg_revisions?: number;
-    avg_price_quoted?: number;
-    total_finalizations?: number;
-  };
   top_buyers?: TopBuyer[];
   vendor_leaderboard?: VendorLeaderboardItem[];
   product_summary?: ProductSummaryItem[];
-  top_products?: TopProduct[];
 }
 
 interface Category {
@@ -264,8 +267,9 @@ const VendorStatsDashboard: React.FC = () => {
   const [vendorSearchLoading] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [, setVendorLoading] = useState<VendorLoading>({});
-  const [, setFinancialData] = useState<FinancialData | null>(null);
+  const [financialData, setFinancialData] = useState<FinancialData | null>(null);
   const [financialLoading, setFinancialLoading] = useState<boolean>(false);
+  const [expandedVendorId, setExpandedVendorId] = useState<string | number | null>(null);
   const [leaderboardFilters, setLeaderboardFilters] = useState<LeaderboardFilters>({
     source: "",
     sortBy: "awards_desc",
@@ -468,7 +472,6 @@ const VendorStatsDashboard: React.FC = () => {
           vendor_ids: selectedVendors.map(id => parseInt(id, 10)).filter(id => !isNaN(id))
         })
       };
-      console.log("Fetching overview with filters:", filtersWithVendors);
       const res = await fetchVendorStatsOverview(filtersWithVendors);
       if ((res as any)?.status === 1) {
         setOverview((res as any).data);
@@ -492,9 +495,9 @@ const VendorStatsDashboard: React.FC = () => {
           vendor_ids: selectedVendors.map(id => parseInt(id, 10)).filter(id => !isNaN(id))
         })
       };
-      const res = await fetchQuotationFinancialAnalysis(filtersWithVendors);
-      if ((res as any)?.status === 1) {
-        setFinancialData((res as any).data);
+      const res : any = await fetchQuotationFinancialAnalysis(filtersWithVendors);
+      if (res?.status == 1) {
+        setFinancialData(res.data);
       } else {
         setFinancialData(null);
       }
@@ -851,9 +854,6 @@ const VendorStatsDashboard: React.FC = () => {
     fetchOverview();
     fetchCategories();
     fetchVariants(null);
-    if (activeTab === "financial") {
-      fetchFinancialAnalysis();
-    }
   }, []);
 
   useEffect(() => {
@@ -1419,10 +1419,72 @@ const VendorStatsDashboard: React.FC = () => {
       {!loading && activeTab === "behavior" && (
         <div className="card shadow-sm">
           <div className="card-body">
-            <h4 className="card-title mb-0 fw-bold">
+            <h4 className="card-title mb-4 fw-bold">
               <i className="fas fa-user-chart me-2 text-primary"></i>Vendor Behavior Analysis
             </h4>
             <FilterBar showBuyer={true} showVendor={true} />
+            {overview && (
+              <div className="row mt-4 mb-4">
+                <div className="col-md-4 col-sm-6 mb-3">
+                  <div className="card border-info border-top">
+                    <div className="card-body">
+                      <p className="text-muted text-uppercase fs-12 mb-1">Avg Response Time</p>
+                      <h4 className="mb-0 fw-bold">{formatResponseTime(overview.avg_response_minutes, overview)}</h4>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-4 col-sm-6 mb-3">
+                  <div className="card border-success border-top">
+                    <div className="card-body">
+                      <p className="text-muted text-uppercase fs-12 mb-1">Total Awards</p>
+                      <h4 className="mb-0 fw-bold">{overview.total_awards ?? 0}</h4>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-4 col-sm-6 mb-3">
+                  <div className="card border-danger border-top">
+                    <div className="card-body">
+                      <p className="text-muted text-uppercase fs-12 mb-1">Total Regrets</p>
+                      <h4 className="mb-0 fw-bold">{overview.total_regrets ?? 0}</h4>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="table-responsive mt-3">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>#</th>
+                    <th>Vendor Name</th>
+                    <th>Company</th>
+                    <th>Avg Response Time</th>
+                    <th className="text-center">Awards</th>
+                    <th className="text-center">Regrets</th>
+                    <th className="text-center">Avg Delivery Period</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLeaderboard.length ? (
+                    filteredLeaderboard.map((row, idx) => (
+                      <tr key={getVendorId(row) || `beh-${idx}`}>
+                        <td className="text-muted">{idx + 1}</td>
+                        <td className="fw-semibold">{row.name || "N/A"}</td>
+                        <td>{row.company_name || "N/A"}</td>
+                        <td>{formatResponseTime(row.avg_response_minutes, row)}</td>
+                        <td className="text-center"><span className="badge bg-success">{row.awards ?? 0}</span></td>
+                        <td className="text-center"><span className="badge bg-danger">{row.regrets ?? 0}</span></td>
+                        <td className="text-center">{formatDeliveryPeriod((row as any).avg_delivery_period)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="text-center text-muted py-4">No behavior data available</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1430,10 +1492,62 @@ const VendorStatsDashboard: React.FC = () => {
       {!loading && activeTab === "tech-eval" && (
         <div className="card shadow-sm">
           <div className="card-body">
-            <h4 className="card-title mb-0 fw-bold">
+            <h4 className="card-title mb-4 fw-bold">
               <i className="fas fa-clipboard-check me-2 text-primary"></i>Technical Evaluation Statistics
             </h4>
             <FilterBar showBuyer={true} showVendor={true} />
+            {overview && (
+              <div className="row mt-4 mb-4">
+                <div className="col-md-6 col-sm-6 mb-3">
+                  <div className="card border-success border-top">
+                    <div className="card-body">
+                      <p className="text-muted text-uppercase fs-12 mb-1">Total Tech Eval Accepted</p>
+                      <h4 className="mb-0 fw-bold">{overview.total_tech_eval_accepted ?? 0}</h4>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-6 col-sm-6 mb-3">
+                  <div className="card border-danger border-top">
+                    <div className="card-body">
+                      <p className="text-muted text-uppercase fs-12 mb-1">Total Tech Eval Rejected</p>
+                      <h4 className="mb-0 fw-bold">{overview.total_tech_eval_rejected ?? 0}</h4>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="table-responsive mt-3">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>#</th>
+                    <th>Vendor Name</th>
+                    <th>Company</th>
+                    <th className="text-center">Accepted</th>
+                    <th className="text-center">Rejected</th>
+                    <th className="text-center">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLeaderboard.length ? (
+                    filteredLeaderboard.map((row, idx) => (
+                      <tr key={getVendorId(row) || `te-${idx}`}>
+                        <td className="text-muted">{idx + 1}</td>
+                        <td className="fw-semibold">{row.name || "N/A"}</td>
+                        <td>{row.company_name || "N/A"}</td>
+                        <td className="text-center"><span className="badge bg-success">{row.tech_eval_accepted ?? 0}</span></td>
+                        <td className="text-center"><span className="badge bg-danger">{row.tech_eval_rejected ?? 0}</span></td>
+                        <td className="text-center">{(row.tech_eval_accepted || 0) + (row.tech_eval_rejected || 0)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="text-center text-muted py-4">No technical evaluation data available</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1441,10 +1555,52 @@ const VendorStatsDashboard: React.FC = () => {
       {!loading && activeTab === "clauses" && (
         <div className="card shadow-sm">
           <div className="card-body">
-            <h4 className="card-title mb-0 fw-bold">
+            <h4 className="card-title mb-4 fw-bold">
               <i className="fas fa-file-contract me-2 text-primary"></i>Clause Agreement Statistics
             </h4>
             <FilterBar showBuyer={true} showVendor={true} />
+            {overview && (
+              <div className="row mt-4 mb-4">
+                <div className="col-md-6 col-sm-6 mb-3">
+                  <div className="card border-info border-top">
+                    <div className="card-body">
+                      <p className="text-muted text-uppercase fs-12 mb-1">Total Clauses Agreed</p>
+                      <h4 className="mb-0 fw-bold">{overview.total_clauses_agreed ?? 0}</h4>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="table-responsive mt-3">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>#</th>
+                    <th>Vendor Name</th>
+                    <th>Company</th>
+                    <th className="text-center">Clauses Agreed</th>
+                    <th className="text-center">Clauses Responded</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLeaderboard.length ? (
+                    filteredLeaderboard.map((row, idx) => (
+                      <tr key={getVendorId(row) || `cl-${idx}`}>
+                        <td className="text-muted">{idx + 1}</td>
+                        <td className="fw-semibold">{row.name || "N/A"}</td>
+                        <td>{row.company_name || "N/A"}</td>
+                        <td className="text-center"><span className="badge bg-info">{row.clauses_agreed ?? 0}</span></td>
+                        <td className="text-center"><span className="badge bg-secondary">{row.clauses_responded ?? 0}</span></td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="text-center text-muted py-4">No clause data available</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1452,23 +1608,322 @@ const VendorStatsDashboard: React.FC = () => {
       {!loading && activeTab === "queries" && (
         <div className="card shadow-sm">
           <div className="card-body">
-            <h4 className="card-title mb-0 fw-bold">
+            <h4 className="card-title mb-4 fw-bold">
               <i className="fas fa-question-circle me-2 text-primary"></i>Queries & Deviations Statistics
             </h4>
             <FilterBar showBuyer={true} showVendor={true} />
+            {overview && (
+              <div className="row mt-4 mb-4">
+                <div className="col-md-6 col-sm-6 mb-3">
+                  <div className="card border-warning border-top">
+                    <div className="card-body">
+                      <p className="text-muted text-uppercase fs-12 mb-1">Total Queries Raised</p>
+                      <h4 className="mb-0 fw-bold">{overview.total_queries_raised ?? 0}</h4>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="table-responsive mt-3">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>#</th>
+                    <th>Vendor Name</th>
+                    <th>Company</th>
+                    <th className="text-center">Queries Raised</th>
+                    <th className="text-center">Queries by Vendor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLeaderboard.length ? (
+                    filteredLeaderboard.map((row, idx) => (
+                      <tr key={getVendorId(row) || `qr-${idx}`}>
+                        <td className="text-muted">{idx + 1}</td>
+                        <td className="fw-semibold">{row.name || "N/A"}</td>
+                        <td>{row.company_name || "N/A"}</td>
+                        <td className="text-center"><span className="badge bg-warning text-dark">{row.queries_raised ?? 0}</span></td>
+                        <td className="text-center"><span className="badge bg-secondary">{row.queries_by_vendor ?? 0}</span></td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="text-center text-muted py-4">No query data available</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
       {!financialLoading && activeTab === "financial" && (
-        <div className="card shadow-sm">
-          <div className="card-body">
-            <h4 className="card-title mb-0 fw-bold">
-              <FontAwesomeIcon icon={faChartLine} className="me-2 text-primary" />Financial Analysis
-            </h4>
-            <FilterBar showBuyer={true} showVendor={true} />
+        <>
+          <div className="card shadow-sm">
+            <div className="card-body">
+              <h4 className="card-title mb-0 fw-bold">
+                <FontAwesomeIcon icon={faChartLine} className="me-2 text-primary" />Financial Analysis
+              </h4>
+              <FilterBar showBuyer={true} showVendor={true} />
+            </div>
           </div>
-        </div>
+
+          {financialData ? (
+            <>
+              {/* Overall Stats */}
+              {financialData.overall_stats && (
+                <div className="row mt-4">
+                  <div className="col-md-2 col-sm-6 mb-3">
+                    <div className="card border-primary border-top">
+                      <div className="card-body">
+                        <p className="text-muted text-uppercase fs-12 mb-1">Total Quotes</p>
+                        <h4 className="mb-0 fw-bold">{financialData.overall_stats.total_quotes_submitted ?? 0}</h4>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-2 col-sm-6 mb-3">
+                    <div className="card border-info border-top">
+                      <div className="card-body">
+                        <p className="text-muted text-uppercase fs-12 mb-1">Avg Revisions</p>
+                        <h4 className="mb-0 fw-bold">{(financialData.overall_stats.avg_revisions ?? 0).toFixed(2)}</h4>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-2 col-sm-6 mb-3">
+                    <div className="card border-success border-top">
+                      <div className="card-body">
+                        <p className="text-muted text-uppercase fs-12 mb-1">Avg Unit Price</p>
+                        <h4 className="mb-0 fw-bold">{(financialData.overall_stats.avg_unit_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-2 col-sm-6 mb-3">
+                    <div className="card border-warning border-top">
+                      <div className="card-body">
+                        <p className="text-muted text-uppercase fs-12 mb-1">Total Finalizations</p>
+                        <h4 className="mb-0 fw-bold">{financialData.overall_stats.total_finalizations ?? 0}</h4>
+                      </div>
+                    </div>
+                  </div>
+                  {financialData.overall_stats.min_unit_price != null && (
+                    <div className="col-md-2 col-sm-6 mb-3">
+                      <div className="card border-danger border-top">
+                        <div className="card-body">
+                          <p className="text-muted text-uppercase fs-12 mb-1">Min Unit Price</p>
+                          <h4 className="mb-0 fw-bold">{financialData.overall_stats.min_unit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {financialData.overall_stats.max_unit_price != null && (
+                    <div className="col-md-2 col-sm-6 mb-3">
+                      <div className="card border-secondary border-top">
+                        <div className="card-body">
+                          <p className="text-muted text-uppercase fs-12 mb-1">Max Unit Price</p>
+                          <h4 className="mb-0 fw-bold">{financialData.overall_stats.max_unit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Vendor Leaderboard Table with expandable rows */}
+              {financialData.vendor_leaderboard && financialData.vendor_leaderboard.length > 0 && (
+                <div className="card shadow-sm mt-4">
+                  <div className="card-body">
+                    <h5 className="fw-bold mb-3">Vendor Leaderboard</h5>
+                    <div className="table-responsive">
+                      <table className="table table-hover align-middle mb-0">
+                        <thead className="table-light">
+                          <tr>
+                            <th style={{ width: 30 }}></th>
+                            <th>Vendor</th>
+                            <th>Company</th>
+                            <th className="text-center">Source</th>
+                            <th className="text-center">Total Quotes</th>
+                            <th className="text-center">With Price</th>
+                            <th className="text-center">Avg Revisions</th>
+                            <th className="text-end">Avg Unit Price</th>
+                            <th className="text-center">Finalizations</th>
+                            <th className="text-center">Buyers</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {financialData.vendor_leaderboard.map((v) => {
+                            const vendorId = v.vendor_id ?? '';
+                            const isExpanded = expandedVendorId === vendorId;
+                            return (
+                              <React.Fragment key={vendorId}>
+                                <tr
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => setExpandedVendorId(isExpanded ? null : vendorId)}
+                                  className={isExpanded ? "table-active" : ""}
+                                >
+                                  <td>
+                                    <i className={`fas fa-chevron-${isExpanded ? "down" : "right"} text-muted`}></i>
+                                  </td>
+                                  <td className="fw-semibold">{v.vendor_name || "-"}</td>
+                                  <td>{v.company_name || "-"}</td>
+                                  <td className="text-center">
+                                    <span className={`badge bg-${v.source === "admin" ? "info" : "primary"}`}>
+                                      {v.source || "-"}
+                                    </span>
+                                  </td>
+                                  <td className="text-center">{v.total_quotes_submitted ?? 0}</td>
+                                  <td className="text-center">{v.quotes_with_price ?? 0}</td>
+                                  <td className="text-center">{(v.avg_revisions ?? 0).toFixed(2)}</td>
+                                  <td className="text-end">{(v.avg_unit_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                  <td className="text-center">{v.total_finalizations ?? 0}</td>
+                                  <td className="text-center">{v.buyer_count ?? 0}</td>
+                                </tr>
+                                {isExpanded && (
+                                  <tr>
+                                    <td colSpan={10} className="p-0 border-0">
+                                      <div className="bg-light p-3">
+                                        <div className="row">
+                                          {/* Vendor's Top Buyers */}
+                                          {v.top_buyers && v.top_buyers.length > 0 && (
+                                            <div className="col-md-6 mb-3">
+                                              <h6 className="fw-bold mb-2">Top Buyers</h6>
+                                              <table className="table table-sm table-bordered mb-0 bg-white">
+                                                <thead className="table-light">
+                                                  <tr>
+                                                    <th>Buyer</th>
+                                                    <th>Organization</th>
+                                                    <th className="text-center">RFQs</th>
+                                                    <th className="text-center">Awards</th>
+                                                  </tr>
+                                                </thead>
+                                                <tbody>
+                                                  {v.top_buyers.map((b, bi) => (
+                                                    <tr key={bi}>
+                                                      <td>{b.buyer_name || "-"}</td>
+                                                      <td>{b.buyer_organization || "-"}</td>
+                                                      <td className="text-center">{b.rfqs_created ?? 0}</td>
+                                                      <td className="text-center">{b.awards_given ?? 0}</td>
+                                                    </tr>
+                                                  ))}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          )}
+                                          {/* Vendor's Top Products */}
+                                          {v.top_products && v.top_products.length > 0 && (
+                                            <div className="col-md-6 mb-3">
+                                              <h6 className="fw-bold mb-2">Top Products</h6>
+                                              <table className="table table-sm table-bordered mb-0 bg-white">
+                                                <thead className="table-light">
+                                                  <tr>
+                                                    <th>Product</th>
+                                                    <th className="text-center">Quotes</th>
+                                                    <th className="text-center">Finalizations</th>
+                                                    <th className="text-end">Avg Price</th>
+                                                  </tr>
+                                                </thead>
+                                                <tbody>
+                                                  {v.top_products.map((p, pi) => (
+                                                    <tr key={pi}>
+                                                      <td>{p.product_name || "-"}</td>
+                                                      <td className="text-center">{p.quotes_count ?? 0}</td>
+                                                      <td className="text-center">{p.finalizations_count ?? 0}</td>
+                                                      <td className="text-end">{(p.avg_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                    </tr>
+                                                  ))}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Top Buyers Table */}
+              {financialData.top_buyers && financialData.top_buyers.length > 0 && (
+                <div className="card shadow-sm mt-4">
+                  <div className="card-body">
+                    <h5 className="fw-bold mb-3">Top Buyers</h5>
+                    <div className="table-responsive">
+                      <table className="table table-hover align-middle mb-0">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Buyer</th>
+                            <th>Organization</th>
+                            <th className="text-center">RFQs Created</th>
+                            <th className="text-center">Awards Given</th>
+                            <th className="text-center">Total Interactions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {financialData.top_buyers.map((b, i) => (
+                            <tr key={i}>
+                              <td>{b.buyer_name || "-"}</td>
+                              <td>{b.buyer_organization || "-"}</td>
+                              <td className="text-center">{b.rfqs_created ?? 0}</td>
+                              <td className="text-center">{b.awards_given ?? 0}</td>
+                              <td className="text-center">{b.total_interactions ?? 0}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Product Summary Table */}
+              {financialData.product_summary && financialData.product_summary.length > 0 && (
+                <div className="card shadow-sm mt-4">
+                  <div className="card-body">
+                    <h5 className="fw-bold mb-3">Product Summary</h5>
+                    <div className="table-responsive">
+                      <table className="table table-hover align-middle mb-0">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Product</th>
+                            <th>Variant</th>
+                            <th className="text-center">Quotes</th>
+                            <th className="text-center">Finalizations</th>
+                            <th className="text-end">Avg Price</th>
+                            <th className="text-end">Avg Total Price</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {financialData.product_summary.map((p, i) => (
+                            <tr key={i}>
+                              <td>{p.product_name || "-"}</td>
+                              <td>{p.variant_name || "-"}</td>
+                              <td className="text-center">{p.quote_count ?? 0}</td>
+                              <td className="text-center">{p.finalization_count ?? 0}</td>
+                              <td className="text-end">{(p.avg_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                              <td className="text-end">{(p.avg_total_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-5 text-muted">
+              <p>No financial data available. Try adjusting your filters.</p>
+            </div>
+          )}
+        </>
       )}
 
       {financialLoading && activeTab === "financial" && (
