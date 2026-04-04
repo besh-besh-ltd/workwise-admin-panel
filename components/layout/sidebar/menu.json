@@ -88,6 +88,15 @@
         "icon": "fa fa-wrench",
         "active": false
       },
+    ]
+  },
+  {
+    "title": "AI Module",
+    "link": "",
+    "class": "",
+    "icon": "fa fa-magic",
+    "active": false,
+    "children": [
       {
         "title": "Rate Charts",
         "link": "/rate-store",
