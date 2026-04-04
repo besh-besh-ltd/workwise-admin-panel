@@ -87,6 +87,13 @@
         "class": "",
         "icon": "fa fa-wrench",
         "active": false
+      },
+      {
+        "title": "Rate Charts",
+        "link": "/rate-store",
+        "class": "",
+        "icon": "fa fa-table",
+        "active": false
       }
     ]
   },
