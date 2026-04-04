@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useRouter, NextRouter } from "next/router";
 import { ToastContainer, toast } from "react-toastify";
 import { createRolePermission, getMenuList, getRolesDetails, getSubadminDropdown, updateRolePermission } from '@/utils/services/rolesPermission';
@@ -12,6 +12,7 @@ interface SelectOption {
 interface MenuItem {
     id: number;
     tile: string;
+    section: string | null;
 }
 
 interface UserItem {
@@ -46,6 +47,19 @@ const RolesPermission: React.FC = () => {
     const [userType, setUserType] = useState<string>("");
     const [queryUserDetails, setQueryUserDetails] = useState<QueryUserDetails | null>(null);
 
+    // Group menu items by section
+    const groupedMenu = useMemo(() => {
+        const groups: Record<string, MenuItem[]> = {};
+        menuList.forEach((item) => {
+            const section = item.section || 'Other';
+            if (!groups[section]) groups[section] = [];
+            groups[section].push(item);
+        });
+        return groups;
+    }, [menuList]);
+
+    const sectionOrder = useMemo(() => Object.keys(groupedMenu), [groupedMenu]);
+
     const handleSubAdminChange = (selectedOption: SingleValue<SelectOption>): void => {
         setSelectedSubAdmin(selectedOption);
         setSelectedDataMember(null);
@@ -72,9 +86,37 @@ const RolesPermission: React.FC = () => {
         }
     };
 
+    const handleSectionToggle = (section: string): void => {
+        const sectionIds = groupedMenu[section]?.map((m) => m.id) || [];
+        const allSelected = sectionIds.every((id) => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(selectedIds.filter((id) => !sectionIds.includes(id)));
+        } else {
+            const merged = new Set([...selectedIds, ...sectionIds]);
+            setSelectedIds(Array.from(merged));
+        }
+    };
+
+    const isSectionFullySelected = (section: string): boolean => {
+        const sectionIds = groupedMenu[section]?.map((m) => m.id) || [];
+        return sectionIds.length > 0 && sectionIds.every((id) => selectedIds.includes(id));
+    };
+
+    const isSectionPartiallySelected = (section: string): boolean => {
+        const sectionIds = groupedMenu[section]?.map((m) => m.id) || [];
+        const someSelected = sectionIds.some((id) => selectedIds.includes(id));
+        return someSelected && !isSectionFullySelected(section);
+    };
+
+    const handleSelectAll = (): void => {
+        const allIds = menuList.map((m) => m.id);
+        const allSelected = allIds.every((id) => selectedIds.includes(id));
+        setSelectedIds(allSelected ? [] : allIds);
+    };
+
     const getSubAdminList = (): void => {
         getSubadminDropdown()
-            .then((res : any) => {
+            .then((res: any) => {
                 let subAdmins: SelectOption[] = [], dataMembers: SelectOption[] = [];
                 res?.data?.forEach((item: UserItem) => {
                     const option: SelectOption = {
@@ -122,7 +164,7 @@ const RolesPermission: React.FC = () => {
         if (router?.query?.id) {
             delete payload.user_id;
             updateRolePermission(payload, router?.query?.id as string)
-                .then((res) => {
+                .then(() => {
                     toast.success("Roles updated successfully");
                     resetForm();
                     setTimeout(() => {
@@ -134,7 +176,7 @@ const RolesPermission: React.FC = () => {
                 });
         } else {
             createRolePermission(payload)
-                .then((res) => {
+                .then(() => {
                     toast.success("Roles added successfully");
                     resetForm();
                     setTimeout(() => {
@@ -149,7 +191,7 @@ const RolesPermission: React.FC = () => {
 
     const getMenu = (): void => {
         getMenuList()
-            .then((res : any) => {
+            .then((res: any) => {
                 setMenuList(res.data);
             })
             .catch((err) => {
@@ -162,7 +204,7 @@ const RolesPermission: React.FC = () => {
         if (!selectedId) return;
 
         getRolesDetails(selectedId)
-            .then((res : any) => {
+            .then((res: any) => {
                 const arr = res?.data?.map((item: { menu_id: number }) => item?.menu_id);
                 setSelectedIds(arr);
             })
@@ -170,7 +212,6 @@ const RolesPermission: React.FC = () => {
                 console.log("Error fetching roles:", err);
             });
     };
-
 
     const resetForm = (): void => {
         setSelectedIds([]);
@@ -216,11 +257,15 @@ const RolesPermission: React.FC = () => {
         }
     }, [router?.query?.id, queryUserDetails]);
 
+    const selectedCount = selectedIds.length;
+    const totalCount = menuList.length;
+
     return (
         <>
             <ToastContainer />
             <section className="content">
                 <div className="card card-body product-table mt-3">
+                    {/* User selection */}
                     <div className="row">
                         <div className="col-md-4">
                             <div className="form-group">
@@ -261,28 +306,80 @@ const RolesPermission: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="">
-                        <h4>Menu List</h4>
-                        <div className="row mt-3">
-                            {menuList && menuList.map((menu) => (
-                                <div className="col-md-4 mb-3" key={menu.id}>
-                                    <div className="form-check">
-                                        <input
-                                            className="form-check-input"
-                                            type="checkbox"
-                                            checked={selectedIds.includes(menu.id)}
-                                            onChange={() => handleCheckboxChange(menu.id)}
-                                            id={`checkbox-${menu.id}`}
-                                        />
-                                        <label htmlFor={`checkbox-${menu.id}`}>
-                                            {menu.tile}
-                                        </label>
+
+                    {/* Menu permissions — grouped by section */}
+                    <div className="mt-4">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                            <h4 className="mb-0">Menu Permissions</h4>
+                            <div className="d-flex align-items-center gap-3">
+                                <small className="text-muted">{selectedCount} / {totalCount} selected</small>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-secondary"
+                                    onClick={handleSelectAll}
+                                >
+                                    {selectedCount === totalCount ? 'Deselect All' : 'Select All'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="row g-3">
+                            {sectionOrder.map((section) => {
+                                const items = groupedMenu[section];
+                                const fullySelected = isSectionFullySelected(section);
+                                const partiallySelected = isSectionPartiallySelected(section);
+
+                                return (
+                                    <div className="col-md-6 col-lg-4" key={section}>
+                                        <div className="card h-100">
+                                            <div
+                                                className="card-header d-flex align-items-center gap-2 py-2"
+                                                style={{ cursor: 'pointer', userSelect: 'none' }}
+                                                onClick={() => handleSectionToggle(section)}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    className="form-check-input mt-0"
+                                                    checked={fullySelected}
+                                                    ref={(el) => {
+                                                        if (el) el.indeterminate = partiallySelected;
+                                                    }}
+                                                    onChange={() => handleSectionToggle(section)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                                <strong style={{ fontSize: '0.85rem' }}>{section}</strong>
+                                                <small className="text-muted ms-auto">
+                                                    {items.filter((m) => selectedIds.includes(m.id)).length}/{items.length}
+                                                </small>
+                                            </div>
+                                            <div className="card-body py-2">
+                                                {items.map((menu) => (
+                                                    <div className="form-check mb-1" key={menu.id}>
+                                                        <input
+                                                            className="form-check-input"
+                                                            type="checkbox"
+                                                            checked={selectedIds.includes(menu.id)}
+                                                            onChange={() => handleCheckboxChange(menu.id)}
+                                                            id={`checkbox-${menu.id}`}
+                                                        />
+                                                        <label
+                                                            className="form-check-label"
+                                                            htmlFor={`checkbox-${menu.id}`}
+                                                            style={{ fontSize: '0.85rem' }}
+                                                        >
+                                                            {menu.tile}
+                                                        </label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
-                    <div className="d-flex justify-content-end">
+
+                    <div className="d-flex justify-content-end mt-4">
                         <button onClick={handleRolePermission} className="btn btn-primary">
                             Save
                         </button>
