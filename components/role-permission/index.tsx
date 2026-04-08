@@ -339,13 +339,13 @@ const RolesPermission: React.FC = () => {
                                             >
                                                 <input
                                                     type="checkbox"
-                                                    className="form-check-input mt-0"
                                                     checked={fullySelected}
                                                     ref={(el) => {
                                                         if (el) el.indeterminate = partiallySelected;
                                                     }}
                                                     onChange={() => handleSectionToggle(section)}
                                                     onClick={(e) => e.stopPropagation()}
+                                                    style={{ width: '1rem', height: '1rem', margin: 0, marginRight: '0.75rem', flexShrink: 0, cursor: 'pointer' }}
                                                 />
                                                 <strong style={{ fontSize: '0.85rem' }}>{section}</strong>
                                                 <small className="text-muted ms-auto">

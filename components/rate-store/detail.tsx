@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
 import ReactPaginate from "react-paginate";
+import * as XLSX from "xlsx";
 import {
   getRateSource,
   getRateSourceItems,
@@ -115,6 +116,68 @@ export default function RateStoreDetail() {
     }
   };
 
+  // Re-export parsed items as XLSX. Fetches all pages from the items API
+  // (no backend endpoint needed) and builds the spreadsheet client-side.
+  const [exporting, setExporting] = useState(false);
+  const handleExportXLSX = async () => {
+    if (!id || !source) return;
+    try {
+      setExporting(true);
+      const PAGE_SIZE = 500;
+      const allRows: RateSourceItem[] = [];
+      let p = 1;
+      // Pull all items in batches (uses existing /items?page=&limit= endpoint)
+      // Cap at 100 pages = 50k items as safety
+      for (let i = 0; i < 100; i++) {
+        const res: any = await getRateSourceItems(Number(id), p, PAGE_SIZE);
+        const batch: RateSourceItem[] = res?.data || [];
+        allRows.push(...batch);
+        const total = res?.pagination?.total || allRows.length;
+        if (allRows.length >= total || batch.length < PAGE_SIZE) break;
+        p++;
+      }
+
+      if (allRows.length === 0) {
+        toast.warn("No items to export");
+        return;
+      }
+
+      const wsData = [
+        ["Item Code", "Description", "Unit", "Rate", "Category", "Sub Category"],
+        ...allRows.map((r) => [
+          r.item_code || "",
+          r.description || "",
+          r.unit || "",
+          r.rate ?? "",
+          r.category || "",
+          r.sub_category || "",
+        ]),
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws["!cols"] = [
+        { wch: 14 },
+        { wch: 60 },
+        { wch: 10 },
+        { wch: 12 },
+        { wch: 22 },
+        { wch: 22 },
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Parsed Items");
+
+      const safeName = source.name.replace(/[^a-z0-9_\-]+/gi, "_").slice(0, 60);
+      const versionTag = source.version ? `_${source.version}` : "";
+      XLSX.writeFile(wb, `${safeName}${versionTag}_parsed.xlsx`);
+
+      toast.success(`Exported ${allRows.length} items`);
+    } catch {
+      toast.error("Failed to export parsed items");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return <div className="container-fluid py-4 text-center">Loading...</div>;
   }
@@ -198,6 +261,15 @@ export default function RateStoreDetail() {
                     Download Source File
                   </a>
                 )}
+                {(source.item_count || 0) > 0 && (
+                  <button
+                    className="btn btn-outline-success btn-sm"
+                    onClick={handleExportXLSX}
+                    disabled={exporting}
+                  >
+                    {exporting ? "Exporting..." : "Download Parsed Items (XLSX)"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -230,10 +302,8 @@ export default function RateStoreDetail() {
                 <tr key={item.id}>
                   <td className="text-muted">{(page - 1) * limit + idx + 1}</td>
                   <td><code>{item.item_code || "-"}</code></td>
-                  <td style={{ maxWidth: 400 }}>
-                    <span className="text-truncate d-inline-block" style={{ maxWidth: "100%" }} title={item.description}>
-                      {item.description}
-                    </span>
+                  <td style={{ minWidth: 320, maxWidth: 600, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                    {item.description}
                   </td>
                   <td>{item.unit || "-"}</td>
                   <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>

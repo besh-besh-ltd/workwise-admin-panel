@@ -1,5 +1,5 @@
+import axios from "axios";
 import axiosInstance from "../axios/index";
-import axiosFormData from "../axios/form-data";
 
 const BASE = `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/rate-store`;
 
@@ -10,11 +10,13 @@ export function listRateSources(params: {
   limit?: number;
   type?: string;
   status?: string;
+  visibility?: string;
 }) {
-  const { page = 1, limit = 20, type, status } = params;
+  const { page = 1, limit = 20, type, status, visibility } = params;
   let url = `${BASE}?page=${page}&limit=${limit}`;
   if (type) url += `&type=${type}`;
   if (status) url += `&status=${status}`;
+  if (visibility) url += `&visibility=${visibility}`;
   return axiosInstance.get(url);
 }
 
@@ -43,15 +45,35 @@ export function uploadRateChart(data: {
   return axiosInstance.post(`${BASE}/upload`, data);
 }
 
-// ── Upload file to S3 (get URL) ────────────────────────────────────
+// ── Direct-to-S3 upload via presigned URL ──────────────────────────
+// 1) Ask backend for a presigned PUT URL
+// 2) PUT the file straight to S3 from the browser (no Node round-trip)
+// Returns the public S3 URL of the uploaded object.
 
-export function uploadFileToS3(file: File) {
-  const formData = new FormData();
-  formData.append("file", file);
-  return axiosFormData.post(
-    `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/media/upload-file`,
-    formData
-  );
+export async function uploadFileToS3(
+  file: File,
+  onProgress?: (pct: number) => void
+): Promise<string> {
+  const presignRes: any = await axiosInstance.post(`${BASE}/presigned-upload`, {
+    filename: file.name,
+    content_type: file.type || "application/octet-stream",
+  });
+
+  const { presigned_url, file_url } = presignRes?.data || {};
+  if (!presigned_url || !file_url) {
+    throw new Error("Failed to get presigned upload URL");
+  }
+
+  await axios.put(presigned_url, file, {
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    onUploadProgress: (e) => {
+      if (e.total && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    },
+  });
+
+  return file_url;
 }
 
 // ── Archive a rate source ───────────────────────────────────────────
@@ -70,4 +92,13 @@ export function deleteRateSource(id: number) {
 
 export function embedRateSource(id: number) {
   return axiosInstance.post(`${BASE}/${id}/embed`);
+}
+
+// ── Update visibility (admin — no owner check) ──────────────────────
+
+export function updateRateSourceVisibility(
+  id: number,
+  visibility: "private" | "team" | "org"
+) {
+  return axiosInstance.put(`${BASE}/${id}/visibility`, { visibility });
 }

@@ -10,6 +10,7 @@ import {
   deleteRateSource,
   getRateSource,
   embedRateSource,
+  updateRateSourceVisibility,
 } from "@/utils/services/rate-store";
 
 interface RateSource {
@@ -23,7 +24,16 @@ interface RateSource {
   effective_date: string | null;
   created_by_name: string | null;
   created_at: string;
+  visibility?: "private" | "team" | "org";
+  tenant_id?: number | null;
 }
+
+const VISIBILITY_BADGES: Record<string, { cls: string; label: string }> = {
+  private: { cls: "badge bg-secondary", label: "Private" },
+  team: { cls: "badge bg-warning text-dark", label: "Team" },
+  org: { cls: "badge bg-success", label: "Org" },
+  global: { cls: "badge bg-info text-dark", label: "Global" },
+};
 
 const TYPE_LABELS: Record<string, string> = {
   govt_chart: "Government Chart",
@@ -51,6 +61,7 @@ export default function RateStoreList() {
   const [totalPages, setTotalPages] = useState(1);
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [visibilityFilter, setVisibilityFilter] = useState("");
   const limit = 20;
 
   // Upload modal state
@@ -65,7 +76,13 @@ export default function RateStoreList() {
   const fetchSources = useCallback(async () => {
     setLoading(true);
     try {
-      const res: any = await listRateSources({ page, limit, type: typeFilter, status: statusFilter });
+      const res: any = await listRateSources({
+        page,
+        limit,
+        type: typeFilter,
+        status: statusFilter,
+        visibility: visibilityFilter,
+      });
       setSources(res?.data || []);
       const total = res?.pagination?.total || 0;
       setTotalPages(Math.ceil(total / limit) || 1);
@@ -74,7 +91,7 @@ export default function RateStoreList() {
     } finally {
       setLoading(false);
     }
-  }, [page, typeFilter, statusFilter]);
+  }, [page, typeFilter, statusFilter, visibilityFilter]);
 
   useEffect(() => {
     fetchSources();
@@ -91,9 +108,8 @@ export default function RateStoreList() {
     }
     setUploading(true);
     try {
-      // Step 1: Upload file to S3
-      const fileRes: any = await uploadFileToS3(uploadFile);
-      const fileUrl = fileRes?.data?.[0]?.file_path || fileRes?.data?.file_url;
+      // Step 1: Upload file directly to S3 via presigned URL
+      const fileUrl = await uploadFileToS3(uploadFile);
       if (!fileUrl) throw new Error("File upload failed");
 
       // Step 2: Create rate source (triggers AI parsing)
@@ -138,6 +154,21 @@ export default function RateStoreList() {
       fetchSources();
     } catch {
       toast.error("Delete failed");
+    }
+  };
+
+  const handleVisibilityChange = async (
+    id: number,
+    visibility: "private" | "team" | "org"
+  ) => {
+    try {
+      await updateRateSourceVisibility(id, visibility);
+      toast.success(`Visibility set to ${visibility}`);
+      setSources((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, visibility } : s))
+      );
+    } catch {
+      toast.error("Failed to update visibility");
     }
   };
 
@@ -196,6 +227,14 @@ export default function RateStoreList() {
             <option value="failed">Failed</option>
           </select>
         </div>
+        <div className="col-auto">
+          <select className="form-select form-select-sm" value={visibilityFilter} onChange={(e) => { setVisibilityFilter(e.target.value); setPage(1); }}>
+            <option value="">All Visibilities</option>
+            <option value="private">Private</option>
+            <option value="team">Team</option>
+            <option value="org">Org</option>
+          </select>
+        </div>
       </div>
 
       {/* Table */}
@@ -206,6 +245,7 @@ export default function RateStoreList() {
               <th>#</th>
               <th>Name</th>
               <th>Type</th>
+              <th>Visibility</th>
               <th>Version</th>
               <th>Items</th>
               <th>Status</th>
@@ -215,9 +255,9 @@ export default function RateStoreList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center py-4">Loading...</td></tr>
+              <tr><td colSpan={9} className="text-center py-4">Loading...</td></tr>
             ) : sources.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-4 text-muted">No rate sources found</td></tr>
+              <tr><td colSpan={9} className="text-center py-4 text-muted">No rate sources found</td></tr>
             ) : (
               sources.map((src, idx) => (
                 <tr key={src.id}>
@@ -232,6 +272,29 @@ export default function RateStoreList() {
                     )}
                   </td>
                   <td>{TYPE_LABELS[src.type] || src.type}</td>
+                  <td>
+                    {src.type === "govt_chart" ? (
+                      <span className={VISIBILITY_BADGES.global.cls}>{VISIBILITY_BADGES.global.label}</span>
+                    ) : (
+                      <select
+                        className="form-select form-select-sm"
+                        style={{ minWidth: 100 }}
+                        value={src.visibility || "private"}
+                        onChange={(e) =>
+                          handleVisibilityChange(
+                            src.id,
+                            e.target.value as "private" | "team" | "org"
+                          )
+                        }
+                        disabled={src.status !== "active"}
+                        title="Change visibility"
+                      >
+                        <option value="private">Private</option>
+                        <option value="team">Team</option>
+                        <option value="org">Org</option>
+                      </select>
+                    )}
+                  </td>
                   <td>{src.version || "-"}</td>
                   <td>{src.item_count || 0}</td>
                   <td><span className={STATUS_BADGES[src.status] || "badge bg-light"}>{src.status}</span></td>
@@ -343,7 +406,7 @@ export default function RateStoreList() {
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Excel File *</label>
-                  <input className="form-control" type="file" accept=".xlsx,.xls,.csv"
+                  <input className="form-control" type="file" accept=".xlsx,.xls,.csv,.pdf"
                     onChange={(e) => setUploadFile(e.target.files?.[0] || null)} />
                 </div>
               </div>
