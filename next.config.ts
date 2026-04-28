@@ -46,6 +46,17 @@ const nextConfig: NextConfig = {
         protocol: "http",
         hostname: "api.letsworkwise.com",
         pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "tenderhub.letsworkwise.com",
+        pathname: "/**",
+      },
+      // API domain over HTTP (Need to remove this after backend enforces HTTPS)
+      {
+        protocol: "http",
+        hostname: "tenderhub.letsworkwise.com",
+        pathname: "/**",
       }
     ],
   },
