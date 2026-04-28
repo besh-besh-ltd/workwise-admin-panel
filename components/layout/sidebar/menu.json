@@ -91,6 +91,22 @@
     ]
   },
   {
+    "title": "AI Module",
+    "link": "",
+    "class": "",
+    "icon": "fa fa-magic",
+    "active": false,
+    "children": [
+      {
+        "title": "AI Feedback & Accuracy",
+        "link": "/ai-feedback",
+        "class": "",
+        "icon": "fa fa-line-chart",
+        "active": false
+      }
+    ]
+  },
+  {
     "title": "CMS",
     "link": "",
     "class": "",
