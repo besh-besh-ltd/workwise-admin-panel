@@ -1,6 +1,6 @@
 import aiServer from "@/utils/axios/ai-server";
 
-const BASE = "/api/admin/v2";
+const BASE = "/api/admin/v1";
 
 export function getFeedbackOverview(module?: string) {
   const params = module ? `?module=${module}` : "";
