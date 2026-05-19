@@ -227,7 +227,7 @@ const VendorDetails: React.FC = () => {
                 </li>
                 {details?.gstin != null && (
                   <li className="list-group-item">
-                    GSTIN- {details?.gstin}
+                    GSTIN/TRN- {details?.gstin}
                   </li>
                 )}
                 {details?.cin != null && (

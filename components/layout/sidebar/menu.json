@@ -103,6 +103,13 @@
         "class": "",
         "icon": "fa fa-table",
         "active": false
+      },
+      {
+        "title": "AI Feedback & Accuracy",
+        "link": "/ai-feedback",
+        "class": "",
+        "icon": "fa fa-line-chart",
+        "active": false
       }
     ]
   },

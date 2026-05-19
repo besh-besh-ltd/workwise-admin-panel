@@ -690,12 +690,12 @@ const AddVendor: React.FC = () => {
                         </div>
 
                         <div className="col-6">
-                          <label htmlFor="gstin">Gstin</label>
+                          <label htmlFor="gstin">GSTIN/TRN</label>
                           <Field
                             type="text"
                             name="gstin"
                             className="form-control"
-                            placeholder="gstin"
+                            placeholder="GSTIN/TRN"
                           />
                           <ErrorMessage
                             name="gstin"
