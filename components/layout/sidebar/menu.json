@@ -98,6 +98,13 @@
     "active": false,
     "children": [
       {
+        "title": "Rate Charts",
+        "link": "/rate-store",
+        "class": "",
+        "icon": "fa fa-table",
+        "active": false
+      },
+      {
         "title": "AI Feedback & Accuracy",
         "link": "/ai-feedback",
         "class": "",
