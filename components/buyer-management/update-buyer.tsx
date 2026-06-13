@@ -38,10 +38,12 @@ interface AccountLimits {
   max_procurement: number;
   max_engineering: number;
   max_finance: number;
+  max_approver: number;
   used_top_management?: number;
   used_procurement?: number;
   used_engineering?: number;
   used_finance?: number;
+  used_approver?: number;
 }
 
 interface CurrentUser {
@@ -74,6 +76,7 @@ interface AccountLimitsFormValues {
   max_procurement: number;
   max_engineering: number;
   max_finance: number;
+  max_approver: number;
 }
 
 interface ApiError {
@@ -271,6 +274,7 @@ const UpdateBuyer: React.FC = () => {
     max_procurement: accountLimits?.max_procurement || 0,
     max_engineering: accountLimits?.max_engineering || 0,
     max_finance: accountLimits?.max_finance || 0,
+    max_approver: accountLimits?.max_approver || 0,
   };
 
   const validationSchema = yup.object({
@@ -290,6 +294,7 @@ const UpdateBuyer: React.FC = () => {
     max_procurement: yup.number().min(0).required("Required"),
     max_engineering: yup.number().min(0).required("Required"),
     max_finance: yup.number().min(0).required("Required"),
+    max_approver: yup.number().min(0).required("Required"),
   });
 
   return (
@@ -495,6 +500,18 @@ const UpdateBuyer: React.FC = () => {
                     />
                     <small className="text-muted">Used: {accountLimits.used_finance || 0}</small>
                     <ErrorMessage name="max_finance" component="div" className="text-danger" />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Max Approver</label>
+                    <Field
+                      type="number"
+                      name="max_approver"
+                      className="form-control"
+                      min="0"
+                      readOnly={!isAdmin()}
+                    />
+                    <small className="text-muted">Used: {accountLimits.used_approver || 0}</small>
+                    <ErrorMessage name="max_approver" component="div" className="text-danger" />
                   </div>
                 </div>
                 {isAdmin() && (
