@@ -25,6 +25,7 @@ interface BuyerDetails {
   subscription_plan_id?: number;
   user_type: number;
   company_id?: number;
+  product_access_mode?: string;
 }
 
 interface CountryCode {
@@ -69,6 +70,7 @@ interface FormValues {
   image: File | string | null;
   subscription: string;
   countryCode: string;
+  product_access_mode: string;
 }
 
 interface AccountLimitsFormValues {
@@ -267,6 +269,7 @@ const UpdateBuyer: React.FC = () => {
     image: editDetails?.profile_image || null,
     subscription: editDetails?.subscription_plan_id?.toString() || "-1",
     countryCode: "",
+    product_access_mode: editDetails?.product_access_mode || "both",
   };
 
   const accountLimitsInitialValues: AccountLimitsFormValues = {
@@ -420,6 +423,24 @@ const UpdateBuyer: React.FC = () => {
                         </option>
                       ))}
                     </Field>
+                  </div>
+                </div>
+                <div className="row md-6 mb-4">
+                  <div className="col-md-12">
+                    <label htmlFor="product_access_mode">Product &amp; Vendor Access</label>
+                    <Field
+                      as="select"
+                      className="form-control"
+                      name="product_access_mode"
+                      disabled={!canEditUser()}
+                    >
+                      <option value="both">Private + Global (Workwise catalog)</option>
+                      <option value="private">Private only (own products &amp; vendors)</option>
+                    </Field>
+                    <div className="form-text">
+                      Private only = this company sees and quotes only its own products and vendors.
+                      Private + Global also includes the Workwise shared catalog.
+                    </div>
                   </div>
                 </div>
                 {canEditUser() && (
