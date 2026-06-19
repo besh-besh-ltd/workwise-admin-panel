@@ -28,6 +28,7 @@ interface FormValues {
   max_engineering: number;
   max_finance: number;
   max_approver: number;
+  product_access_mode: string;
 }
 
 interface ValidationErrors {
@@ -57,7 +58,8 @@ const AddBuyerPage: React.FC = () => {
     max_procurement: 0,
     max_engineering: 0,
     max_finance: 0,
-    max_approver: 0
+    max_approver: 0,
+    product_access_mode: "both"
   };
 
   // Custom validation function to check if at least one account type is > 0
@@ -124,6 +126,7 @@ const AddBuyerPage: React.FC = () => {
     formData.append("max_engineering", values.max_engineering.toString());
     formData.append("max_finance", values.max_finance.toString());
     formData.append("max_approver", values.max_approver.toString());
+    formData.append("product_access_mode", values.product_access_mode);
 
     try {
       await RegisterCompanyByAdmin(formData);
@@ -183,6 +186,18 @@ const AddBuyerPage: React.FC = () => {
                 <label className="form-label">Organization Name *</label>
                 <Field type="text" name="organization_name" className="form-control" />
                 <ErrorMessage name="organization_name" component="div" className="text-danger" />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Product &amp; Vendor Access</label>
+                <Field as="select" name="product_access_mode" className="form-select">
+                  <option value="both">Private + Global (Workwise catalog)</option>
+                  <option value="private">Private only (own products &amp; vendors)</option>
+                </Field>
+                <div className="form-text">
+                  Private only = this company sees and quotes only its own products and vendors.
+                  Private + Global also includes the Workwise shared catalog.
+                </div>
               </div>
 
               <h4 className="mt-4 mb-3">Account Limits</h4>
