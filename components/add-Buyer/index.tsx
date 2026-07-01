@@ -27,6 +27,8 @@ interface FormValues {
   max_procurement: number;
   max_engineering: number;
   max_finance: number;
+  max_approver: number;
+  product_access_mode: string;
 }
 
 interface ValidationErrors {
@@ -55,7 +57,9 @@ const AddBuyerPage: React.FC = () => {
     max_top_management: 0,
     max_procurement: 0,
     max_engineering: 0,
-    max_finance: 0
+    max_finance: 0,
+    max_approver: 0,
+    product_access_mode: "both"
   };
 
   // Custom validation function to check if at least one account type is > 0
@@ -65,7 +69,8 @@ const AddBuyerPage: React.FC = () => {
       values.max_top_management,
       values.max_procurement,
       values.max_engineering,
-      values.max_finance
+      values.max_finance,
+      values.max_approver
     ];
 
     if (!accountTypes.some(val => val > 0)) {
@@ -89,7 +94,8 @@ const AddBuyerPage: React.FC = () => {
     max_top_management: yup.number().min(0).required("Required"),
     max_procurement: yup.number().min(0).required("Required"),
     max_engineering: yup.number().min(0).required("Required"),
-    max_finance: yup.number().min(0).required("Required")
+    max_finance: yup.number().min(0).required("Required"),
+    max_approver: yup.number().min(0).required("Required")
   });
 
   const submitHandler = async (
@@ -119,6 +125,8 @@ const AddBuyerPage: React.FC = () => {
     formData.append("max_procurement", values.max_procurement.toString());
     formData.append("max_engineering", values.max_engineering.toString());
     formData.append("max_finance", values.max_finance.toString());
+    formData.append("max_approver", values.max_approver.toString());
+    formData.append("product_access_mode", values.product_access_mode);
 
     try {
       await RegisterCompanyByAdmin(formData);
@@ -180,6 +188,18 @@ const AddBuyerPage: React.FC = () => {
                 <ErrorMessage name="organization_name" component="div" className="text-danger" />
               </div>
 
+              <div className="mb-3">
+                <label className="form-label">Product &amp; Vendor Access</label>
+                <Field as="select" name="product_access_mode" className="form-select">
+                  <option value="both">Private + Global (Workwise catalog)</option>
+                  <option value="private">Private only (own products &amp; vendors)</option>
+                </Field>
+                <div className="form-text">
+                  Private only = this company sees and quotes only its own products and vendors.
+                  Private + Global also includes the Workwise shared catalog.
+                </div>
+              </div>
+
               <h4 className="mt-4 mb-3">Account Limits</h4>
               <p className="text-muted">At least one account type must have a limit greater than 0.</p>
 
@@ -188,7 +208,7 @@ const AddBuyerPage: React.FC = () => {
               )}
 
               <div className="row mb-3">
-                {(["max_top_management", "max_procurement", "max_engineering", "max_finance"] as const).map((field) => (
+                {(["max_top_management", "max_procurement", "max_engineering", "max_finance", "max_approver"] as const).map((field) => (
                   <div className="col-md-6 col-lg-3" key={field}>
                     <label className="form-label">
                       {field.replace("max_", "Max ").replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}

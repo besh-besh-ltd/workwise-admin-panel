@@ -108,7 +108,8 @@ export const getAllProducts = (
   dateFrom,
   dateTo,
   approvalStatus,
-  onlyAddedByAdmin
+  onlyAddedByAdmin,
+  productSource = ""
 ) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -156,7 +157,12 @@ export const getAllProducts = (
       if(approvalStatus !== null && approvalStatus !== ""){
         url += `&is_approve=${encodeURIComponent(approvalStatus)}`;
       }
-      
+
+      // Handle product source / owner filtering (global vs buyer-company products)
+      if(productSource){
+        url += `&productSource=${encodeURIComponent(productSource)}`;
+      }
+
       // Add a cache-busting parameter to prevent 304 responses
       const timestamp = Date.now();
       url += `&_t=${timestamp}`;

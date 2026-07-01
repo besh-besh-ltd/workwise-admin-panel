@@ -25,6 +25,7 @@ interface BuyerDetails {
   subscription_plan_id?: number;
   user_type: number;
   company_id?: number;
+  product_access_mode?: string;
 }
 
 interface CountryCode {
@@ -38,10 +39,12 @@ interface AccountLimits {
   max_procurement: number;
   max_engineering: number;
   max_finance: number;
+  max_approver: number;
   used_top_management?: number;
   used_procurement?: number;
   used_engineering?: number;
   used_finance?: number;
+  used_approver?: number;
 }
 
 interface CurrentUser {
@@ -67,6 +70,7 @@ interface FormValues {
   image: File | string | null;
   subscription: string;
   countryCode: string;
+  product_access_mode: string;
 }
 
 interface AccountLimitsFormValues {
@@ -74,6 +78,7 @@ interface AccountLimitsFormValues {
   max_procurement: number;
   max_engineering: number;
   max_finance: number;
+  max_approver: number;
 }
 
 interface ApiError {
@@ -264,6 +269,7 @@ const UpdateBuyer: React.FC = () => {
     image: editDetails?.profile_image || null,
     subscription: editDetails?.subscription_plan_id?.toString() || "-1",
     countryCode: "",
+    product_access_mode: editDetails?.product_access_mode || "both",
   };
 
   const accountLimitsInitialValues: AccountLimitsFormValues = {
@@ -271,6 +277,7 @@ const UpdateBuyer: React.FC = () => {
     max_procurement: accountLimits?.max_procurement || 0,
     max_engineering: accountLimits?.max_engineering || 0,
     max_finance: accountLimits?.max_finance || 0,
+    max_approver: accountLimits?.max_approver || 0,
   };
 
   const validationSchema = yup.object({
@@ -290,6 +297,7 @@ const UpdateBuyer: React.FC = () => {
     max_procurement: yup.number().min(0).required("Required"),
     max_engineering: yup.number().min(0).required("Required"),
     max_finance: yup.number().min(0).required("Required"),
+    max_approver: yup.number().min(0).required("Required"),
   });
 
   return (
@@ -417,6 +425,24 @@ const UpdateBuyer: React.FC = () => {
                     </Field>
                   </div>
                 </div>
+                <div className="row md-6 mb-4">
+                  <div className="col-md-12">
+                    <label htmlFor="product_access_mode">Product &amp; Vendor Access</label>
+                    <Field
+                      as="select"
+                      className="form-control"
+                      name="product_access_mode"
+                      disabled={!canEditUser()}
+                    >
+                      <option value="both">Private + Global (Workwise catalog)</option>
+                      <option value="private">Private only (own products &amp; vendors)</option>
+                    </Field>
+                    <div className="form-text">
+                      Private only = this company sees and quotes only its own products and vendors.
+                      Private + Global also includes the Workwise shared catalog.
+                    </div>
+                  </div>
+                </div>
                 {canEditUser() && (
                   <div className="text-end">
                     <button type="submit" className="btn btn-primary">Save User Details</button>
@@ -495,6 +521,18 @@ const UpdateBuyer: React.FC = () => {
                     />
                     <small className="text-muted">Used: {accountLimits.used_finance || 0}</small>
                     <ErrorMessage name="max_finance" component="div" className="text-danger" />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Max Approver</label>
+                    <Field
+                      type="number"
+                      name="max_approver"
+                      className="form-control"
+                      min="0"
+                      readOnly={!isAdmin()}
+                    />
+                    <small className="text-muted">Used: {accountLimits.used_approver || 0}</small>
+                    <ErrorMessage name="max_approver" component="div" className="text-danger" />
                   </div>
                 </div>
                 {isAdmin() && (

@@ -26,6 +26,8 @@ interface ProductData {
     approved_by?: string;
     product_categories?: ProductCategory[];
     product_variants?: any[];
+    company_id?: number | null;
+    owner_company?: string | null;
 }
 
 const ProductDetails: React.FC = () => {
@@ -144,7 +146,16 @@ const ProductDetails: React.FC = () => {
                 <div className="card">
                     <div className="card-body">
                         <div className="product-info mb-4">
-                            <h2>{productData.name}</h2>
+                            <h2>
+                                {productData.name}{" "}
+                                {productData.company_id ? (
+                                    <span className="badge badge-info">
+                                        Buyer: {productData.owner_company || 'Private'}
+                                    </span>
+                                ) : (
+                                    <span className="badge badge-secondary">Global</span>
+                                )}
+                            </h2>
                             <div className="row">
                                 <div className="col-md-6">
                                     {productData.vendor_name && (

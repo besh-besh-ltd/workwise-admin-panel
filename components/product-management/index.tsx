@@ -67,6 +67,8 @@ interface Product {
   product_variants?: any[];
   isChecked?: boolean;
   reject_reason?: string;
+  company_id?: number | null;
+  owner_company?: string | null;
 }
 
 interface Variant {
@@ -144,6 +146,7 @@ interface FilterValues {
   startDate: string;
   endDate: string;
   variant: string;
+  productSource: string;
 }
 
 interface ProductMapObj {
@@ -242,7 +245,8 @@ const ProductManagement: React.FC = () => {
     approvalStatus: (router.query.approvalStatus as string) || "",
     startDate: (router.query.startDate as string) || "",
     endDate: (router.query.endDate as string) || "",
-    variant: (router.query.variant as string) || ""
+    variant: (router.query.variant as string) || "",
+    productSource: (router.query.productSource as string) || ""
   });
 
   const [productSearchTerm, setProductSearchTerm] = useState<string>('');
@@ -302,7 +306,8 @@ const ProductManagement: React.FC = () => {
       approvalStatus: "",
       startDate: "",
       endDate: "",
-      variant: ""
+      variant: "",
+      productSource: ""
     });
 
     setPage(1);
@@ -634,7 +639,8 @@ const ProductManagement: React.FC = () => {
       dateFrom: filterValues.dateFrom,
       dateTo: filterValues.dateTo,
       selectedApprovalStatus: filterValues.approvalStatus,
-      onlyAddedByAdmin: filterValues.addedBy
+      onlyAddedByAdmin: filterValues.addedBy,
+      productSource: filterValues.productSource
     }
 
     getAllProducts(
@@ -649,7 +655,8 @@ const ProductManagement: React.FC = () => {
       params.dateFrom,
       params.dateTo,
       params.selectedApprovalStatus,
-      params.onlyAddedByAdmin
+      params.onlyAddedByAdmin,
+      params.productSource
     )
       .then((res: any) => {
         setloading(false);
@@ -1786,6 +1793,19 @@ const ProductManagement: React.FC = () => {
                   </select>
                 </div>
 
+                {/* Source filter: global (admin) catalog vs buyer-company private products */}
+                <div className="col-sm-3 mb-1">
+                  <select
+                    className="form-control"
+                    value={filterValues.productSource}
+                    onChange={(e) => handleFilterChange('productSource', e.target.value)}
+                  >
+                    <option value="">Filter by Source (All)</option>
+                    <option value="global">Global (Admin)</option>
+                    <option value="buyer">Buyer Company Products</option>
+                  </select>
+                </div>
+
                 {/* Date Filters */}
                 <div className="col-sm-3 mb-1">
                   <div className="date-input-container">
@@ -1891,6 +1911,7 @@ const ProductManagement: React.FC = () => {
                       />
                     </th>
                     <th scope="col">Product Name</th>
+                    <th scope="col">Owner</th>
                     <th scope="col">Category</th>
                     <th scope="col">Sub Category</th>
                     <th scope="col">Approval Status</th>
@@ -1906,15 +1927,24 @@ const ProductManagement: React.FC = () => {
                       return (
                         <tr key={item.id} className={item.is_deleted == 1 ? 'deleted-row' : ''} >
                           <td>
-                            <input
-                              type="checkbox"
-                              name="select_product"
-                              checked={item.isChecked}
-                              readOnly
-                              onClick={(e) => selectProduct(e as any, item)}
-                            />
+                            {!item.company_id && (
+                              <input
+                                type="checkbox"
+                                name="select_product"
+                                checked={item.isChecked}
+                                readOnly
+                                onClick={(e) => selectProduct(e as any, item)}
+                              />
+                            )}
                           </td>
                           <td>{item.name}</td>
+                          <td>
+                            {item.company_id ? (
+                              <span className="badge badge-info">{item.owner_company || 'Buyer'}</span>
+                            ) : (
+                              <span className="badge badge-secondary">Global</span>
+                            )}
+                          </td>
                           <td className="subcatstd">
                             <span className="badge badge-warning">
                               {item.product_categories.length > 0
@@ -1924,7 +1954,9 @@ const ProductManagement: React.FC = () => {
                           </td>
                           <td className="subcatstd">{getSubCats(item)}</td>
                           <td>
-                            {(userType && userType != 6) && (
+                            {item.company_id ? (
+                              <span className="badge badge-light text-muted">Buyer-managed</span>
+                            ) : (userType && userType != 6) && (
                               item?.is_approve === 1 ? (
                                 <OverlayTrigger
                                   placement="top"
@@ -2005,7 +2037,7 @@ const ProductManagement: React.FC = () => {
                                   )
                                 }
                               ></span>
-                              {userType != 6 &&
+                              {userType != 6 && !item.company_id &&
                                 <span
                                   className="fa fa-edit"
                                   onClick={() => handleUpdateProduct(item)}
@@ -2016,7 +2048,7 @@ const ProductManagement: React.FC = () => {
                       );
                     }) : (
                       <tr>
-                        <td colSpan={10} className="text-center">
+                        <td colSpan={11} className="text-center">
                           No products found
                         </td>
                       </tr>
