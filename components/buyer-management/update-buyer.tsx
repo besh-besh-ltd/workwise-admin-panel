@@ -40,11 +40,15 @@ interface AccountLimits {
   max_engineering: number;
   max_finance: number;
   max_approver: number;
+  max_estimator: number;
+  max_senior_estimator: number;
   used_top_management?: number;
   used_procurement?: number;
   used_engineering?: number;
   used_finance?: number;
   used_approver?: number;
+  used_estimator?: number;
+  used_senior_estimator?: number;
 }
 
 interface CurrentUser {
@@ -79,6 +83,8 @@ interface AccountLimitsFormValues {
   max_engineering: number;
   max_finance: number;
   max_approver: number;
+  max_estimator: number;
+  max_senior_estimator: number;
 }
 
 interface ApiError {
@@ -278,6 +284,8 @@ const UpdateBuyer: React.FC = () => {
     max_engineering: accountLimits?.max_engineering || 0,
     max_finance: accountLimits?.max_finance || 0,
     max_approver: accountLimits?.max_approver || 0,
+    max_estimator: accountLimits?.max_estimator || 0,
+    max_senior_estimator: accountLimits?.max_senior_estimator || 0,
   };
 
   const validationSchema = yup.object({
@@ -298,6 +306,8 @@ const UpdateBuyer: React.FC = () => {
     max_engineering: yup.number().min(0).required("Required"),
     max_finance: yup.number().min(0).required("Required"),
     max_approver: yup.number().min(0).required("Required"),
+    max_estimator: yup.number().min(0).required("Required"),
+    max_senior_estimator: yup.number().min(0).required("Required"),
   });
 
   return (
@@ -533,6 +543,30 @@ const UpdateBuyer: React.FC = () => {
                     />
                     <small className="text-muted">Used: {accountLimits.used_approver || 0}</small>
                     <ErrorMessage name="max_approver" component="div" className="text-danger" />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Max Estimator</label>
+                    <Field
+                      type="number"
+                      name="max_estimator"
+                      className="form-control"
+                      min="0"
+                      readOnly={!isAdmin()}
+                    />
+                    <small className="text-muted">Used: {accountLimits.used_estimator || 0}</small>
+                    <ErrorMessage name="max_estimator" component="div" className="text-danger" />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Max Senior Estimator</label>
+                    <Field
+                      type="number"
+                      name="max_senior_estimator"
+                      className="form-control"
+                      min="0"
+                      readOnly={!isAdmin()}
+                    />
+                    <small className="text-muted">Used: {accountLimits.used_senior_estimator || 0}</small>
+                    <ErrorMessage name="max_senior_estimator" component="div" className="text-danger" />
                   </div>
                 </div>
                 {isAdmin() && (
