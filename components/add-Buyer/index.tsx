@@ -28,6 +28,8 @@ interface FormValues {
   max_engineering: number;
   max_finance: number;
   max_approver: number;
+  max_estimator: number;
+  max_senior_estimator: number;
   product_access_mode: string;
 }
 
@@ -59,6 +61,8 @@ const AddBuyerPage: React.FC = () => {
     max_engineering: 0,
     max_finance: 0,
     max_approver: 0,
+    max_estimator: 0,
+    max_senior_estimator: 0,
     product_access_mode: "both"
   };
 
@@ -70,7 +74,9 @@ const AddBuyerPage: React.FC = () => {
       values.max_procurement,
       values.max_engineering,
       values.max_finance,
-      values.max_approver
+      values.max_approver,
+      values.max_estimator,
+      values.max_senior_estimator
     ];
 
     if (!accountTypes.some(val => val > 0)) {
@@ -95,7 +101,9 @@ const AddBuyerPage: React.FC = () => {
     max_procurement: yup.number().min(0).required("Required"),
     max_engineering: yup.number().min(0).required("Required"),
     max_finance: yup.number().min(0).required("Required"),
-    max_approver: yup.number().min(0).required("Required")
+    max_approver: yup.number().min(0).required("Required"),
+    max_estimator: yup.number().min(0).required("Required"),
+    max_senior_estimator: yup.number().min(0).required("Required")
   });
 
   const submitHandler = async (
@@ -126,6 +134,8 @@ const AddBuyerPage: React.FC = () => {
     formData.append("max_engineering", values.max_engineering.toString());
     formData.append("max_finance", values.max_finance.toString());
     formData.append("max_approver", values.max_approver.toString());
+    formData.append("max_estimator", values.max_estimator.toString());
+    formData.append("max_senior_estimator", values.max_senior_estimator.toString());
     formData.append("product_access_mode", values.product_access_mode);
 
     try {
@@ -208,7 +218,7 @@ const AddBuyerPage: React.FC = () => {
               )}
 
               <div className="row mb-3">
-                {(["max_top_management", "max_procurement", "max_engineering", "max_finance", "max_approver"] as const).map((field) => (
+                {(["max_top_management", "max_procurement", "max_engineering", "max_finance", "max_approver", "max_estimator", "max_senior_estimator"] as const).map((field) => (
                   <div className="col-md-6 col-lg-3" key={field}>
                     <label className="form-label">
                       {field.replace("max_", "Max ").replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
