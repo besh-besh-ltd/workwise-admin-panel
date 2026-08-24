@@ -14,6 +14,7 @@ import img1 from "../../public/assets/images/products.png";
 import { getCountryCodes } from "@/utils/services/location-management";
 import { getAdminProfile } from "@/utils/services/login";
 import { handleGetSubscriptionList } from "@/utils/services/price-subscription-management";
+import { getUserTypeLabel } from "@/utils/userTypes";
 
 interface BuyerDetails {
   name: string;
@@ -117,13 +118,13 @@ const UpdateBuyer: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-    if(editDetails) getSubscriptionList();
-  }, [editDetails])
+    if (editDetails) getSubscriptionList();
+  }, [editDetails]);
 
   const fetchBuyerDetails = async (): Promise<void> => {
     try {
       setLoading(true);
-      const response : any = await handleGetBuyerDetails(id as string);
+      const response: any = await handleGetBuyerDetails(id as string);
       const buyerData = response?.data?.[0];
 
       setEditDetails(buyerData);
@@ -142,7 +143,7 @@ const UpdateBuyer: React.FC = () => {
 
   const fetchCountryCodes = async (): Promise<void> => {
     try {
-      const response : any = await getCountryCodes();
+      const response: any = await getCountryCodes();
       setCountryCode(response?.data || []);
     } catch (error) {
       setCountryCode([]);
@@ -151,7 +152,7 @@ const UpdateBuyer: React.FC = () => {
 
   const getCurrentUser = async (): Promise<void> => {
     try {
-      const response : any = await getAdminProfile();
+      const response: any = await getAdminProfile();
       setCurrentUser(response?.data || {});
     } catch (error) {
       setCurrentUser({});
@@ -160,7 +161,7 @@ const UpdateBuyer: React.FC = () => {
 
   const fetchAccountLimits = async (company_id: number): Promise<void> => {
     try {
-      const response : any = await handleGetBuyerAccountLimits(company_id);
+      const response: any = await handleGetBuyerAccountLimits(company_id);
       setAccountLimits(response?.data || null);
     } catch (error) {
       setAccountLimits(null);
@@ -176,11 +177,10 @@ const UpdateBuyer: React.FC = () => {
 
   const getSubscriptionList = (): void => {
     handleGetSubscriptionList(editDetails!.user_type)
-      .then((res : any) => {
+      .then((res: any) => {
         const formattedData: SubscriptionOption[] = res.data.map((obj: SubscriptionPlan) => ({
           label: `${obj.plan_name} (${
-            getSubscriptionDuration[parseInt(obj.duration).toString()] ||
-            obj.duration + " Months"
+            getSubscriptionDuration[parseInt(obj.duration).toString()] || obj.duration + " Months"
           })`,
           value: obj.id.toString(),
         }));
@@ -189,17 +189,6 @@ const UpdateBuyer: React.FC = () => {
       .catch((error) => {
         toast.error("Internal server error");
       });
-  };
-
-  const getUserTypeLabel = (userType: number): string => {
-    const userTypeMap: Record<number, string> = {
-      2: "Procurement",
-      7: "Company Admin",
-      8: "Top Management",
-      9: "Engineering Account",
-      10: "Finance Account"
-    };
-    return userTypeMap[userType] || `Type ${userType}`;
   };
 
   const isAdmin = (): boolean => {
@@ -226,17 +215,18 @@ const UpdateBuyer: React.FC = () => {
 
     const { countryCode: _, ...updatedValues } = {
       ...values,
-      mobile: fullMobile
+      mobile: fullMobile,
     };
 
     handleUpdateBuyer(updatedValues, editDetails!)
-      .then((res : any) => {
+      .then((res: any) => {
         resetForm();
         toast.success(res.message);
         router.push("/buyer-management");
       })
       .catch((error: ApiError) => {
-        const errorMsg = Object.values(error?.error?.response?.data?.errors || {})[0] || "Update failed";
+        const errorMsg =
+          Object.values(error?.error?.response?.data?.errors || {})[0] || "Update failed";
         toast.error(errorMsg as string);
       });
   };
@@ -248,12 +238,13 @@ const UpdateBuyer: React.FC = () => {
     }
 
     handleUpdateBuyerAccountLimits(editDetails!.company_id!, values)
-      .then((res : any) => {
+      .then((res: any) => {
         toast.success(res.message);
         fetchAccountLimits(editDetails!.company_id!);
       })
       .catch((error: ApiError) => {
-        const errorMsg = Object.values(error?.error?.response?.data?.errors || {})[0] || "Update failed";
+        const errorMsg =
+          Object.values(error?.error?.response?.data?.errors || {})[0] || "Update failed";
         toast.error(errorMsg as string);
       });
   };
@@ -263,9 +254,7 @@ const UpdateBuyer: React.FC = () => {
   }
 
   const extractedCountryCode = editDetails?.mobile?.match(/^\+?\d+/)?.[0] || "+91";
-  const selectedCountry = countryCode.find(
-    (item) => item.phone_code === extractedCountryCode
-  );
+  const selectedCountry = countryCode.find((item) => item.phone_code === extractedCountryCode);
 
   const initialValues: FormValues = {
     name: editDetails?.name || "",
@@ -290,10 +279,7 @@ const UpdateBuyer: React.FC = () => {
 
   const validationSchema = yup.object({
     name: yup.string().required("Name is required"),
-    email: yup
-      .string()
-      .email("Please enter valid email address")
-      .required("Email is required"),
+    email: yup.string().email("Please enter valid email address").required("Email is required"),
     mobile: yup
       .string()
       .matches(/^[0-9]{10,15}$/, "Enter a valid mobile number")
@@ -360,7 +346,9 @@ const UpdateBuyer: React.FC = () => {
                         className="form-select me-2 w-auto"
                         disabled={!canEditUser()}
                       >
-                        <option value="">{selectedCountry?.country_code} ({selectedCountry?.phone_code})</option>
+                        <option value="">
+                          {selectedCountry?.country_code} ({selectedCountry?.phone_code})
+                        </option>
                         {countryCode.map((item) => (
                           <option key={item.id} value={item.phone_code}>
                             {item.country_code} ({item.phone_code})
@@ -389,19 +377,16 @@ const UpdateBuyer: React.FC = () => {
                 <div className="row mb-3">
                   <div className="col-md-6">
                     <label className="form-label">Company Name</label>
-                    <Field
-                      type="text"
-                      name="organization_name"
-                      className="form-control"
-                      readOnly
-                    />
+                    <Field type="text" name="organization_name" className="form-control" readOnly />
                   </div>
                   <div className="col-md-6">
                     <label className="form-label">Image</label>
                     <input
                       type="file"
                       className="form-control"
-                      onChange={(event: ChangeEvent<HTMLInputElement>) => setFieldValue("image", event.target.files?.[0])}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                        setFieldValue("image", event.target.files?.[0])
+                      }
                       disabled={!canEditUser()}
                     />
                     {editDetails?.profile_image && (
@@ -420,12 +405,10 @@ const UpdateBuyer: React.FC = () => {
                 <div className="row md-6 mb-4">
                   <div className="col-md-12">
                     <label htmlFor="subscription">Select Subscription ( Empty for Free )</label>
-                    <Field
-                      as="select"
-                      className="form-control"
-                      name="subscription"
-                    >
-                      <option value="" disabled>Select</option>
+                    <Field as="select" className="form-control" name="subscription">
+                      <option value="" disabled>
+                        Select
+                      </option>
                       <option value="-1">No Subscription</option>
                       {subscriptionList?.map((subscription) => (
                         <option key={subscription.value} value={subscription.value}>
@@ -455,7 +438,9 @@ const UpdateBuyer: React.FC = () => {
                 </div>
                 {canEditUser() && (
                   <div className="text-end">
-                    <button type="submit" className="btn btn-primary">Save User Details</button>
+                    <button type="submit" className="btn btn-primary">
+                      Save User Details
+                    </button>
                   </div>
                 )}
                 {!canEditUser() && (
@@ -493,8 +478,14 @@ const UpdateBuyer: React.FC = () => {
                       min="0"
                       readOnly={!isAdmin()}
                     />
-                    <small className="text-muted">Used: {accountLimits.used_top_management || 0}</small>
-                    <ErrorMessage name="max_top_management" component="div" className="text-danger" />
+                    <small className="text-muted">
+                      Used: {accountLimits.used_top_management || 0}
+                    </small>
+                    <ErrorMessage
+                      name="max_top_management"
+                      component="div"
+                      className="text-danger"
+                    />
                   </div>
                   <div className="col-md-3">
                     <label className="form-label">Max Procurement</label>
@@ -505,7 +496,9 @@ const UpdateBuyer: React.FC = () => {
                       min="0"
                       readOnly={!isAdmin()}
                     />
-                    <small className="text-muted">Used: {accountLimits.used_procurement || 0}</small>
+                    <small className="text-muted">
+                      Used: {accountLimits.used_procurement || 0}
+                    </small>
                     <ErrorMessage name="max_procurement" component="div" className="text-danger" />
                   </div>
                   <div className="col-md-3">
@@ -517,7 +510,9 @@ const UpdateBuyer: React.FC = () => {
                       min="0"
                       readOnly={!isAdmin()}
                     />
-                    <small className="text-muted">Used: {accountLimits.used_engineering || 0}</small>
+                    <small className="text-muted">
+                      Used: {accountLimits.used_engineering || 0}
+                    </small>
                     <ErrorMessage name="max_engineering" component="div" className="text-danger" />
                   </div>
                   <div className="col-md-3">
@@ -565,13 +560,21 @@ const UpdateBuyer: React.FC = () => {
                       min="0"
                       readOnly={!isAdmin()}
                     />
-                    <small className="text-muted">Used: {accountLimits.used_senior_estimator || 0}</small>
-                    <ErrorMessage name="max_senior_estimator" component="div" className="text-danger" />
+                    <small className="text-muted">
+                      Used: {accountLimits.used_senior_estimator || 0}
+                    </small>
+                    <ErrorMessage
+                      name="max_senior_estimator"
+                      component="div"
+                      className="text-danger"
+                    />
                   </div>
                 </div>
                 {isAdmin() && (
                   <div className="text-end">
-                    <button type="submit" className="btn btn-success">Update Account Limits</button>
+                    <button type="submit" className="btn btn-success">
+                      Update Account Limits
+                    </button>
                   </div>
                 )}
                 {!isAdmin() && (
