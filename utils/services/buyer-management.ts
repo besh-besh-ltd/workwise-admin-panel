@@ -3,24 +3,70 @@ import axiosFormData from "../axios/form-data";
 import axiosxdata from "../axios/xxx-form-data";
 
 export const RegisterCompanyByAdmin = (values) => {
-	return new Promise(async (resolve, reject) => {
-		try {
-			let response = await axiosFormData.post(
-				`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/company-registration`,
-				values
-			);
-			resolve(response);
-		} catch (error) {
-			reject({ message: error });
-		}
-	});
-};
-
-function handleGetBuyerList(limit = 10, page = 1, verified, organization, name, user_type) {
   return new Promise(async (resolve, reject) => {
     try {
+      let response = await axiosFormData.post(
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/company-registration`,
+        values
+      );
+      resolve(response);
+    } catch (error) {
+      reject({ message: error });
+    }
+  });
+};
+
+export interface BuyerListParams {
+  limit?: number;
+  page?: number;
+  /** 't' active | 'f' inactive */
+  verified?: string;
+  /** One box: matches name, email, mobile, organisation or company. */
+  search?: string;
+  organization?: string;
+  name?: string;
+  email?: string;
+  mobile?: string;
+  /** A single user_type, or several as a comma-separated list. */
+  user_type?: string;
+  /** 'active' | 'expired' | 'none' */
+  subscription_status?: string;
+  /** 'monthly' | 'quarterly' | 'yearly' */
+  subscription_cycle?: string;
+}
+
+// Takes an options object rather than eight positional arguments — the filter
+// list has grown and `(10, 1, "", "", "", "")` said nothing about which blank
+// was which. Values are URL-encoded, so a search containing & or # no longer
+// truncates the query string.
+function handleGetBuyerList(params: BuyerListParams = {}) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const qs = new URLSearchParams();
+      qs.set("limit", String(params.limit ?? 10));
+      qs.set("page", String(params.page ?? 1));
+      qs.set("include_company", "true");
+
+      const optional: Array<keyof BuyerListParams> = [
+        "verified",
+        "search",
+        "organization",
+        "name",
+        "email",
+        "mobile",
+        "user_type",
+        "subscription_status",
+        "subscription_cycle",
+      ];
+      optional.forEach((k) => {
+        const v = params[k];
+        if (v !== undefined && v !== null && String(v).trim() !== "") {
+          qs.set(k, String(v).trim());
+        }
+      });
+
       let response = await axiosInstance.get(
-        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/buyer-list?limit=${limit}&page=${page}&verified=${verified}&organization=${organization}&name=${name}&user_type=${user_type}&include_company=true`
+        `${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/buyer/buyer-list?${qs.toString()}`
       );
       resolve(response);
     } catch (error) {
@@ -36,7 +82,7 @@ function generateRandomPassword() {
     password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return password;
-};
+}
 
 // mukul 07-06-2025 , function is not in use, cross check and remove
 function handleApproveBuyer(id: any, status: any) {
@@ -96,7 +142,7 @@ function handleGetBuyerDetails(id) {
   });
 }
 
-function handleGetBuyerRfqList(page=1, limit=10, id) {
+function handleGetBuyerRfqList(page = 1, limit = 10, id) {
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.get(
@@ -109,7 +155,7 @@ function handleGetBuyerRfqList(page=1, limit=10, id) {
   });
 }
 
-function handleGetSubscriptionDetails(id){
+function handleGetSubscriptionDetails(id) {
   return new Promise(async (resolve, reject) => {
     try {
       let response = await axiosInstance.get(
@@ -159,5 +205,5 @@ export {
   handleGetSubscriptionDetails,
   handleGetBuyerAccountLimits,
   handleUpdateBuyerAccountLimits,
-  generateRandomPassword
+  generateRandomPassword,
 };

@@ -13,13 +13,12 @@ import {
   ChartOptions,
 } from "chart.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEye, faChartPie, faChartBar, faChartLine } from "@fortawesome/free-solid-svg-icons";
 import {
-  faEye,
-  faChartPie,
-  faChartBar,
-  faChartLine,
-} from "@fortawesome/free-solid-svg-icons";
-import { fetchVendorStatsOverview, fetchVendorStatsByVendor, fetchQuotationFinancialAnalysis } from "@/utils/services/vendor-stats";
+  fetchVendorStatsOverview,
+  fetchVendorStatsByVendor,
+  fetchQuotationFinancialAnalysis,
+} from "@/utils/services/vendor-stats";
 import { getParentCategories } from "@/utils/services/product-management";
 import { searchAllVariants } from "@/utils/services/product-management";
 import { handleGetBuyerList } from "@/utils/services/buyer-management";
@@ -237,7 +236,16 @@ interface FilterBarProps {
 }
 
 if (typeof window !== "undefined") {
-  ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, ChartTooltip, Legend);
+  ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    BarElement,
+    ArcElement,
+    ChartTooltip,
+    Legend
+  );
 }
 
 const VendorStatsDashboard: React.FC = () => {
@@ -283,7 +291,6 @@ const VendorStatsDashboard: React.FC = () => {
     awardRegret: 0,
   });
 
-
   const kpiCards = useMemo<KPICard[]>(() => {
     if (!overview) return [];
     return [
@@ -291,67 +298,67 @@ const VendorStatsDashboard: React.FC = () => {
         label: "Total Vendors",
         value: overview.total_vendors ?? 0,
         icon: "users",
-        color: "primary"
+        color: "primary",
       },
       {
         label: "Active Vendors",
         value: overview.active_vendors ?? 0,
         icon: "check-circle",
-        color: "success"
+        color: "success",
       },
       {
         label: "Deactivated Vendors",
         value: overview.deactivated_vendors ?? 0,
         icon: "times-circle",
-        color: "danger"
+        color: "danger",
       },
       {
         label: "Avg Response Time",
         value: formatResponseTime(overview.avg_response_minutes, overview),
         icon: "clock",
-        color: "info"
+        color: "info",
       },
       {
         label: "Total Awards",
         value: overview.total_awards ?? 0,
         icon: "trophy",
-        color: "warning"
+        color: "warning",
       },
       {
         label: "Total Regrets",
         value: overview.total_regrets ?? 0,
         icon: "ban",
-        color: "danger"
+        color: "danger",
       },
       {
         label: "Avg Delivery Period",
         value: formatDeliveryPeriod(overview.avg_delivery_period),
         icon: "truck",
-        color: "secondary"
+        color: "secondary",
       },
       {
         label: "Tech Eval Accepted",
         value: overview.total_tech_eval_accepted ?? 0,
         icon: "check-double",
-        color: "success"
+        color: "success",
       },
       {
         label: "Tech Eval Rejected",
         value: overview.total_tech_eval_rejected ?? 0,
         icon: "times",
-        color: "danger"
+        color: "danger",
       },
       {
         label: "Clauses Agreed",
         value: overview.total_clauses_agreed ?? 0,
         icon: "file-contract",
-        color: "info"
+        color: "info",
       },
       {
         label: "Queries Raised",
         value: overview.total_queries_raised ?? 0,
         icon: "question-circle",
-        color: "warning"
+        color: "warning",
       },
     ];
   }, [overview]);
@@ -361,9 +368,7 @@ const VendorStatsDashboard: React.FC = () => {
     let list = [...overview.leaderboard];
 
     if (selectedVendors.length > 3) {
-      list = list.filter((row) =>
-        selectedVendors.includes(getVendorId(row))
-      );
+      list = list.filter((row) => selectedVendors.includes(getVendorId(row)));
     }
 
     if (columnFilter.column) {
@@ -378,8 +383,8 @@ const VendorStatsDashboard: React.FC = () => {
           list = list.filter((row) => (row.regrets || 0) > 0);
           break;
         case "tech_eval":
-          list = list.filter((row) =>
-            ((row.tech_eval_accepted || 0) + (row.tech_eval_rejected || 0)) > 0
+          list = list.filter(
+            (row) => (row.tech_eval_accepted || 0) + (row.tech_eval_rejected || 0) > 0
           );
           break;
         case "clauses":
@@ -469,8 +474,8 @@ const VendorStatsDashboard: React.FC = () => {
       const filtersWithVendors = {
         ...filters,
         ...(selectedVendors.length > 0 && {
-          vendor_ids: selectedVendors.map(id => parseInt(id, 10)).filter(id => !isNaN(id))
-        })
+          vendor_ids: selectedVendors.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id)),
+        }),
       };
       const res = await fetchVendorStatsOverview(filtersWithVendors);
       if ((res as any)?.status === 1) {
@@ -492,10 +497,10 @@ const VendorStatsDashboard: React.FC = () => {
       const filtersWithVendors = {
         ...filters,
         ...(selectedVendors.length > 0 && {
-          vendor_ids: selectedVendors.map(id => parseInt(id, 10)).filter(id => !isNaN(id))
-        })
+          vendor_ids: selectedVendors.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id)),
+        }),
       };
-      const res : any = await fetchQuotationFinancialAnalysis(filtersWithVendors);
+      const res: any = await fetchQuotationFinancialAnalysis(filtersWithVendors);
       if (res?.status == 1) {
         setFinancialData(res.data);
       } else {
@@ -543,7 +548,8 @@ const VendorStatsDashboard: React.FC = () => {
       const fetchPromises = vendorIds.map(async (vendorId) => {
         try {
           setVendorLoading((prev) => ({ ...prev, [vendorId]: true }));
-          const numericId = typeof vendorId === "string" ? parseInt(vendorId, 10) : Number(vendorId);
+          const numericId =
+            typeof vendorId === "string" ? parseInt(vendorId, 10) : Number(vendorId);
           if (Number.isNaN(numericId)) {
             return { vendorId, data: null };
           }
@@ -587,7 +593,16 @@ const VendorStatsDashboard: React.FC = () => {
   };
 
   const handleResetFilters = (): void => {
-    setFilters({ date_from: "", date_to: "", source: "", category_id: "", variant_id: "", created_by: "", is_private: "", subscription_plan: "" });
+    setFilters({
+      date_from: "",
+      date_to: "",
+      source: "",
+      category_id: "",
+      variant_id: "",
+      created_by: "",
+      is_private: "",
+      subscription_plan: "",
+    });
     setSelectedVendors([]);
     setLeaderboardFilters({ source: "", sortBy: "awards_desc", minAwards: "", maxRegrets: "" });
     setVendorSearchTerm("");
@@ -607,10 +622,10 @@ const VendorStatsDashboard: React.FC = () => {
 
   useEffect(() => {
     const syncScrollbar = (): void => {
-      const tableScroll = document.getElementById('bottom-table-scroll');
-      const scrollContent = document.getElementById('top-scroll-content');
+      const tableScroll = document.getElementById("bottom-table-scroll");
+      const scrollContent = document.getElementById("top-scroll-content");
       if (tableScroll && scrollContent) {
-        const table = tableScroll.querySelector('table');
+        const table = tableScroll.querySelector("table");
         if (table) {
           scrollContent.style.width = `${table.offsetWidth}px`;
         } else {
@@ -620,22 +635,23 @@ const VendorStatsDashboard: React.FC = () => {
     };
 
     const timeoutId = setTimeout(syncScrollbar, 200);
-    window.addEventListener('resize', syncScrollbar);
+    window.addEventListener("resize", syncScrollbar);
 
     return () => {
       clearTimeout(timeoutId);
-      window.removeEventListener('resize', syncScrollbar);
+      window.removeEventListener("resize", syncScrollbar);
     };
   }, [filteredLeaderboard, columnFilter, loading]);
 
   const sourceChartData = useMemo(() => {
-    const labels = overview?.source_distribution?.map((item) => {
-      const source = item.source || "Unknown";
-      if (source === "admin") return "Admin Added";
-      if (source === "self") return "Self Registration";
-      if (source === "buyer") return "Private Vendor";
-      return source;
-    }) || [];
+    const labels =
+      overview?.source_distribution?.map((item) => {
+        const source = item.source || "Unknown";
+        if (source === "admin") return "Admin Added";
+        if (source === "self") return "Self Registration";
+        if (source === "buyer") return "Private Vendor";
+        return source;
+      }) || [];
     const data = overview?.source_distribution?.map((item) => Number(item.count) || 0) || [];
     return {
       labels,
@@ -695,7 +711,7 @@ const VendorStatsDashboard: React.FC = () => {
   };
 
   const doughnutChartOptions: ChartOptions<"doughnut"> = {
-    ...chartOptions as ChartOptions<"doughnut">,
+    ...(chartOptions as ChartOptions<"doughnut">),
     plugins: {
       ...chartOptions.plugins,
       tooltip: {
@@ -718,7 +734,7 @@ const VendorStatsDashboard: React.FC = () => {
   };
 
   const lineChartOptions: ChartOptions<"line"> = {
-    ...chartOptions as ChartOptions<"line">,
+    ...(chartOptions as ChartOptions<"line">),
     plugins: {
       ...chartOptions.plugins,
       legend: {
@@ -869,10 +885,12 @@ const VendorStatsDashboard: React.FC = () => {
       if (Array.isArray((response as any)?.data)) {
         const cats = (response as any).data;
         setCategories(cats);
-        setCategoryOptions(cats.map((cat: Category) => ({
-          value: cat.id,
-          label: cat.title || cat.name || cat.category_name || `Category ${cat.id}`
-        })));
+        setCategoryOptions(
+          cats.map((cat: Category) => ({
+            value: cat.id,
+            label: cat.title || cat.name || cat.category_name || `Category ${cat.id}`,
+          }))
+        );
       } else {
         setCategories([]);
         setCategoryOptions([]);
@@ -886,19 +904,32 @@ const VendorStatsDashboard: React.FC = () => {
 
   const fetchVariants = async (categoryId: string | number | null = null): Promise<void> => {
     try {
-      const res = await searchAllVariants(null, "", "", "", null, categoryId || null, null, null, 1, 1000000);
+      const res = await searchAllVariants(
+        null,
+        "",
+        "",
+        "",
+        null,
+        categoryId || null,
+        null,
+        null,
+        1,
+        1000000
+      );
       const variantsList = (res as any)?.data || [];
 
       const vars = variantsList.map((v: any) => ({
         id: v.id,
         name: v.variant_name || v.variant || v.name || `Variant ${v.id}`,
-        product_name: v.product_name || '',
+        product_name: v.product_name || "",
       }));
       setVariants(vars);
-      setVariantOptions(vars.map((v: Variant) => ({
-        value: v.id,
-        label: v.product_name ? `${v.name} (${v.product_name})` : v.name
-      })));
+      setVariantOptions(
+        vars.map((v: Variant) => ({
+          value: v.id,
+          label: v.product_name ? `${v.name} (${v.product_name})` : v.name,
+        }))
+      );
     } catch (error) {
       console.error("Variant fetch error", error);
       setVariants([]);
@@ -912,7 +943,15 @@ const VendorStatsDashboard: React.FC = () => {
 
   const fetchBuyers = async (): Promise<void> => {
     try {
-      const res = await handleGetBuyerList(1000000, 1, "", "", "", "");
+      // Pinned to the five transacting company roles. Buyer Management now
+      // also lists Approver / Estimator / Senior Estimator, and none of them
+      // raise RFQs — leaving this unfiltered would put them in a dropdown
+      // used to pick whose vendor stats to look at.
+      const res = await handleGetBuyerList({
+        limit: 1000000,
+        page: 1,
+        user_type: "2,7,8,9,10",
+      });
 
       let buyersList: Buyer[] = [];
       if (Array.isArray((res as any)?.data)) {
@@ -924,10 +963,12 @@ const VendorStatsDashboard: React.FC = () => {
       }
 
       setBuyers(buyersList);
-      setBuyerOptions(buyersList.map(buyer => ({
-        value: buyer.id,
-        label: buyer.name || buyer.organization_name || `Buyer ${buyer.id}`
-      })));
+      setBuyerOptions(
+        buyersList.map((buyer) => ({
+          value: buyer.id,
+          label: buyer.name || buyer.organization_name || `Buyer ${buyer.id}`,
+        }))
+      );
     } catch (error) {
       console.error("Buyer fetch error", error);
       setBuyers([]);
@@ -935,11 +976,9 @@ const VendorStatsDashboard: React.FC = () => {
     }
   };
 
-
   useEffect(() => {
     fetchBuyers();
   }, []);
-
 
   const handleVendorsChange = useCallback((vendorIds: string[]): void => {
     setSelectedVendors(vendorIds);
@@ -949,188 +988,203 @@ const VendorStatsDashboard: React.FC = () => {
     setVendorSearchTerm(searchTerm);
   }, []);
 
-
-  const FilterBar = React.memo<FilterBarProps>(({ showBuyer = true, showVendor = false }) => (
-    <div className="card bg-light mb-4 border-0 shadow-sm">
-      <div className="card-body p-3">
-        <div className="row g-3 align-items-end">
-          <div className="col-md-2">
-            <label className="form-label small mb-1 fw-semibold">
-              <i className="fas fa-calendar-alt me-1 text-primary"></i>From Date
-            </label>
-            <input
-              type="date"
-              className="form-control form-control-sm"
-              name="date_from"
-              value={filters.date_from}
-              onChange={handleFilterChange}
-            />
-          </div>
-          <div className="col-md-2">
-            <label className="form-label small mb-1 fw-semibold">
-              <i className="fas fa-calendar-check me-1 text-primary"></i>To Date
-            </label>
-            <input
-              type="date"
-              className="form-control form-control-sm"
-              name="date_to"
-              value={filters.date_to}
-              onChange={handleFilterChange}
-              disabled={!filters.date_from}
-              min={filters.date_from}
-            />
-          </div>
-          <div className="col-md-2">
-            <label className="form-label small mb-1 fw-semibold">
-              <i className="fas fa-filter me-1 text-info"></i>Source
-            </label>
-            <select
-              className="form-select form-select-sm"
-              name="source"
-              value={filters.source}
-              onChange={handleFilterChange}
-            >
-              <option value="">All Sources</option>
-              <option value="admin">Admin Added</option>
-              <option value="self">Self Registration</option>
-              <option value="buyer">Private Vendor</option>
-            </select>
-          </div>
-          <div className="col-md-2">
-            <label className="form-label small mb-1 fw-semibold">
-              <i className="fas fa-user-shield me-1 text-warning"></i>Private Vendor
-            </label>
-            <select
-              className="form-select form-select-sm"
-              name="is_private"
-              value={filters.is_private}
-              onChange={handleFilterChange}
-            >
-              <option value="">All</option>
-              <option value="1">Private Only</option>
-              <option value="0">Non-Private Only</option>
-            </select>
-          </div>
-          <div className="col-md-2">
-            <label className="form-label small mb-1 fw-semibold">
-              <i className="fas fa-crown me-1 text-success"></i>Premium Vendor
-            </label>
-            <select
-              className="form-select form-select-sm"
-              name="subscription_plan"
-              value={filters.subscription_plan}
-              onChange={handleFilterChange}
-            >
-              <option value="">All Plans</option>
-              <option value="1">Premium</option>
-              <option value="2">Standard</option>
-              <option value="3">Basic</option>
-            </select>
-          </div>
-          <div className="col-md-2">
-            <label className="form-label small mb-1 fw-semibold">
-              <i className="fas fa-folder me-1 text-primary"></i>Category
-            </label>
-            <Select
-              options={categoryOptions}
-              value={categoryOptions.find(opt => opt.value === parseInt(String(filters.category_id))) || null}
-              onChange={(selectedOption: SingleValue<SelectOption>) => {
-                const categoryId = selectedOption ? selectedOption.value : "";
-                setFilters((prev) => ({ ...prev, category_id: categoryId, variant_id: "" }));
-              }}
-              placeholder="All Categories"
-              isClearable={true}
-              isSearchable={true}
-              className="basic-select"
-              classNamePrefix="select"
-            />
-          </div>
-          <div className="col-md-2">
-            <label className="form-label small mb-1 fw-semibold">
-              <i className="fas fa-tags me-1 text-success"></i>Variant
-            </label>
-            <Select
-              options={variantOptions}
-              value={variantOptions.find(opt => opt.value === parseInt(String(filters.variant_id))) || null}
-              onChange={(selectedOption: SingleValue<SelectOption>) => {
-                const variantId = selectedOption ? selectedOption.value : "";
-                setFilters((prev) => ({ ...prev, variant_id: variantId }));
-              }}
-              placeholder="All Variants"
-              isClearable={true}
-              isSearchable={true}
-              className="basic-select"
-              classNamePrefix="select"
-            />
-          </div>
-          {showBuyer && (
+  const FilterBar = React.memo<FilterBarProps>(
+    ({ showBuyer = true, showVendor = false }) => (
+      <div className="card bg-light mb-4 border-0 shadow-sm">
+        <div className="card-body p-3">
+          <div className="row g-3 align-items-end">
             <div className="col-md-2">
               <label className="form-label small mb-1 fw-semibold">
-                <i className="fas fa-user-tie me-1 text-primary"></i>Buyer
+                <i className="fas fa-calendar-alt me-1 text-primary"></i>From Date
+              </label>
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                name="date_from"
+                value={filters.date_from}
+                onChange={handleFilterChange}
+              />
+            </div>
+            <div className="col-md-2">
+              <label className="form-label small mb-1 fw-semibold">
+                <i className="fas fa-calendar-check me-1 text-primary"></i>To Date
+              </label>
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                name="date_to"
+                value={filters.date_to}
+                onChange={handleFilterChange}
+                disabled={!filters.date_from}
+                min={filters.date_from}
+              />
+            </div>
+            <div className="col-md-2">
+              <label className="form-label small mb-1 fw-semibold">
+                <i className="fas fa-filter me-1 text-info"></i>Source
+              </label>
+              <select
+                className="form-select form-select-sm"
+                name="source"
+                value={filters.source}
+                onChange={handleFilterChange}
+              >
+                <option value="">All Sources</option>
+                <option value="admin">Admin Added</option>
+                <option value="self">Self Registration</option>
+                <option value="buyer">Private Vendor</option>
+              </select>
+            </div>
+            <div className="col-md-2">
+              <label className="form-label small mb-1 fw-semibold">
+                <i className="fas fa-user-shield me-1 text-warning"></i>Private Vendor
+              </label>
+              <select
+                className="form-select form-select-sm"
+                name="is_private"
+                value={filters.is_private}
+                onChange={handleFilterChange}
+              >
+                <option value="">All</option>
+                <option value="1">Private Only</option>
+                <option value="0">Non-Private Only</option>
+              </select>
+            </div>
+            <div className="col-md-2">
+              <label className="form-label small mb-1 fw-semibold">
+                <i className="fas fa-crown me-1 text-success"></i>Premium Vendor
+              </label>
+              <select
+                className="form-select form-select-sm"
+                name="subscription_plan"
+                value={filters.subscription_plan}
+                onChange={handleFilterChange}
+              >
+                <option value="">All Plans</option>
+                <option value="1">Premium</option>
+                <option value="2">Standard</option>
+                <option value="3">Basic</option>
+              </select>
+            </div>
+            <div className="col-md-2">
+              <label className="form-label small mb-1 fw-semibold">
+                <i className="fas fa-folder me-1 text-primary"></i>Category
               </label>
               <Select
-                options={buyerOptions}
-                value={buyerOptions.find(opt => opt.value === parseInt(String(filters.created_by))) || null}
+                options={categoryOptions}
+                value={
+                  categoryOptions.find(
+                    (opt) => opt.value === parseInt(String(filters.category_id))
+                  ) || null
+                }
                 onChange={(selectedOption: SingleValue<SelectOption>) => {
-                  const buyerId = selectedOption ? selectedOption.value : "";
-                  setFilters((prev) => ({ ...prev, created_by: buyerId }));
+                  const categoryId = selectedOption ? selectedOption.value : "";
+                  setFilters((prev) => ({ ...prev, category_id: categoryId, variant_id: "" }));
                 }}
-                placeholder="All Buyers"
+                placeholder="All Categories"
                 isClearable={true}
                 isSearchable={true}
                 className="basic-select"
                 classNamePrefix="select"
               />
             </div>
-          )}
-          {showVendor && (
-            <div className="col-md-3">
+            <div className="col-md-2">
               <label className="form-label small mb-1 fw-semibold">
-                <i className="fas fa-store me-1 text-success"></i>Vendor
+                <i className="fas fa-tags me-1 text-success"></i>Variant
               </label>
-              <VendorSelect
-                selectedVendors={selectedVendors}
-                onVendorsChange={handleVendorsChange}
-                vendorOptions={vendorOptions}
-                vendorSearchLoading={vendorSearchLoading}
-                onSearchChange={handleVendorSearchChange}
+              <Select
+                options={variantOptions}
+                value={
+                  variantOptions.find(
+                    (opt) => opt.value === parseInt(String(filters.variant_id))
+                  ) || null
+                }
+                onChange={(selectedOption: SingleValue<SelectOption>) => {
+                  const variantId = selectedOption ? selectedOption.value : "";
+                  setFilters((prev) => ({ ...prev, variant_id: variantId }));
+                }}
+                placeholder="All Variants"
+                isClearable={true}
+                isSearchable={true}
+                className="basic-select"
+                classNamePrefix="select"
               />
             </div>
-          )}
-          <div className="col-md-12 d-flex gap-2 justify-content-end mt-3">
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={handleApplyFilters}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                  Loading...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-filter me-2"></i>Apply Filters
-                </>
-              )}
-            </button>
-            <button
-              className="btn btn-outline-secondary btn-sm"
-              onClick={handleResetFilters}
-              disabled={loading}
-            >
-              <i className="fas fa-redo me-2"></i>Reset
-            </button>
+            {showBuyer && (
+              <div className="col-md-2">
+                <label className="form-label small mb-1 fw-semibold">
+                  <i className="fas fa-user-tie me-1 text-primary"></i>Buyer
+                </label>
+                <Select
+                  options={buyerOptions}
+                  value={
+                    buyerOptions.find(
+                      (opt) => opt.value === parseInt(String(filters.created_by))
+                    ) || null
+                  }
+                  onChange={(selectedOption: SingleValue<SelectOption>) => {
+                    const buyerId = selectedOption ? selectedOption.value : "";
+                    setFilters((prev) => ({ ...prev, created_by: buyerId }));
+                  }}
+                  placeholder="All Buyers"
+                  isClearable={true}
+                  isSearchable={true}
+                  className="basic-select"
+                  classNamePrefix="select"
+                />
+              </div>
+            )}
+            {showVendor && (
+              <div className="col-md-3">
+                <label className="form-label small mb-1 fw-semibold">
+                  <i className="fas fa-store me-1 text-success"></i>Vendor
+                </label>
+                <VendorSelect
+                  selectedVendors={selectedVendors}
+                  onVendorsChange={handleVendorsChange}
+                  vendorOptions={vendorOptions}
+                  vendorSearchLoading={vendorSearchLoading}
+                  onSearchChange={handleVendorSearchChange}
+                />
+              </div>
+            )}
+            <div className="col-md-12 d-flex gap-2 justify-content-end mt-3">
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={handleApplyFilters}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-filter me-2"></i>Apply Filters
+                  </>
+                )}
+              </button>
+              <button
+                className="btn btn-outline-secondary btn-sm"
+                onClick={handleResetFilters}
+                disabled={loading}
+              >
+                <i className="fas fa-redo me-2"></i>Reset
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  ), (prevProps, nextProps) => {
-    return prevProps.showBuyer === nextProps.showBuyer &&
-           prevProps.showVendor === nextProps.showVendor;
-  });
+    ),
+    (prevProps, nextProps) => {
+      return (
+        prevProps.showBuyer === nextProps.showBuyer && prevProps.showVendor === nextProps.showVendor
+      );
+    }
+  );
 
-  FilterBar.displayName = 'FilterBar';
+  FilterBar.displayName = "FilterBar";
 
   // Note: The JSX return statement is very large (~1800 lines).
   // Due to the file size, the rest of the component remains structurally identical
@@ -1198,14 +1252,14 @@ const VendorStatsDashboard: React.FC = () => {
                   <div className="btn-group" role="group">
                     <button
                       className={`btn btn-sm ${chartViews.sourceDistribution === 0 ? "btn-primary" : "btn-outline-primary"}`}
-                      onClick={() => setChartViews(prev => ({ ...prev, sourceDistribution: 0 }))}
+                      onClick={() => setChartViews((prev) => ({ ...prev, sourceDistribution: 0 }))}
                       title="Doughnut Chart"
                     >
                       <FontAwesomeIcon icon={faChartPie} />
                     </button>
                     <button
                       className={`btn btn-sm ${chartViews.sourceDistribution === 1 ? "btn-primary" : "btn-outline-primary"}`}
-                      onClick={() => setChartViews(prev => ({ ...prev, sourceDistribution: 1 }))}
+                      onClick={() => setChartViews((prev) => ({ ...prev, sourceDistribution: 1 }))}
                       title="Bar Chart"
                     >
                       <FontAwesomeIcon icon={faChartBar} />
@@ -1247,14 +1301,14 @@ const VendorStatsDashboard: React.FC = () => {
                   <div className="btn-group" role="group">
                     <button
                       className={`btn btn-sm ${chartViews.responseTime === 0 ? "btn-primary" : "btn-outline-primary"}`}
-                      onClick={() => setChartViews(prev => ({ ...prev, responseTime: 0 }))}
+                      onClick={() => setChartViews((prev) => ({ ...prev, responseTime: 0 }))}
                       title="Line Chart"
                     >
                       <FontAwesomeIcon icon={faChartLine} />
                     </button>
                     <button
                       className={`btn btn-sm ${chartViews.responseTime === 1 ? "btn-primary" : "btn-outline-primary"}`}
-                      onClick={() => setChartViews(prev => ({ ...prev, responseTime: 1 }))}
+                      onClick={() => setChartViews((prev) => ({ ...prev, responseTime: 1 }))}
                       title="Bar Chart"
                     >
                       <FontAwesomeIcon icon={faChartBar} />
@@ -1339,7 +1393,8 @@ const VendorStatsDashboard: React.FC = () => {
                   className={`nav-link ${activeTab === "financial" ? "active" : ""}`}
                   onClick={() => setActiveTab("financial")}
                 >
-                  <FontAwesomeIcon icon={faChartLine} className="me-2" />Financial Analysis
+                  <FontAwesomeIcon icon={faChartLine} className="me-2" />
+                  Financial Analysis
                 </button>
               </li>
             </ul>
@@ -1381,12 +1436,22 @@ const VendorStatsDashboard: React.FC = () => {
                         <td className="fw-semibold">{row.name || "N/A"}</td>
                         <td>{row.company_name || "N/A"}</td>
                         <td>
-                          <span className={`badge ${row.source === "admin" ? "bg-primary" : row.source === "self" ? "bg-success" : "bg-secondary"}`}>
-                            {row.source === "admin" ? "Admin Added" : row.source === "self" ? "Self Registration" : row.source || "Unknown"}
+                          <span
+                            className={`badge ${row.source === "admin" ? "bg-primary" : row.source === "self" ? "bg-success" : "bg-secondary"}`}
+                          >
+                            {row.source === "admin"
+                              ? "Admin Added"
+                              : row.source === "self"
+                                ? "Self Registration"
+                                : row.source || "Unknown"}
                           </span>
                         </td>
-                        <td><span className="badge bg-success">{row.awards ?? 0}</span></td>
-                        <td><span className="badge bg-danger">{row.regrets ?? 0}</span></td>
+                        <td>
+                          <span className="badge bg-success">{row.awards ?? 0}</span>
+                        </td>
+                        <td>
+                          <span className="badge bg-danger">{row.regrets ?? 0}</span>
+                        </td>
                         <td>
                           <button
                             className="btn btn-sm btn-primary"
@@ -1396,7 +1461,8 @@ const VendorStatsDashboard: React.FC = () => {
                               fetchVendorStats([vendorId]);
                             }}
                           >
-                            <FontAwesomeIcon icon={faEye} className="me-1" />View
+                            <FontAwesomeIcon icon={faEye} className="me-1" />
+                            View
                           </button>
                         </td>
                       </tr>
@@ -1429,7 +1495,9 @@ const VendorStatsDashboard: React.FC = () => {
                   <div className="card border-info border-top">
                     <div className="card-body">
                       <p className="text-muted text-uppercase fs-12 mb-1">Avg Response Time</p>
-                      <h4 className="mb-0 fw-bold">{formatResponseTime(overview.avg_response_minutes, overview)}</h4>
+                      <h4 className="mb-0 fw-bold">
+                        {formatResponseTime(overview.avg_response_minutes, overview)}
+                      </h4>
                     </div>
                   </div>
                 </div>
@@ -1472,14 +1540,22 @@ const VendorStatsDashboard: React.FC = () => {
                         <td className="fw-semibold">{row.name || "N/A"}</td>
                         <td>{row.company_name || "N/A"}</td>
                         <td>{formatResponseTime(row.avg_response_minutes, row)}</td>
-                        <td className="text-center"><span className="badge bg-success">{row.awards ?? 0}</span></td>
-                        <td className="text-center"><span className="badge bg-danger">{row.regrets ?? 0}</span></td>
-                        <td className="text-center">{formatDeliveryPeriod((row as any).avg_delivery_period)}</td>
+                        <td className="text-center">
+                          <span className="badge bg-success">{row.awards ?? 0}</span>
+                        </td>
+                        <td className="text-center">
+                          <span className="badge bg-danger">{row.regrets ?? 0}</span>
+                        </td>
+                        <td className="text-center">
+                          {formatDeliveryPeriod((row as any).avg_delivery_period)}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={7} className="text-center text-muted py-4">No behavior data available</td>
+                      <td colSpan={7} className="text-center text-muted py-4">
+                        No behavior data available
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -1493,7 +1569,8 @@ const VendorStatsDashboard: React.FC = () => {
         <div className="card shadow-sm">
           <div className="card-body">
             <h4 className="card-title mb-4 fw-bold">
-              <i className="fas fa-clipboard-check me-2 text-primary"></i>Technical Evaluation Statistics
+              <i className="fas fa-clipboard-check me-2 text-primary"></i>Technical Evaluation
+              Statistics
             </h4>
             <FilterBar showBuyer={true} showVendor={true} />
             {overview && (
@@ -1501,7 +1578,9 @@ const VendorStatsDashboard: React.FC = () => {
                 <div className="col-md-6 col-sm-6 mb-3">
                   <div className="card border-success border-top">
                     <div className="card-body">
-                      <p className="text-muted text-uppercase fs-12 mb-1">Total Tech Eval Accepted</p>
+                      <p className="text-muted text-uppercase fs-12 mb-1">
+                        Total Tech Eval Accepted
+                      </p>
                       <h4 className="mb-0 fw-bold">{overview.total_tech_eval_accepted ?? 0}</h4>
                     </div>
                   </div>
@@ -1509,7 +1588,9 @@ const VendorStatsDashboard: React.FC = () => {
                 <div className="col-md-6 col-sm-6 mb-3">
                   <div className="card border-danger border-top">
                     <div className="card-body">
-                      <p className="text-muted text-uppercase fs-12 mb-1">Total Tech Eval Rejected</p>
+                      <p className="text-muted text-uppercase fs-12 mb-1">
+                        Total Tech Eval Rejected
+                      </p>
                       <h4 className="mb-0 fw-bold">{overview.total_tech_eval_rejected ?? 0}</h4>
                     </div>
                   </div>
@@ -1535,14 +1616,22 @@ const VendorStatsDashboard: React.FC = () => {
                         <td className="text-muted">{idx + 1}</td>
                         <td className="fw-semibold">{row.name || "N/A"}</td>
                         <td>{row.company_name || "N/A"}</td>
-                        <td className="text-center"><span className="badge bg-success">{row.tech_eval_accepted ?? 0}</span></td>
-                        <td className="text-center"><span className="badge bg-danger">{row.tech_eval_rejected ?? 0}</span></td>
-                        <td className="text-center">{(row.tech_eval_accepted || 0) + (row.tech_eval_rejected || 0)}</td>
+                        <td className="text-center">
+                          <span className="badge bg-success">{row.tech_eval_accepted ?? 0}</span>
+                        </td>
+                        <td className="text-center">
+                          <span className="badge bg-danger">{row.tech_eval_rejected ?? 0}</span>
+                        </td>
+                        <td className="text-center">
+                          {(row.tech_eval_accepted || 0) + (row.tech_eval_rejected || 0)}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="text-center text-muted py-4">No technical evaluation data available</td>
+                      <td colSpan={6} className="text-center text-muted py-4">
+                        No technical evaluation data available
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -1589,13 +1678,19 @@ const VendorStatsDashboard: React.FC = () => {
                         <td className="text-muted">{idx + 1}</td>
                         <td className="fw-semibold">{row.name || "N/A"}</td>
                         <td>{row.company_name || "N/A"}</td>
-                        <td className="text-center"><span className="badge bg-info">{row.clauses_agreed ?? 0}</span></td>
-                        <td className="text-center"><span className="badge bg-secondary">{row.clauses_responded ?? 0}</span></td>
+                        <td className="text-center">
+                          <span className="badge bg-info">{row.clauses_agreed ?? 0}</span>
+                        </td>
+                        <td className="text-center">
+                          <span className="badge bg-secondary">{row.clauses_responded ?? 0}</span>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="text-center text-muted py-4">No clause data available</td>
+                      <td colSpan={5} className="text-center text-muted py-4">
+                        No clause data available
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -1609,7 +1704,8 @@ const VendorStatsDashboard: React.FC = () => {
         <div className="card shadow-sm">
           <div className="card-body">
             <h4 className="card-title mb-4 fw-bold">
-              <i className="fas fa-question-circle me-2 text-primary"></i>Queries & Deviations Statistics
+              <i className="fas fa-question-circle me-2 text-primary"></i>Queries & Deviations
+              Statistics
             </h4>
             <FilterBar showBuyer={true} showVendor={true} />
             {overview && (
@@ -1642,13 +1738,21 @@ const VendorStatsDashboard: React.FC = () => {
                         <td className="text-muted">{idx + 1}</td>
                         <td className="fw-semibold">{row.name || "N/A"}</td>
                         <td>{row.company_name || "N/A"}</td>
-                        <td className="text-center"><span className="badge bg-warning text-dark">{row.queries_raised ?? 0}</span></td>
-                        <td className="text-center"><span className="badge bg-secondary">{row.queries_by_vendor ?? 0}</span></td>
+                        <td className="text-center">
+                          <span className="badge bg-warning text-dark">
+                            {row.queries_raised ?? 0}
+                          </span>
+                        </td>
+                        <td className="text-center">
+                          <span className="badge bg-secondary">{row.queries_by_vendor ?? 0}</span>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="text-center text-muted py-4">No query data available</td>
+                      <td colSpan={5} className="text-center text-muted py-4">
+                        No query data available
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -1663,7 +1767,8 @@ const VendorStatsDashboard: React.FC = () => {
           <div className="card shadow-sm">
             <div className="card-body">
               <h4 className="card-title mb-0 fw-bold">
-                <FontAwesomeIcon icon={faChartLine} className="me-2 text-primary" />Financial Analysis
+                <FontAwesomeIcon icon={faChartLine} className="me-2 text-primary" />
+                Financial Analysis
               </h4>
               <FilterBar showBuyer={true} showVendor={true} />
             </div>
@@ -1678,7 +1783,9 @@ const VendorStatsDashboard: React.FC = () => {
                     <div className="card border-primary border-top">
                       <div className="card-body">
                         <p className="text-muted text-uppercase fs-12 mb-1">Total Quotes</p>
-                        <h4 className="mb-0 fw-bold">{financialData.overall_stats.total_quotes_submitted ?? 0}</h4>
+                        <h4 className="mb-0 fw-bold">
+                          {financialData.overall_stats.total_quotes_submitted ?? 0}
+                        </h4>
                       </div>
                     </div>
                   </div>
@@ -1686,7 +1793,9 @@ const VendorStatsDashboard: React.FC = () => {
                     <div className="card border-info border-top">
                       <div className="card-body">
                         <p className="text-muted text-uppercase fs-12 mb-1">Avg Revisions</p>
-                        <h4 className="mb-0 fw-bold">{(financialData.overall_stats.avg_revisions ?? 0).toFixed(2)}</h4>
+                        <h4 className="mb-0 fw-bold">
+                          {(financialData.overall_stats.avg_revisions ?? 0).toFixed(2)}
+                        </h4>
                       </div>
                     </div>
                   </div>
@@ -1694,7 +1803,12 @@ const VendorStatsDashboard: React.FC = () => {
                     <div className="card border-success border-top">
                       <div className="card-body">
                         <p className="text-muted text-uppercase fs-12 mb-1">Avg Unit Price</p>
-                        <h4 className="mb-0 fw-bold">{(financialData.overall_stats.avg_unit_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+                        <h4 className="mb-0 fw-bold">
+                          {(financialData.overall_stats.avg_unit_price ?? 0).toLocaleString(
+                            undefined,
+                            { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                          )}
+                        </h4>
                       </div>
                     </div>
                   </div>
@@ -1702,7 +1816,9 @@ const VendorStatsDashboard: React.FC = () => {
                     <div className="card border-warning border-top">
                       <div className="card-body">
                         <p className="text-muted text-uppercase fs-12 mb-1">Total Finalizations</p>
-                        <h4 className="mb-0 fw-bold">{financialData.overall_stats.total_finalizations ?? 0}</h4>
+                        <h4 className="mb-0 fw-bold">
+                          {financialData.overall_stats.total_finalizations ?? 0}
+                        </h4>
                       </div>
                     </div>
                   </div>
@@ -1711,7 +1827,12 @@ const VendorStatsDashboard: React.FC = () => {
                       <div className="card border-danger border-top">
                         <div className="card-body">
                           <p className="text-muted text-uppercase fs-12 mb-1">Min Unit Price</p>
-                          <h4 className="mb-0 fw-bold">{financialData.overall_stats.min_unit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+                          <h4 className="mb-0 fw-bold">
+                            {financialData.overall_stats.min_unit_price.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </h4>
                         </div>
                       </div>
                     </div>
@@ -1721,7 +1842,12 @@ const VendorStatsDashboard: React.FC = () => {
                       <div className="card border-secondary border-top">
                         <div className="card-body">
                           <p className="text-muted text-uppercase fs-12 mb-1">Max Unit Price</p>
-                          <h4 className="mb-0 fw-bold">{financialData.overall_stats.max_unit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+                          <h4 className="mb-0 fw-bold">
+                            {financialData.overall_stats.max_unit_price.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </h4>
                         </div>
                       </div>
                     </div>
@@ -1752,7 +1878,7 @@ const VendorStatsDashboard: React.FC = () => {
                         </thead>
                         <tbody>
                           {financialData.vendor_leaderboard.map((v) => {
-                            const vendorId = v.vendor_id ?? '';
+                            const vendorId = v.vendor_id ?? "";
                             const isExpanded = expandedVendorId === vendorId;
                             return (
                               <React.Fragment key={vendorId}>
@@ -1762,19 +1888,30 @@ const VendorStatsDashboard: React.FC = () => {
                                   className={isExpanded ? "table-active" : ""}
                                 >
                                   <td>
-                                    <i className={`fas fa-chevron-${isExpanded ? "down" : "right"} text-muted`}></i>
+                                    <i
+                                      className={`fas fa-chevron-${isExpanded ? "down" : "right"} text-muted`}
+                                    ></i>
                                   </td>
                                   <td className="fw-semibold">{v.vendor_name || "-"}</td>
                                   <td>{v.company_name || "-"}</td>
                                   <td className="text-center">
-                                    <span className={`badge bg-${v.source === "admin" ? "info" : "primary"}`}>
+                                    <span
+                                      className={`badge bg-${v.source === "admin" ? "info" : "primary"}`}
+                                    >
                                       {v.source || "-"}
                                     </span>
                                   </td>
                                   <td className="text-center">{v.total_quotes_submitted ?? 0}</td>
                                   <td className="text-center">{v.quotes_with_price ?? 0}</td>
-                                  <td className="text-center">{(v.avg_revisions ?? 0).toFixed(2)}</td>
-                                  <td className="text-end">{(v.avg_unit_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                  <td className="text-center">
+                                    {(v.avg_revisions ?? 0).toFixed(2)}
+                                  </td>
+                                  <td className="text-end">
+                                    {(v.avg_unit_price ?? 0).toLocaleString(undefined, {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </td>
                                   <td className="text-center">{v.total_finalizations ?? 0}</td>
                                   <td className="text-center">{v.buyer_count ?? 0}</td>
                                 </tr>
@@ -1801,8 +1938,12 @@ const VendorStatsDashboard: React.FC = () => {
                                                     <tr key={bi}>
                                                       <td>{b.buyer_name || "-"}</td>
                                                       <td>{b.buyer_organization || "-"}</td>
-                                                      <td className="text-center">{b.rfqs_created ?? 0}</td>
-                                                      <td className="text-center">{b.awards_given ?? 0}</td>
+                                                      <td className="text-center">
+                                                        {b.rfqs_created ?? 0}
+                                                      </td>
+                                                      <td className="text-center">
+                                                        {b.awards_given ?? 0}
+                                                      </td>
                                                     </tr>
                                                   ))}
                                                 </tbody>
@@ -1826,9 +1967,21 @@ const VendorStatsDashboard: React.FC = () => {
                                                   {v.top_products.map((p, pi) => (
                                                     <tr key={pi}>
                                                       <td>{p.product_name || "-"}</td>
-                                                      <td className="text-center">{p.quotes_count ?? 0}</td>
-                                                      <td className="text-center">{p.finalizations_count ?? 0}</td>
-                                                      <td className="text-end">{(p.avg_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                      <td className="text-center">
+                                                        {p.quotes_count ?? 0}
+                                                      </td>
+                                                      <td className="text-center">
+                                                        {p.finalizations_count ?? 0}
+                                                      </td>
+                                                      <td className="text-end">
+                                                        {(p.avg_price ?? 0).toLocaleString(
+                                                          undefined,
+                                                          {
+                                                            minimumFractionDigits: 2,
+                                                            maximumFractionDigits: 2,
+                                                          }
+                                                        )}
+                                                      </td>
                                                     </tr>
                                                   ))}
                                                 </tbody>
@@ -1907,8 +2060,18 @@ const VendorStatsDashboard: React.FC = () => {
                               <td>{p.variant_name || "-"}</td>
                               <td className="text-center">{p.quote_count ?? 0}</td>
                               <td className="text-center">{p.finalization_count ?? 0}</td>
-                              <td className="text-end">{(p.avg_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                              <td className="text-end">{(p.avg_total_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                              <td className="text-end">
+                                {(p.avg_price ?? 0).toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </td>
+                              <td className="text-end">
+                                {(p.avg_total_price ?? 0).toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -1959,7 +2122,9 @@ const VendorStatsDashboard: React.FC = () => {
                 <div className="card border-info border-top">
                   <div className="card-body">
                     <p className="text-muted text-uppercase fs-12 mb-1">Avg Response Time</p>
-                    <h4 className="mb-0 fw-bold">{formatResponseTime(vendorDetail.avg_response_minutes, vendorDetail)}</h4>
+                    <h4 className="mb-0 fw-bold">
+                      {formatResponseTime(vendorDetail.avg_response_minutes, vendorDetail)}
+                    </h4>
                   </div>
                 </div>
               </div>
@@ -1983,7 +2148,9 @@ const VendorStatsDashboard: React.FC = () => {
                 <div className="card border-secondary border-top">
                   <div className="card-body">
                     <p className="text-muted text-uppercase fs-12 mb-1">Avg Delivery Period</p>
-                    <h4 className="mb-0 fw-bold">{formatDeliveryPeriod(vendorDetail.avg_delivery_period)}</h4>
+                    <h4 className="mb-0 fw-bold">
+                      {formatDeliveryPeriod(vendorDetail.avg_delivery_period)}
+                    </h4>
                   </div>
                 </div>
               </div>
