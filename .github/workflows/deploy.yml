@@ -29,6 +29,13 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}
 
+    # A build that failed pushed no image. Deploying off it used to stop the
+    # running container and then fail to start a replacement, taking the admin
+    # panel down. A manual dispatch is always allowed — the operator picks the SHA.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
     steps:
       - name: Set DEPLOY_SHA
         run: |
@@ -54,12 +61,16 @@ jobs:
         run: |
           scp docker-compose.yml ${{ secrets.WORKWISE_SSH_USER }}@${{ secrets.WORKWISE_SSH_HOST }}:~/docker-compose.yml
 
+      # Pull first, stop nothing. `up -d` recreates the container once the new
+      # image is on disk, so the running version keeps serving until then and a
+      # missing or unpullable image leaves it untouched rather than down.
       - name: Deploy application
         run: |
           ssh ${{ secrets.WORKWISE_SSH_USER }}@${{ secrets.WORKWISE_SSH_HOST }} "
+            export TAG=${{ env.DEPLOY_SHA }} ECR_REGISTRY=${{ env.ECR_REGISTRY }} ECR_REPOSITORY=${{ env.ECR_REPOSITORY }} &&
             aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }} &&
-            docker compose down workwise-admin 2>/dev/null || true &&
-            TAG=${{ env.DEPLOY_SHA }} ECR_REGISTRY=${{ env.ECR_REGISTRY }} ECR_REPOSITORY=${{ env.ECR_REPOSITORY }} docker compose up -d workwise-admin
+            docker compose pull workwise-admin &&
+            docker compose up -d workwise-admin
           "
 
       - name: Docker prune on VM

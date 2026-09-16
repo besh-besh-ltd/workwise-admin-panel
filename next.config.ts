@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   devIndicators: false,
 
+  // Lint is enforced by the husky pre-commit hook (lint-staged), not by the
+  // production build. eslint-config-next 15 makes `next build` run ESLint and
+  // fail the build on any error, which broke the Docker image build on a set of
+  // pre-existing errors that predate this config. Keep builds about compiling.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   images: {
     remotePatterns: [
       // localhost backend

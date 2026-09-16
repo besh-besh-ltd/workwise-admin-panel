@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - qa
+      # main is deployed by manual dispatch, so it needs an image for its SHA too.
+      # Without this, dispatching a deploy on main always fails with
+      # "manifest unknown: Requested image not found".
+      - main
   workflow_dispatch:
     inputs:
       sha:
