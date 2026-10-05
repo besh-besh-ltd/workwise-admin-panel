@@ -24,6 +24,12 @@ export interface AuctionParticipant {
     current_price: number | null;
 }
 
+export interface NonParticipant {
+    vendor_id: number;
+    vendor_name: string;
+    reason: string;
+}
+
 export interface ProductAuction {
     rfq_product_id: number;
     product_variant_id: number | null;
@@ -35,6 +41,7 @@ export interface ProductAuction {
         current_round: number | null;
         lowest: number | null;
         participants: AuctionParticipant[];
+        not_participating?: NonParticipant[];
     } | null;
     past_runs: {
         outcome: string;
@@ -74,6 +81,14 @@ const OUTCOME: Record<string, string> = {
     cancelled: 'Cancelled',
     superseded: 'Rescheduled',
     ended: 'Ended',
+};
+
+// Why an invited vendor is not in the auction.
+const REASON_BADGE: Record<string, string> = {
+    'Regretted': 'badge-danger',
+    'No quote': 'badge-secondary',
+    'Quoted after the auction started': 'badge-info',
+    'Not technically approved': 'badge-warning',
 };
 
 const decrement = (s: AuctionSetup) =>
@@ -140,10 +155,34 @@ const ParticipantsTable: React.FC<{ participants: AuctionParticipant[] }> = ({ p
         </div>
     );
 
+const NonParticipantsTable: React.FC<{ vendors: NonParticipant[] }> = ({ vendors }) => (
+    <div className="table-responsive">
+        <table className="table table-bordered table-sm mb-0">
+            <thead className="thead-light">
+                <tr>
+                    <th>S.No</th>
+                    <th>Vendor</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                {vendors.map((v, i) => (
+                    <tr key={v.vendor_id}>
+                        <td>{i + 1}</td>
+                        <td>{v.vendor_name}</td>
+                        <td><span className={`badge ${REASON_BADGE[v.reason] || 'badge-light'}`}>{v.reason}</span></td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    </div>
+);
+
 /**
- * The RFQ's reverse auctions, product by product: the scheduled auction's setup
- * and participants, or "not scheduled", then any earlier runs (cancelled or
- * rescheduled) with who closed them and who took part.
+ * The RFQ's reverse auctions, product by product: the scheduled auction's setup,
+ * its participants and the invited vendors who are not in it (with why), or "not
+ * scheduled"; then any earlier runs (cancelled or rescheduled) with who closed
+ * them and who took part.
  */
 const RfqAuctions: React.FC<{ products: AuctionProductRef[]; auctions: ProductAuction[] | null; error?: boolean }> = ({
     products,
@@ -190,6 +229,13 @@ const RfqAuctions: React.FC<{ products: AuctionProductRef[]; auctions: ProductAu
                                 />
                                 <h6 className="mt-3">Participants ({current.participants.length})</h6>
                                 <ParticipantsTable participants={current.participants} />
+                                {/* Invited to the product but not in the auction, and why. */}
+                                {current.not_participating && current.not_participating.length > 0 && (
+                                    <>
+                                        <h6 className="mt-3">Not Participating ({current.not_participating.length})</h6>
+                                        <NonParticipantsTable vendors={current.not_participating} />
+                                    </>
+                                )}
                             </>
                         ) : (
                             <p className="text-muted mb-2">No reverse auction scheduled for this product.</p>
