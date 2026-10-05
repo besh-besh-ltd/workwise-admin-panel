@@ -7,7 +7,8 @@ import FullLoading from '@/components/loading/FullLoading';
 import VendorCard from './vendor-card';
 import StatusModal from '@/components/modal/status-modal';
 import VendorSelectionModal from '@/components/modal/VendorSelectionModal';
-import { getRFQDetails, updateStatus, getVendorsForReminder, sendSelectiveReminder } from '@/utils/services/rfq-management';
+import { getRFQDetails, updateStatus, getVendorsForReminder, sendSelectiveReminder, getRFQBidsAndAuctions } from '@/utils/services/rfq-management';
+import RfqAuctions, { ProductAuction } from './rfq-auctions';
 
 interface QuotationDetail {
     is_regret: number;
@@ -121,6 +122,25 @@ interface Vendor {
     vendor_name: string;
 }
 
+// One invited vendor's technical bid on one product (status null: the product has none).
+interface TechBid {
+    rfq_product_id: number;
+    product_variant_id: number;
+    variant: number;
+    vendor_id: number;
+    has_tech_eval: boolean;
+    clause_count: number;
+    answered: number;
+    status: 'Accepted' | 'Rejected' | 'Response submitted' | 'Not submitted' | null;
+}
+
+const TECH_BID_BADGE: Record<string, string> = {
+    'Accepted': 'badge-success',
+    'Rejected': 'badge-danger',
+    'Response submitted': 'badge-primary',
+    'Not submitted': 'badge-warning',
+};
+
 const RFQDetails: React.FC = () => {
     const router: NextRouter = useRouter();
     const { rfq_id } = router.query;
@@ -131,7 +151,11 @@ const RFQDetails: React.FC = () => {
     const [showVendorModal, setShowVendorModal] = useState<boolean>(false);
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [modalLoading, setModalLoading] = useState<boolean>(false);
-    const [activeTab, setActiveTab] = useState<'vendor-details' | 'product-wise'>('vendor-details');
+    const [activeTab, setActiveTab] = useState<'vendor-details' | 'product-wise' | 'reverse-auction'>('vendor-details');
+    // Technical bids and reverse auctions, loaded alongside the RFQ details.
+    const [techBids, setTechBids] = useState<TechBid[]>([]);
+    const [auctions, setAuctions] = useState<ProductAuction[] | null>(null);
+    const [bidsError, setBidsError] = useState<boolean>(false);
 
     const textCapitalize = (str: string): string => {
         if (!str) return str;
@@ -175,6 +199,33 @@ const RFQDetails: React.FC = () => {
                 setLoading(false)
             })
     }
+
+    const getBidsAndAuctions = (): void => {
+        setBidsError(false);
+        getRFQBidsAndAuctions(rfq_id as string)
+            .then((res: any) => {
+                setTechBids(res.data?.tech_bids || []);
+                setAuctions(res.data?.auctions || []);
+            })
+            .catch((error) => {
+                console.error(error);
+                setBidsError(true);
+            });
+    };
+
+    // vendor × product → technical bid, and which products carry one at all.
+    const techBidOf = useMemo(() => {
+        const byVendor = new Map<string, TechBid>();
+        const productHasBid = new Set<string>();
+        techBids.forEach((t) => {
+            byVendor.set(`${t.product_variant_id}-${t.variant}-${t.vendor_id}`, t);
+            if (t.has_tech_eval) productHasBid.add(`${t.product_variant_id}-${t.variant}`);
+        });
+        return {
+            vendor: (productId: number, variant: number, vendorId: number) => byVendor.get(`${productId}-${variant}-${vendorId}`),
+            productHasBid: (productId: number, variant: number) => productHasBid.has(`${productId}-${variant}`),
+        };
+    }, [techBids]);
 
     const handleOpenVendorModal = async (): Promise<void> => {
         setModalLoading(true);
@@ -342,6 +393,7 @@ const RFQDetails: React.FC = () => {
     useEffect(() => {
         if (rfq_id) {
             getRfqById();
+            getBidsAndAuctions();
         }
     }, [router, rfq_id])
 
@@ -528,6 +580,15 @@ const RFQDetails: React.FC = () => {
                                                 Product-wise Chart
                                             </a>
                                         </li>
+                                        <li className="nav-item">
+                                            <a
+                                                className={`nav-link ${activeTab === 'reverse-auction' ? 'active' : ''}`}
+                                                onClick={() => setActiveTab('reverse-auction')}
+                                                style={{ cursor: 'pointer' }}
+                                            >
+                                                Reverse Auction
+                                            </a>
+                                        </li>
                                     </ul>
 
                                     <div className="tab-content mt-3">
@@ -615,6 +676,17 @@ const RFQDetails: React.FC = () => {
                                                                                     <strong>Vendors Finalized: </strong>
                                                                                     <span className="badge badge-info ml-2">{stats.finalization}</span>
                                                                                 </div>
+                                                                                {techBidOf.productHasBid(product.product_id, product.variant) && (
+                                                                                    <div className="">
+                                                                                        <strong>Technical Bids Submitted: </strong>
+                                                                                        <span className="badge badge-primary ml-2">
+                                                                                            {product.vendors.filter((v) => {
+                                                                                                const t = techBidOf.vendor(product.product_id, product.variant, v.vendor_id);
+                                                                                                return t?.status && t.status !== 'Not submitted';
+                                                                                            }).length} / {product.vendors.length}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
                                                                                 </div>
                                                                     </div>
                                                                 </div>
@@ -633,6 +705,7 @@ const RFQDetails: React.FC = () => {
                                                                                 <th>Private</th>
                                                                                 <th>Premium</th>
                                                                                 <th>Response Status</th>
+                                                                                <th>Technical Bid</th>
                                                                                 <th>Finalization</th>
                                                                                 <th>Action</th>
                                                                             </tr>
@@ -670,6 +743,20 @@ const RFQDetails: React.FC = () => {
                                                                                         )}
                                                                                     </td>
                                                                                     <td>
+                                                                                        {(() => {
+                                                                                            const t = techBidOf.vendor(product.product_id, product.variant, vendor.vendor_id);
+                                                                                            if (!t || !t.status) return <span className="text-muted">No technical bid</span>;
+                                                                                            return (
+                                                                                                <>
+                                                                                                    <span className={`badge ${TECH_BID_BADGE[t.status]}`}>{t.status}</span>
+                                                                                                    {t.status === 'Not submitted' && t.answered > 0 && (
+                                                                                                        <div className="small text-muted mt-1">{t.answered} of {t.clause_count} clauses answered</div>
+                                                                                                    )}
+                                                                                                </>
+                                                                                            );
+                                                                                        })()}
+                                                                                    </td>
+                                                                                    <td>
                                                                                         {vendor.finalization && vendor.finalization.vendor_id === vendor.vendor_id ? (
                                                                                             <span className="badge badge-info">Finalized</span>
                                                                                         ) : (
@@ -699,6 +786,11 @@ const RFQDetails: React.FC = () => {
                                                     <p className="text-center">No Products Found</p>
                                                 )}
                                             </div>
+                                        )}
+
+                                        {/* Reverse Auction Tab */}
+                                        {activeTab === 'reverse-auction' && (
+                                            <RfqAuctions products={productWiseData} auctions={auctions} error={bidsError} />
                                         )}
                                     </div>
 
