@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter, NextRouter } from 'next/router';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPaperPlane, faEdit, faEye } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faEdit, faEye, faLink } from '@fortawesome/free-solid-svg-icons';
 import { ToastContainer, toast } from "react-toastify";
 import FullLoading from '@/components/loading/FullLoading';
 import VendorCard from './vendor-card';
 import StatusModal from '@/components/modal/status-modal';
 import VendorSelectionModal from '@/components/modal/VendorSelectionModal';
+import InvitedVendorsModal from './invited-vendors-modal';
 import { getRFQDetails, updateStatus, getVendorsForReminder, sendSelectiveReminder, getRFQBidsAndAuctions } from '@/utils/services/rfq-management';
 import RfqAuctions, { ProductAuction } from './rfq-auctions';
 
@@ -151,6 +152,8 @@ const RFQDetails: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [openUpdateStatus, setOpenUpdateStatus] = useState<boolean>(false);
     const [showVendorModal, setShowVendorModal] = useState<boolean>(false);
+    // "Invited Vendors": each vendor with a Copy link for their invitation link.
+    const [showInvitedVendors, setShowInvitedVendors] = useState<boolean>(false);
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [modalLoading, setModalLoading] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<'vendor-details' | 'product-wise' | 'reverse-auction'>('vendor-details');
@@ -423,6 +426,16 @@ const RFQDetails: React.FC = () => {
                                 <div className="d-flex justify-content-between mb-2">
                                     <h2 className="fs-5 ">Rfq No. #{` ${rfqDetails?.rfq_no}`}</h2>
                                     <div>
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary mr-3"
+                                            onClick={() => setShowInvitedVendors(true)}
+                                            id="invited_vendors-admin_rfq_details"
+                                        >
+                                            <FontAwesomeIcon icon={faLink} className="me-2" />
+                                            Invited Vendors
+                                        </button>
+
                                         <button
                                             type="button"
                                             className="btn btn-secondary mr-3"
@@ -831,6 +844,16 @@ const RFQDetails: React.FC = () => {
                 vendors={vendors}
                 loading={modalLoading}
             />
+
+            {/* Invited Vendors — Copy link for each vendor's invitation link */}
+            {rfq_id && (
+                <InvitedVendorsModal
+                    show={showInvitedVendors}
+                    onClose={() => setShowInvitedVendors(false)}
+                    rfqId={rfq_id as string}
+                    rfqNo={rfqDetails?.rfq_no}
+                />
+            )}
 
             <ToastContainer />
         </>
