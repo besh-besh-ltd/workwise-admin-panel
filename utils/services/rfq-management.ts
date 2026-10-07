@@ -24,6 +24,20 @@ export const getRFQBidsAndAuctions = (rfq_id) => {
     });
 };
 
+// Every vendor invited to the RFQ with the link from their invitation email
+// (null when none was sent). The link signs in as that vendor: admin-panel
+// accounts only, and the page only ever copies it, never shows it.
+export const getRFQInvitedVendors = (rfq_id) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/rfq/rfq-list/${rfq_id}/invited-vendors`);
+            resolve(response);
+        } catch (error) {
+            reject({ message: error });
+        }
+    });
+};
+
 export const getClientRfqList = (page = 1, limit = 10, search = '', dateFilter = 'all', startDate = '', endDate = '', companyIds = []) => {
   return new Promise(async (resolve, reject) => {
     try {
