@@ -11,6 +11,19 @@ export const getRFQDetails = (rfq_id) => {
     });
 };
 
+// Each invited vendor's technical-bid status per product, and each product's
+// reverse auction (setup, participants, past runs).
+export const getRFQBidsAndAuctions = (rfq_id) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_WEB_URL}/admin/rfq/rfq-list/${rfq_id}/bids-and-auctions`);
+            resolve(response);
+        } catch (error) {
+            reject({ message: error });
+        }
+    });
+};
+
 export const getClientRfqList = (page = 1, limit = 10, search = '', dateFilter = 'all', startDate = '', endDate = '', companyIds = []) => {
   return new Promise(async (resolve, reject) => {
     try {
