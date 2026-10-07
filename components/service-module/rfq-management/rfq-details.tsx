@@ -131,7 +131,7 @@ interface TechBid {
     has_tech_eval: boolean;
     clause_count: number;
     answered: number;
-    status: 'Accepted' | 'Rejected' | 'Response submitted' | 'Not submitted' | null;
+    status: 'Accepted' | 'Rejected' | 'Response submitted' | 'Not submitted' | 'Regretted' | null;
 }
 
 const TECH_BID_BADGE: Record<string, string> = {
@@ -139,6 +139,8 @@ const TECH_BID_BADGE: Record<string, string> = {
     'Rejected': 'badge-danger',
     'Response submitted': 'badge-primary',
     'Not submitted': 'badge-warning',
+    // The vendor regretted the product: no response is owed.
+    'Regretted': 'badge-secondary',
 };
 
 const RFQDetails: React.FC = () => {
@@ -679,12 +681,22 @@ const RFQDetails: React.FC = () => {
                                                                                 {techBidOf.productHasBid(product.product_id, product.variant) && (
                                                                                     <div className="">
                                                                                         <strong>Technical Bids Submitted: </strong>
-                                                                                        <span className="badge badge-primary ml-2">
-                                                                                            {product.vendors.filter((v) => {
-                                                                                                const t = techBidOf.vendor(product.product_id, product.variant, v.vendor_id);
-                                                                                                return t?.status && t.status !== 'Not submitted';
-                                                                                            }).length} / {product.vendors.length}
-                                                                                        </span>
+                                                                                        {(() => {
+                                                                                            // A vendor who regretted owes no response: counted apart.
+                                                                                            const statuses = product.vendors.map((v) => techBidOf.vendor(product.product_id, product.variant, v.vendor_id)?.status);
+                                                                                            const regretted = statuses.filter((s) => s === 'Regretted').length;
+                                                                                            const submitted = statuses.filter((s) => s && s !== 'Not submitted' && s !== 'Regretted').length;
+                                                                                            return (
+                                                                                                <>
+                                                                                                    <span className="badge badge-primary ml-2">
+                                                                                                        {submitted} / {product.vendors.length - regretted}
+                                                                                                    </span>
+                                                                                                    {regretted > 0 && (
+                                                                                                        <span className="badge badge-secondary ml-2">{regretted} regretted</span>
+                                                                                                    )}
+                                                                                                </>
+                                                                                            );
+                                                                                        })()}
                                                                                     </div>
                                                                                 )}
                                                                                 </div>
