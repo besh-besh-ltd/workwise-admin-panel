@@ -18,11 +18,13 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Env vars come from Coolify: build args at build time, container env at runtime
+# Env vars come from Coolify: build args at build time, container env at runtime.
+# next is called directly because the package scripts wrap it in env-cmd, which would
+# load .env.development over the Coolify values.
 
 # Build the application using the production environment
 ENV NODE_ENV=production
-RUN pnpm run build
+RUN pnpm exec next build
 
 FROM base AS runner
 WORKDIR /app
@@ -37,4 +39,4 @@ ENV PORT=8110
 
 EXPOSE 8110
 
-CMD ["pnpm", "start"]
+CMD ["pnpm", "exec", "next", "start"]
