@@ -18,13 +18,13 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Setup environment variables
-COPY .env.development .env
-ENV NEXT_PUBLIC_API_URL="http://15.206.254.103:8002/api/v1"
+# Env vars come from Coolify: build args at build time, container env at runtime.
+# next is called directly because the package scripts wrap it in env-cmd, which would
+# load .env.development over the Coolify values.
 
 # Build the application using the production environment
 ENV NODE_ENV=production
-RUN pnpm run build
+RUN pnpm exec next build
 
 FROM base AS runner
 WORKDIR /app
@@ -33,11 +33,10 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod=false
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/.env ./
 
 ENV NODE_ENV=production
 ENV PORT=8110
 
 EXPOSE 8110
 
-CMD ["pnpm", "start"]
+CMD ["pnpm", "exec", "next", "start"]
