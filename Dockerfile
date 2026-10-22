@@ -18,9 +18,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Setup environment variables
-COPY .env.development .env
-ENV NEXT_PUBLIC_API_URL="http://15.206.254.103:8002/api/v1"
+# Env vars come from Coolify: build args at build time, container env at runtime
 
 # Build the application using the production environment
 ENV NODE_ENV=production
@@ -33,7 +31,6 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod=false
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/.env ./
 
 ENV NODE_ENV=production
 ENV PORT=8110
